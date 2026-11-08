@@ -54,6 +54,8 @@ ExportedObj/
 .consulo/
 *.csproj
 *.unityproj
+# Unity 生成的 csproj 仍然忽略。tools/ 里的检查工程要入库。
+!tools/**/*.csproj
 *.sln
 *.slnx
 *.suo
