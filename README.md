@@ -23,6 +23,14 @@
 
 样例数据在 [content/examples/](content/examples/)。字段是形状说明，数值为空，不代表策划表。
 
+## 文档与协作
+
+仓库内 `docs/` 只保留技术约定。产品与协作材料在仓库外：
+
+- [产品设计 Canvas](https://cursor.com/canvas/store-1838654e-7bc4-415b-9f4d-c229663f31b0/cffcba2f-711b-4a64-9493-b9a2e46f5528)
+- [项目管理 Notion](https://app.notion.com/p/412a33c747a9814d84b2ea89ffa04b3b)
+- [云存档方案草案](https://app.notion.com/p/412a33c747a981bb8b69ff360926c96e)
+
 ## 以后如何打开 Unity 工程
 
 仓库里还没有 Unity 工程，也没有 `.unity` 场景。下一次 PR 会提交可打开的 Unity 6 LTS 工程（根目录出现 `ProjectSettings/ProjectVersion.txt`）。届时：
