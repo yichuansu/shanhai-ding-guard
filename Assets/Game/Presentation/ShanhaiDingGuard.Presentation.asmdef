@@ -2,7 +2,9 @@
   "name": "ShanhaiDingGuard.Presentation",
   "rootNamespace": "ShanhaiDingGuard.Presentation",
   "references": [
-    "ShanhaiDingGuard.Gameplay"
+    "ShanhaiDingGuard.Content",
+    "ShanhaiDingGuard.Gameplay",
+    "Unity.InputSystem"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

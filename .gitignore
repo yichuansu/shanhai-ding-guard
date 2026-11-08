@@ -3,6 +3,8 @@
 # 下列路径必须入库，不要追加忽略：docs/、content/、tools/、README.md、LICENSE。
 
 # --- 本仓库补充：系统杂项 ---
+tools/**/bin/
+tools/**/obj/
 .DS_Store
 Thumbs.db
 ehthumbs.db

@@ -1,0 +1,104 @@
+using System.Collections.Generic;
+
+namespace ShanhaiDingGuard.Content
+{
+    /// <summary>
+    /// M1 切片用到的规则 id。形状样例里的 leak_rule_tbd 不是可玩规则。
+    /// </summary>
+    public static class SliceRules
+    {
+        public const int SchemaVersion = 0;
+        public const string TowerSchema = "shdg.tower";
+        public const string EnemySchema = "shdg.enemy";
+        public const string LevelSchema = "shdg.level.waves";
+        public const string SpaceNormalizedPlayfield = "normalized_playfield";
+        public const string TargetFirstAlongPath = "first_along_path";
+        public const string WinAllWavesCleared = "all_waves_cleared";
+
+        /// <summary>
+        /// 漏出终点的敌人数达到关卡上的 loseLeakCount 即负。
+        /// leakDamage 只累计，不折成基地生命。
+        /// </summary>
+        public const string LoseLeakCount = "leak_count";
+
+        public const string SliceTowerId = "tower_jin";
+        public const string SliceEnemyId = "enemy_dangkang";
+        public const string SliceLevelId = "level_jizhou_01";
+    }
+
+    public sealed class TowerDefinition
+    {
+        public string Id;
+        public string DisplayName;
+        public string Element;
+        public int BuildCost;
+        public int Damage;
+        public double Range;
+        public int AttackIntervalTicks;
+        public string TargetPriority;
+        public bool MergeEnabled;
+    }
+
+    public sealed class EnemyDefinition
+    {
+        public string Id;
+        public string DisplayName;
+
+        /// <summary>五行 id。M1 允许 null，结算时不乘相克倍率。</summary>
+        public string Element;
+
+        public int MaxHp;
+        public double Speed;
+        public int LeakDamage;
+        public string RewardCurrencyId;
+        public int RewardAmount;
+    }
+
+    public sealed class WaypointDefinition
+    {
+        public string Id;
+        public double X;
+        public double Y;
+    }
+
+    public sealed class SpawnDefinition
+    {
+        public string EnemyId;
+        public int Count;
+        public int IntervalTicks;
+    }
+
+    public sealed class WaveDefinition
+    {
+        public string Id;
+        public List<SpawnDefinition> Spawns;
+    }
+
+    public sealed class BuildCellDefinition
+    {
+        public string Id;
+        public double X;
+        public double Y;
+    }
+
+    public sealed class LevelDefinition
+    {
+        public string Id;
+        public string DisplayName;
+        public string PathId;
+        public string Space;
+        public List<WaypointDefinition> Waypoints;
+        public List<WaveDefinition> Waves;
+        public List<BuildCellDefinition> BuildCells;
+        public string WinRule;
+        public string LoseRule;
+        public int LoseLeakCount;
+    }
+
+    public sealed class SliceBattleContent
+    {
+        public TowerDefinition Tower;
+        public EnemyDefinition Enemy;
+        public LevelDefinition Level;
+    }
+}

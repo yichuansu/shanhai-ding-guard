@@ -1,0 +1,45 @@
+{
+  "schema": "shdg.level.waves",
+  "schemaVersion": 0,
+  "id": "level_jizhou_01",
+  "displayName": "冀州 · 01",
+  "placeholder": false,
+  "slice": "m1",
+  "notes": "M1 垂直切片用表，不是 content/examples/level_jizhou_01_waves.json。形状样例的坐标、数量和 leak_rule_tbd 保持原样。坐标系 normalized_playfield：x 向右、y 向上，可玩区域约 0 到 1。buildCells 只在这张切片表里，样例不编造格子。失败规则 leak_count：漏出终点的敌人数达到 loseLeakCount 即负。loseLeakCount 为 1，所以不放塔时第一只当康漏出就失败；开战前放上金塔则应能清完全部三波。leakDamage 只累计，不另写基地生命公式。",
+  "pathId": "path_jizhou_01",
+  "space": "normalized_playfield",
+  "waypoints": [
+    { "id": "wp_spawn", "x": 0.06, "y": 0.30 },
+    { "id": "wp_east", "x": 0.50, "y": 0.30 },
+    { "id": "wp_south", "x": 0.50, "y": 0.70 },
+    { "id": "wp_exit", "x": 0.94, "y": 0.70 }
+  ],
+  "buildCells": [
+    { "id": "cell_jin_01", "x": 0.50, "y": 0.50 }
+  ],
+  "waves": [
+    {
+      "id": "wave_01",
+      "spawns": [
+        { "enemyId": "enemy_dangkang", "count": 3, "intervalTicks": 20 }
+      ]
+    },
+    {
+      "id": "wave_02",
+      "spawns": [
+        { "enemyId": "enemy_dangkang", "count": 4, "intervalTicks": 18 }
+      ]
+    },
+    {
+      "id": "wave_03",
+      "spawns": [
+        { "enemyId": "enemy_dangkang", "count": 4, "intervalTicks": 16 }
+      ]
+    }
+  ],
+  "outcome": {
+    "win": "all_waves_cleared",
+    "lose": "leak_count",
+    "loseLeakCount": 1
+  }
+}

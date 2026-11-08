@@ -1,7 +1,9 @@
 {
   "name": "ShanhaiDingGuard.Gameplay",
   "rootNamespace": "ShanhaiDingGuard.Gameplay",
-  "references": [],
+  "references": [
+    "ShanhaiDingGuard.Content"
+  ],
   "includePlatforms": [],
   "excludePlatforms": [],
   "allowUnsafeCode": false,

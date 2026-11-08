@@ -81,7 +81,7 @@
 
 `Assets/Game/` 与架构四层同名，避免把 UI、模拟和 SDK 放进同一个脚本目录。
 
-源数据留在仓库根的 `content/`。`Assets/Game/Content/` 只放导入结果和加载代码。这样 JSON 的 diff 不混在 `.meta` 里。
+源数据留在仓库根的 `content/`。`Assets/Game/Content/` 只放导入结果和加载代码。这样 JSON 的 diff 不混在 `.meta` 里。M1 玩家包另读 `Assets/StreamingAssets/shdg/` 里的副本；编辑器 Play 直接读 `content/`。副本由菜单「山海守鼎 / Sync M1 Slice Content」或打玩家包前同步，评审以 `content/` 为准。
 
 以下内容在工程 PR 里仍然不要提交：
 

@@ -1,0 +1,19 @@
+{
+  "schema": "shdg.enemy",
+  "schemaVersion": 0,
+  "id": "enemy_dangkang",
+  "displayName": "当康",
+  "placeholder": false,
+  "slice": "m1",
+  "notes": "M1 垂直切片用表，不是 content/examples/enemy_dangkang.json。element 保持 null：M1 不结算相克。speed 是每个 tick 沿路径前进的 normalized_playfield 距离。leakDamage 只交给失败规则累计，切片规则 leak_count 不把它折成生命。reward 的 slice_coin 只是占位货币 id，本局模拟不发放。",
+  "element": null,
+  "combat": {
+    "maxHp": 40,
+    "speed": 0.004,
+    "leakDamage": 1
+  },
+  "reward": {
+    "currencyId": "slice_coin",
+    "amount": 1
+  }
+}

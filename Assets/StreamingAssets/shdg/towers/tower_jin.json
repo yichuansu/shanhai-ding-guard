@@ -1,0 +1,25 @@
+{
+  "schema": "shdg.tower",
+  "schemaVersion": 0,
+  "id": "tower_jin",
+  "displayName": "金",
+  "placeholder": false,
+  "slice": "m1",
+  "notes": "M1 垂直切片用表，不是 content/examples/tower_jin.json。形状样例里的 null 保持不动。这里的数字只为切片可玩，还不是策划平衡。合成关闭。索敌只实现 first_along_path。伤害不乘五行倍率。",
+  "element": "jin",
+  "role": "tower",
+  "economy": {
+    "buildCost": 100,
+    "upgradeCosts": []
+  },
+  "combat": {
+    "damage": 10,
+    "range": 0.28,
+    "attackIntervalTicks": 8,
+    "targetPriority": "first_along_path"
+  },
+  "merge": {
+    "enabled": false,
+    "tier": 1
+  }
+}
