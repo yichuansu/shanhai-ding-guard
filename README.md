@@ -2,13 +2,16 @@
 
 横屏 Q 版休闲塔防：固定路径布塔、五行相克、可操控英雄，并可捕获异兽作为助手。题材取自《山海经》。单局产品意图约 3–5 分钟，时长尚未用关卡数据验证。
 
-**状态：预制作（pre-production）。** 2026-11-08 已锁定三项：
+**状态：预制作（pre-production）。** 2026-11-08 已锁定：
 
 - 引擎：Unity 6 LTS + 2D（URP 2D Renderer）+ C#。
 - v1 首发平台：仅 iOS 与 Android。微信小游戏是二期（方案 D，已延后），不是待选的 A–D。
 - MVP 进度：登录 + 云存档。本地文件只做缓存。
+- 云后端：**Unity Gaming Services（Authentication + Cloud Save）**。PlayFab 仅为应急，MVP 不并行评估。
+- MVP 登录：**先游客 / 设备登录 + 云存档**。默认路径是 UGS Anonymous（Guest）→ Cloud Save。Apple / Google Sign-In 与账号绑定为 POST-MVP / M2+，不进 M1 验收。
+- 首发发行范围：**海外 / 非大陆 iOS + Android**。不含中国大陆渠道。大陆 App Store 与国内安卓渠道为 phase 2+，不阻塞 M0/M1。
 
-云后端供应商仍是提案（首选 Unity Gaming Services 的 Authentication + Cloud Save，备选 PlayFab）。本仓库目前是文档与内容样例。栈已锁定，下一次 PR 创建可打开的 Unity 工程。
+本仓库目前是文档与内容样例。栈已锁定，下一次 PR 创建可打开的 Unity 工程。
 
 产品设计由产品经理另行维护，不入库。`docs/` 只写技术约定。
 
@@ -16,7 +19,7 @@
 
 | 文档 | 内容 |
 | --- | --- |
-| [docs/TECH_STACK.md](docs/TECH_STACK.md) | 三项锁定；云后端提案（UGS 优先，PlayFab 备选）；微信为二期方案 D |
+| [docs/TECH_STACK.md](docs/TECH_STACK.md) | 引擎、平台、MVP 进度、云后端（UGS）、游客登录与海外首发已锁定；PlayFab 仅应急；Apple/Google 与大陆渠道为后置；微信为二期方案 D |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | 客户端分层、Auth / CloudSave、内容 schema、战斗循环 |
 | [docs/MILESTONES.md](docs/MILESTONES.md) | M0–M6 可交付里程碑 |
 | [docs/REPO_LAYOUT.md](docs/REPO_LAYOUT.md) | 当前目录与未来 `Assets/Game/` 布局 |
@@ -44,8 +47,8 @@
 ## 下一步
 
 1. 用后续 PR 生成 Unity 6 LTS 空工程（URP 2D Renderer + C#）。该 PR 提交源码与 `ProjectSettings` / `Packages`，不提交 `Library/`。
-2. 在该工程上做登录与云存档 spike，并在 Unity Gaming Services 与 PlayFab 中选定供应商。
-3. 再做 M1 竖切。微信小游戏留在二期，不进入这些 PR。
+2. 在该工程上提供 `IAuthService` / `ICloudSaveService` stub，默认走游客路径，并做 UGS Anonymous 登录与 Cloud Save spike。不并行评估 PlayFab，也不把 Apple / Google 登录列为 M1 阻塞项。
+3. 再做 M1 竖切。微信小游戏、大陆 App Store 与国内安卓渠道留在后置阶段，不进入这些 PR，也不作为 M0/M1 阻塞。
 
 ## 贡献
 
