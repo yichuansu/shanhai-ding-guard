@@ -2,48 +2,51 @@
 
 预制作路线。每一段都要能单独演示或单独评审。数值、最终美术、广告和支付不提前渗入。登录与云存档是 MVP，从 M0/M1 的 spike 进入。
 
-三项已于 2026-11-08 锁定：Unity 6 LTS + URP 2D Renderer + C#；v1 仅 iOS + Android；MVP 为登录 + 云存档。微信小游戏是二期（方案 D，已延后），不作为 A–D 开放项，也不挡住 M0。M1 在 Unity 编辑器以及 iOS 或 Android 开发构建上验收。
+已于 2026-11-08 锁定：Unity 6 LTS + URP 2D Renderer + C#；v1 仅 iOS + Android；MVP 为登录 + 云存档；云后端为 Unity Gaming Services（Authentication + Cloud Save）；MVP 登录为 UGS Anonymous / Guest（设备）→ Cloud Save；首发发行范围为海外 / 非大陆 iOS + Android，不含中国大陆渠道。Apple / Google Sign-In 与账号绑定为 POST-MVP / M2+，不进 M1 验收。PlayFab 仅为应急，不并行评估。大陆 App Store 与国内安卓渠道为 phase 2+，不阻塞 M0/M1。微信小游戏是二期（方案 D，已延后），不作为 A–D 开放项，也不挡住 M0。M1 在 Unity 编辑器以及一台海外 / 非大陆的 iOS 或 Android 开发构建上验收。
 
 ## M0 Bootstrap
 
 **目标**
 
-文档记录三项锁定。后续 PR 创建可打开的 Unity 6 LTS 空工程，并在该工程上做登录与云存档 spike。云后端供应商仍按提案选择，不挡住建工程。
+文档记录上述锁定。后续 PR 创建可打开的 Unity 6 LTS 空工程，并在该工程上提供 `IAuthService` / `ICloudSaveService` stub，默认实现走游客路径（UGS Anonymous → Cloud Save）。PlayFab 不并行评估，也不挡住建工程。
 
 **退出标准**
 
-- 文档已写明三项锁定，以及微信小游戏为二期（方案 D，已延后）。云后端保持 PROPOSED，首选 Unity Gaming Services，备选 PlayFab。这一条由当前文档 PR 完成。
+- 文档已写明引擎、v1 平台、MVP 进度、云后端（UGS Authentication + Cloud Save）、MVP 登录（游客 / 设备 → 云存档）和首发发行范围（海外 / 非大陆 iOS + Android，不含中国大陆渠道）。PlayFab 仅为应急。Apple / Google Sign-In 与 link 标为 POST-MVP / M2+。大陆渠道与大陆合规不作为 M0/M1 阻塞。微信小游戏为二期（方案 D，已延后）。这一条由当前文档 PR 完成。
 - 后续 PR：Unity 6 LTS 空工程能在编辑器中打开，进入一个横屏空场景。提交源码与 `ProjectSettings` / `Packages`，不提交 `Library/`。
-- Spike：同一账号登录，写入一份最小档案，在另一次会话读回。实现首选 Unity Gaming Services（Authentication + Cloud Save），备选 PlayFab。选定的供应商和冲突规则写回 `docs/TECH_STACK.md`。
+- 同一后续工程提供 `IAuthService` 与 `ICloudSaveService` stub。默认实现走游客路径：UGS Anonymous / Guest（设备）登录后读写 Cloud Save。不并行实现 PlayFab，也不在此 stub 上接 Apple / Google。
+- Spike：同一游客账号登录，写入一份最小档案，在另一次会话读回。冲突规则写回 `docs/TECH_STACK.md`。平台登录不是本 spike 的退出条件。
 - 本里程碑的文档更新不包含 Unity 工程；工程在下一次 PR。
 
 **范围外**
 
-玩法竖切、正式关卡场景、美术资源、广告、IAP、CI、微信小游戏（二期 / 方案 D）。
+玩法竖切、正式关卡场景、美术资源、广告、IAP、CI、Apple / Google Sign-In 与账号绑定、PlayFab、中国大陆渠道与大陆合规（phase 2+，不作为本里程碑阻塞）、微信小游戏（二期 / 方案 D）。
 
 ## M1 垂直切片
 
 **目标**
 
-一条路径、一座金塔（`tower_jin`）、一种敌人当康（`enemy_dangkang`）、三波、分出胜负、2 倍速桩。用来证明 tick 模拟和内容读取是通的。登录与云存档 spike 接到这局结果上。
+一条路径、一座金塔（`tower_jin`）、一种敌人当康（`enemy_dangkang`）、三波、分出胜负、2 倍速桩。用来证明 tick 模拟和内容读取是通的。游客登录与云存档接到这局结果上。平台登录不阻塞本段。
 
 **退出标准**
 
-- 关卡数据补全路径点与三波数量后，可从开打到结束。宿主是 Unity 编辑器，以及一台 iOS 或 Android 开发构建。
+- 关卡数据补全路径点与三波数量后，可从开打到结束。宿主是 Unity 编辑器，以及一台海外 / 非大陆的 iOS 或 Android 开发构建。大陆渠道与大陆合规不是本段阻塞项。
 - 三波清空且场上无敌人则胜。失败走关卡上的 `outcome.lose` 规则 id（规则内容由策划表在本里程碑填入，程序不私自加一条生命公式）。
 - 倍速可在 1 与 2 之间切换，只改变模拟推进，不改单次伤害。
 - 塔与敌人从数据读入。样例 JSON 里的 `null` 在本里程碑被替换成表内数字，或另有一张标明为切片专用的数据，避免改坏「形状样例」的含义时无人知晓。
-- 本关胜负写入 CloudSave。同一账号再次登录能读回该进度。M0 的 spike 证明档案往返，M1 证明这局结果走同一条路径。
+- 本关胜负写入 Cloud Save。游客登录即可在再次进入时从云端读回该进度。M0 的 spike 证明档案往返，M1 证明这局结果走同一条游客路径。Apple / Google 等平台登录不是 M1 阻塞项，不进 M1 验收。
 
 **范围外**
 
-其余四种五行、相克倍率、英雄、捕获、局外枢纽、合成、广告、支付、最终登录界面视觉、微信小游戏（二期）。
+其余四种五行、相克倍率、英雄、捕获、局外枢纽、合成、广告、支付、最终登录界面视觉、Apple / Google Sign-In 与账号绑定（POST-MVP / M2+）、中国大陆渠道与大陆合规（phase 2+）、微信小游戏（二期）。
 
 ## M2 五行、相克与四角 UI
 
 **目标**
 
 五座塔对应金木水火土，伤害走全局相克表，横屏 HUD 四角有五行与资源占位。
+
+Apple / Google Sign-In 与账号绑定标为 POST-MVP / M2+：不早于 M2，且不进 M1 验收。它们不改本段的五行与 HUD 退出标准，也未排进本段验收。
 
 **退出标准**
 

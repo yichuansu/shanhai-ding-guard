@@ -1,6 +1,6 @@
 # 仓库布局
 
-本文件描述两套目录：现在就有的文档与数据，以及下一次 PR 才创建的 Unity 工程。引擎、v1 平台（仅 iOS + Android）与云存档已于 2026-11-08 锁定。当前提交只创建第一套。
+本文件描述两套目录：现在就有的文档与数据，以及下一次 PR 才创建的 Unity 工程。引擎、v1 平台（仅 iOS + Android，首发为海外 / 非大陆）、云存档，以及云后端（Unity Gaming Services）已于 2026-11-08 锁定。当前提交只创建第一套。
 
 ## 现在
 
@@ -83,4 +83,4 @@
 - Addressables 的 `addressables_content_state.bin` 与 `ServerData/`
 - 任何只为占位而建、离开编辑器就无法合并的场景实验
 
-`docs/`、`content/`、`tools/` 留在根上。当前提交还没有 `Assets/`。CloudSave 的本地缓存写在运行时目录，不作为仓库里的另一套进度源。微信小游戏是二期（方案 D），v1 不另建客户端目录。
+`docs/`、`content/`、`tools/` 留在根上。当前提交还没有 `Assets/`。CloudSave 的本地缓存写在运行时目录，不作为仓库里的另一套进度源。`Assets/Game/Services/Auth/` 的默认实现是 UGS Anonymous / Guest（设备登录），经 `IAuthService` 交给 `CloudSave/` 的 `ICloudSaveService`。Apple / Google Sign-In 与账号绑定不放进 M1。微信小游戏是二期（方案 D），v1 不另建客户端目录。
