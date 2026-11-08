@@ -1,6 +1,6 @@
 # 仓库布局
 
-本文件描述两套目录：现在就有的文档与数据，以及引擎锁定后才创建的 Unity 工程。当前 PR 只创建第一套。
+本文件描述两套目录：现在就有的文档与数据，以及后续 PR 才创建的 Unity 工程。引擎已于 2026-11-08 锁定为 Unity 6 LTS。当前提交只创建第一套。
 
 ## 现在
 
@@ -29,9 +29,9 @@
 - `tools/` 预留给 JSON 校验、以及把 JSON 导入引擎资产的脚本。本 PR 不放可执行脚本。
 - 没有 `Assets/`、没有 `.meta`、没有 `.unity` 场景。这是故意的，方便先合并文档。
 
-## 以后（Unity 提案）
+## 以后（Unity 6 LTS）
 
-选型若锁定为 Unity，工程放在仓库根目录，与 `docs/`、`content/` 并列。缓存目录继续被 `.gitignore` 排除。
+引擎已锁定为 Unity。工程放在仓库根目录，与 `docs/`、`content/` 并列。缓存目录继续被 `.gitignore` 排除。
 
 ```text
 /
@@ -82,4 +82,4 @@
 - Addressables 的 `addressables_content_state.bin` 与 `ServerData/`
 - 任何只为占位而建、离开编辑器就无法合并的场景实验
 
-若最终锁定 Cocos Creator 或 Godot，删除尚未创建的 `Assets/Game/` 计划，改用该引擎的资产目录。`docs/`、`content/`、`tools/` 仍然留在根上，层的名字保持 Presentation / Gameplay / Meta / Services。
+资产目录按 `Assets/Game/` 实施。仅当微信小游戏日后成为硬需求并重新打开选型时，才另议引擎目录；在那之前不并行 Cocos 或 Godot 工程。`docs/`、`content/`、`tools/` 仍然留在根上。

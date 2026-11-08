@@ -2,19 +2,19 @@
 
 预制作路线。每一段都要能单独演示或单独评审。数值、最终美术、广告、支付和服务器不提前渗入。
 
-引擎在 M0 锁定。M1 及以后默认按锁定结果实现；下文的「编辑器 / 真机」在 Unity 提案下指 Unity 编辑器与 iOS 或 Android 开发构建。
+引擎已于 2026-11-08 锁定为 Unity 6 LTS + URP 2D Renderer + C#。M1 及以后在 Unity 编辑器与 iOS 或 Android 开发构建上验收。
 
 ## M0 Bootstrap
 
 **目标**
 
-仓库能被人读完并接着干活：文档与样例入库；引擎从 PROPOSED 变成书面锁定；后续 PR 提交一个打得开的空工程。
+仓库能被人读完并接着干活：文档与样例入库；引擎锁定为 Unity；后续 PR 提交一个打得开的空 Unity 工程。
 
 **退出标准**
 
 - 本 PR：`README.md`、`docs/`、`content/examples/`、`tools/`、Unity 向 `.gitignore`、专有 `LICENSE` 已在分支上。
-- 开放问题里「微信小游戏」和「首发平台」有书面答案，`docs/TECH_STACK.md` 的状态改为已锁定。
-- 后续工程 PR：干净工程能在编辑器中打开，进入一个横屏空场景。不提交 `Library/`。
+- 引擎已于 2026-11-08 锁定为 Unity 6 LTS + URP 2D Renderer + C#，见 `docs/TECH_STACK.md`。Cocos 与 Godot 暂不采用。
+- 后续工程 PR：干净 Unity 工程能在编辑器中打开，进入一个横屏空场景。该 PR 提交源码与 `ProjectSettings` / `Packages`。
 
 **范围外**
 

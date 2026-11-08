@@ -2,7 +2,7 @@
 
 状态：与 [TECH_STACK.md](TECH_STACK.md) 一起处于预制作。分层、模拟方式和 schema 字段名按此实现；平衡数值、文案和美术不在这里。
 
-引擎暂定 Unity 6 LTS + C#。下文的程序集和 ScriptableObject 是 Unity 提案下的落点。若锁定为 Cocos 或 Godot，目录名可以换，层与层之间的依赖不换。
+引擎已于 2026-11-08 锁定为 Unity 6 LTS + URP 2D Renderer + C#。程序集、ScriptableObject 与 Addressables 按此落点。见 [TECH_STACK.md](TECH_STACK.md)。
 
 ## 总览
 
@@ -204,7 +204,7 @@ sequenceDiagram
 }
 ```
 
-- 写入 `persistentDataPath`（或非 Unity 平台的等价私有目录），先写临时文件再替换，避免写到一半损坏。
+- 写入 Unity 的 `Application.persistentDataPath`，先写临时文件再替换，避免写到一半损坏。
 - `levelProgress` 的值形状在 M1 再定，至少能表达某关卡 id 已胜利。
 - `shanhaijingUnlocks` 是异兽 id 列表。M5 写入一条。
 - 设置里的倍速只记住玩家偏好，默认 1。
