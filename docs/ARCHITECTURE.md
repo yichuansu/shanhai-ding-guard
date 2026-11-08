@@ -2,13 +2,13 @@
 
 状态：与 [TECH_STACK.md](TECH_STACK.md) 一起处于预制作。分层、模拟方式和 schema 字段名按此实现；平衡数值、文案和美术不在这里。
 
-引擎族已于 2026-11-08 锁定为 Unity 6 LTS + URP 2D Renderer + C#。程序集、ScriptableObject 与 Addressables 按此落点。微信小游戏的导出适配取决于尚未选定的方案 A–D，见 [TECH_STACK.md](TECH_STACK.md)。
+引擎已于 2026-11-08 锁定为 Unity 6 LTS + URP 2D Renderer + C#。v1 平台为 iOS 与 Android。程序集、ScriptableObject 与 Addressables 按此落点。见 [TECH_STACK.md](TECH_STACK.md)。
 
 ## 总览
 
 客户端分成四层。对局内的真相在 Gameplay 的 tick 模拟里。表现层只显示快照和收集操作。局外进度在 Meta。登录、云存档、广告、支付和分析都走 Services。玩法代码不直接调用 SDK。
 
-战斗循环、路径、波次、塔、英雄和捕获的划分保持不变。平台差异收在导出适配和 Services 里。
+战斗循环、路径、波次、塔、英雄和捕获的划分保持不变。iOS 与 Android 的登录和支付差异收在 Services 里。
 
 ```mermaid
 flowchart TB
@@ -20,8 +20,7 @@ flowchart TB
     services["Services\nAuth、CloudSave、Ads、IAP、Analytics"]
   end
   cache["本地缓存"]
-  server["MVP 服务端\n登录与云存档"]
-  export["微信导出适配\n方案 A–D，尚未选定"]
+  server["MVP 服务端\n登录与云存档\n供应商未锁定"]
 
   content --> gameplay
   content --> meta
@@ -30,18 +29,15 @@ flowchart TB
   meta --> services
   services --> cache
   services --> server
-  export -.-> presentation
-  export -.-> services
 ```
 
 依赖规则：
 
 - Presentation 读取模拟快照，提交意图：放置塔、施放技能、暂停、切换倍速。它不修改生命值。
-- Gameplay 读取内容与意图，按 tick 写下战斗状态。Gameplay 不引用 Auth、CloudSave、广告、支付或微信导出 SDK。
+- Gameplay 读取内容与意图，按 tick 写下战斗状态。Gameplay 不引用 Auth、CloudSave、广告或支付 SDK。
 - Meta 管一局之外的事：进入关卡、收下胜负结果、写进度与图鉴。进度经 CloudSave 提交。对局进行中，Meta 不改模拟内部状态；暂停和退出走明确接口。
-- Services 是 IO。
+- Services 是 IO。Auth 与 CloudSave 的具体 SDK 藏在各自实现里，玩法层只看见接口。
 - 捕获在对局内产生「解锁意图」，由 Meta 经 CloudSave 写入账号档案。模拟本身不写玩家档案。
-- 微信导出适配包住客户端，不改 CombatSimulation 的 tick 规则。方案 A–D 选定前，仓库里不放这个适配的实现。
 
 ## 客户端分层
 
@@ -76,8 +72,8 @@ M1 实现 Path、Wave、Towers（仅 `tower_jin`）、CombatSimulation。Hero �
 
 | 服务 | MVP | 以后 |
 | --- | --- | --- |
-| Auth | 登录，得到稳定的账号 id。iOS、Android、微信的登录通道可以不同，接口相同 | 账号绑定、注销 |
-| CloudSave | 按账号读写进度。服务端副本是进度来源 | IAP 权益与档案放在一起校验 |
+| Auth | 登录，得到稳定的账号 id。v1 通道是 iOS 与 Android。接口不暴露供应商 SDK | 账号绑定、注销 |
+| CloudSave | 按账号读写进度。服务端副本是进度来源。实现可以是 PlayFab、Firebase 或薄 API | IAP 权益与档案放在一起校验 |
 | 本地缓存 | CloudSave 使用的缓存，放在 `Application.persistentDataPath`。缓存不是进度来源 | 断线策略以 spike 结论为准 |
 | Ads | 接口空着 | 激励视频 |
 | IAP | 接口空着 | Unity IAP 或渠道支付；票据到服务端 |
@@ -85,20 +81,13 @@ M1 实现 Path、Wave、Towers（仅 `tower_jin`）、CombatSimulation。Hero �
 
 Auth 对外只暴露登录、登出和当前账号 id。令牌留在服务内部。CloudSave 对外只暴露按账号加载和保存档案。Meta 是二者的唯一玩法侧调用方。
 
+供应商按 [TECH_STACK.md](TECH_STACK.md) 的提案评估：优先看 PlayFab，其次 Firebase Auth + Cloud Save，再次薄自定义 API。选定前，Services 里只保留这三个实现都能满足的接口，不把某一个 SDK 的类型漏进 Gameplay 或 Meta。
+
 没有账号 id 时，不把本机缓存当成已保存的 MVP 进度。
 
-### 微信导出适配
+### 微信小游戏
 
-标准 Unity 没有微信小游戏的原生导出。适配层是开放决策，选项见 [TECH_STACK.md](TECH_STACK.md)：
-
-| 方案 | 适配落在哪里 |
-| --- | --- |
-| A | 团结引擎工程同时导出 iOS、Android、微信。Gameplay 仍是这一套 C# |
-| B | 原生端继续 Unity。微信是第二套客户端（Cocos 或 Web），遵守同一层边界和同一份内容 schema |
-| C | 三端改为 Cocos。本文的程序集与 ScriptableObject 落点要改写，层边界保留 |
-| D | 第一段只有 Unity 的 iOS / Android 导出。微信适配后补，三端仍是产品目标 |
-
-选定前不提交团结引擎工程、第二套 Cocos/Web 工程或微信构建脚本。建议先评估 A。
+v1 不包含微信小游戏导出。战斗模拟和 Auth / CloudSave 接口不为此预留第二套客户端。若 v1 之后立项，再加导出适配。
 
 ## 内容数据
 
