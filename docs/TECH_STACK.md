@@ -26,15 +26,14 @@
 
 ## 云后端（PROPOSED）
 
-MVP 用现成的登录 + 玩家数据服务，不自建完整账号平台。供应商**未锁定**。
+MVP 用现成的登录 + 玩家数据服务，不自建完整账号平台。供应商**未锁定**。顺序来自工程负责人的 [Notion 提案](https://app.notion.com/p/412a33c747a981bb8b69ff360926c96e)。
 
 提案的评估顺序：
 
-1. **PlayFab**（认证 + Player Data）。Unity 有现成 SDK，登录和云存档在同一个服务里，贴近 iOS / Android 的 MVP。
-2. **Firebase Auth + Cloud Save**（或 Firestore 上的玩家文档）。登录渠道成熟，存档需要自己定文档形状。
-3. **薄自定义 API**。只提供登录会话和按账号读写一份档案。在前两者的登录渠道或数据模型不够时再采用。
+1. **Unity Gaming Services（Authentication + Cloud Save）**。首选。与 Unity 6 同一套服务，登录和云存档成对使用。
+2. **PlayFab**（认证 + Player Data）。备选。UGS 的登录渠道或存档模型不够时再评估。
 
-M0/M1 的 spike 在这三者里选定一个，把结论写回本文。两台设备同时写入的冲突规则随 spike 一起定，现在不锁。IAP 票据校验晚于这个 spike。
+M0/M1 的 spike 按这个顺序选定一个，把结论写回本文。两台设备同时写入的冲突规则随 spike 一起定，现在不锁。IAP 票据校验晚于这个 spike。
 
 iOS 若提供第三方登录，需要同时提供 Sign in with Apple。具体登录按钮清单不在本文指定。
 
@@ -50,7 +49,7 @@ Godot 与 Cocos Creator 不用于 v1。
 
 这些不推翻上面三项锁定，也不挡住 Unity 空工程。
 
-1. 云后端供应商：PlayFab、Firebase 或薄 API，spike 选定。
+1. 云后端供应商：首选 Unity Gaming Services（Authentication + Cloud Save），备选 PlayFab。spike 选定。
 2. 相生邻接是四向还是八向，加成作用在伤害还是攻击间隔？见 [ARCHITECTURE.md](ARCHITECTURE.md)。
 3. 漏怪失败条件的规则 id 由策划表定义。工程只预留字段。
 4. 英雄移动空间：沿路径、可建造区，或固定站位？M3 用桩。

@@ -72,8 +72,8 @@ M1 实现 Path、Wave、Towers（仅 `tower_jin`）、CombatSimulation。Hero �
 
 | 服务 | MVP | 以后 |
 | --- | --- | --- |
-| Auth | 登录，得到稳定的账号 id。v1 通道是 iOS 与 Android。接口不暴露供应商 SDK | 账号绑定、注销 |
-| CloudSave | 按账号读写进度。服务端副本是进度来源。实现可以是 PlayFab、Firebase 或薄 API | IAP 权益与档案放在一起校验 |
+| Auth | 登录，得到稳定的账号 id。v1 通道是 iOS 与 Android。首选 Unity Gaming Services Authentication，备选 PlayFab。接口不暴露供应商 SDK | 账号绑定、注销 |
+| CloudSave | 按账号读写进度。服务端副本是进度来源。首选 Unity Gaming Services Cloud Save，备选 PlayFab | IAP 权益与档案放在一起校验 |
 | 本地缓存 | CloudSave 使用的缓存，放在 `Application.persistentDataPath`。缓存不是进度来源 | 断线策略以 spike 结论为准 |
 | Ads | 接口空着 | 激励视频 |
 | IAP | 接口空着 | Unity IAP 或渠道支付；票据到服务端 |
@@ -81,7 +81,7 @@ M1 实现 Path、Wave、Towers（仅 `tower_jin`）、CombatSimulation。Hero �
 
 Auth 对外只暴露登录、登出和当前账号 id。令牌留在服务内部。CloudSave 对外只暴露按账号加载和保存档案。Meta 是二者的唯一玩法侧调用方。
 
-供应商按 [TECH_STACK.md](TECH_STACK.md) 的提案评估：优先看 PlayFab，其次 Firebase Auth + Cloud Save，再次薄自定义 API。选定前，Services 里只保留这三个实现都能满足的接口，不把某一个 SDK 的类型漏进 Gameplay 或 Meta。
+供应商按 [TECH_STACK.md](TECH_STACK.md) 的提案评估：首选 Unity Gaming Services（Authentication + Cloud Save），备选 PlayFab。选定前，Services 里只保留这两种实现都能满足的接口，不把某一个 SDK 的类型漏进 Gameplay 或 Meta。
 
 没有账号 id 时，不把本机缓存当成已保存的 MVP 进度。
 

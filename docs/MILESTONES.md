@@ -12,9 +12,9 @@
 
 **退出标准**
 
-- 文档已写明三项锁定，以及微信小游戏为二期（方案 D，已延后）。云后端保持 PROPOSED，优先评估 PlayFab。这一条由当前文档 PR 完成。
+- 文档已写明三项锁定，以及微信小游戏为二期（方案 D，已延后）。云后端保持 PROPOSED，首选 Unity Gaming Services，备选 PlayFab。这一条由当前文档 PR 完成。
 - 后续 PR：Unity 6 LTS 空工程能在编辑器中打开，进入一个横屏空场景。提交源码与 `ProjectSettings` / `Packages`，不提交 `Library/`。
-- Spike：同一账号登录，写入一份最小档案，在另一次会话读回。实现选自 PlayFab、Firebase Auth + Cloud Save，或薄 API。选定的供应商和冲突规则写回 `docs/TECH_STACK.md`。
+- Spike：同一账号登录，写入一份最小档案，在另一次会话读回。实现首选 Unity Gaming Services（Authentication + Cloud Save），备选 PlayFab。选定的供应商和冲突规则写回 `docs/TECH_STACK.md`。
 - 本里程碑的文档更新不包含 Unity 工程；工程在下一次 PR。
 
 **范围外**
