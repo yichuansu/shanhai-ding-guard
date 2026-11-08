@@ -1,0 +1,16 @@
+{
+  "name": "ShanhaiDingGuard.Meta",
+  "rootNamespace": "ShanhaiDingGuard.Meta",
+  "references": [
+    "ShanhaiDingGuard.Services"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

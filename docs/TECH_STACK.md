@@ -25,7 +25,7 @@
 - 商业化：Services 层预留广告与 Unity IAP。垂直切片不接 SDK。首发不含中国大陆渠道，本阶段不接国内渠道 SDK，大陆合规不进入 M0/M1。
 - 进度：MVP 走 UGS Anonymous（游客 / 设备）登录，再写入 Cloud Save。见 [ARCHITECTURE.md](ARCHITECTURE.md)。
 
-本提交不生成 Unity 工程。栈已锁定，**下一次 PR 创建可打开的 Unity 6 LTS 空工程**。
+Unity 6.3 LTS 工程在仓库根目录（`6000.3.28f1`）。`IAuthService` / `ICloudSaveService` 的默认实现走游客路径。UGS SDK 仍由后续 spike 接入。本环境没有 Editor 时，工程是手写骨架，首次打开会重新导入。
 
 ## 云后端（LOCKED）
 
@@ -69,5 +69,5 @@ Godot 与 Cocos Creator 不用于 v1。
 ## 对仓库的含义
 
 - 引擎、v1 平台、云存档要求、云后端供应商（Unity Gaming Services Authentication + Cloud Save）、MVP 登录（UGS Anonymous / Guest → Cloud Save），以及首发发行范围（海外 / 非大陆 iOS + Android，不含中国大陆渠道）均为 LOCKED。PlayFab 仅为应急，不进入 MVP 并行评估。Apple / Google Sign-In 与账号绑定为 POST-MVP / M2+。大陆 App Store 与国内安卓渠道为 phase 2+。
-- 下一步 PR：生成 Unity 6 LTS 空工程（含 `ProjectSettings/` 与 `Packages/`），不提交 `Library/`。
-- 空工程落地后提供 `IAuthService` / `ICloudSaveService` stub，默认走游客路径，再做 UGS 游客登录与云存档 spike，然后做 M1 竖切。不并行对接 PlayFab，不把平台登录列为 M1 阻塞项，也不把大陆渠道或大陆合规列为 M0/M1 阻塞。
+- Unity 6.3 LTS 空工程在仓库根目录，含 `ProjectSettings/` 与 `Packages/`，不提交 `Library/`。
+- 工程内已有 `IAuthService` / `ICloudSaveService` stub，默认走 UGS Anonymous / Guest（设备）→ Cloud Save。下一步把桩换成 UGS SDK，再做 M1 竖切。不并行对接 PlayFab，不把平台登录列为 M1 阻塞项，也不把大陆渠道或大陆合规列为 M0/M1 阻塞。
