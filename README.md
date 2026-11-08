@@ -4,14 +4,14 @@
 
 **状态：预制作（pre-production）。** 2026-11-08 已锁定：
 
-- 引擎：Unity 6 LTS + 2D（URP 2D Renderer）+ C#。
+- 引擎：Unity 6.3 LTS（`6000.3.28f1`）+ 2D（URP 2D Renderer）+ C#。工程在仓库根目录。
 - v1 首发平台：仅 iOS 与 Android。微信小游戏是二期（方案 D，已延后），不是待选的 A–D。
 - MVP 进度：登录 + 云存档。本地文件只做缓存。
 - 云后端：**Unity Gaming Services（Authentication + Cloud Save）**。PlayFab 仅为应急，MVP 不并行评估。
 - MVP 登录：**先游客 / 设备登录 + 云存档**。默认路径是 UGS Anonymous（Guest）→ Cloud Save。Apple / Google Sign-In 与账号绑定为 POST-MVP / M2+，不进 M1 验收。
 - 首发发行范围：**海外 / 非大陆 iOS + Android**。不含中国大陆渠道。大陆 App Store 与国内安卓渠道为 phase 2+，不阻塞 M0/M1。
 
-本仓库目前是文档与内容样例。栈已锁定，下一次 PR 创建可打开的 Unity 工程。
+栈已锁定。Unity 工程在仓库根目录，与 `docs/`、`content/` 并列。
 
 产品设计由产品经理另行维护，不入库。`docs/` 只写技术约定。
 
@@ -22,7 +22,7 @@
 | [docs/TECH_STACK.md](docs/TECH_STACK.md) | 引擎、平台、MVP 进度、云后端（UGS）、游客登录与海外首发已锁定；PlayFab 仅应急；Apple/Google 与大陆渠道为后置；微信为二期方案 D |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | 客户端分层、Auth / CloudSave、内容 schema、战斗循环 |
 | [docs/MILESTONES.md](docs/MILESTONES.md) | M0–M6 可交付里程碑 |
-| [docs/REPO_LAYOUT.md](docs/REPO_LAYOUT.md) | 当前目录与未来 `Assets/Game/` 布局 |
+| [docs/REPO_LAYOUT.md](docs/REPO_LAYOUT.md) | 根目录 Unity 工程与 `Assets/Game/` 布局 |
 
 样例数据在 [content/examples/](content/examples/)。字段是形状说明，数值为空，不代表策划表。
 
@@ -34,21 +34,42 @@
 - [项目管理 Notion](https://app.notion.com/p/412a33c747a9814d84b2ea89ffa04b3b)
 - [云存档方案草案](https://app.notion.com/p/412a33c747a981bb8b69ff360926c96e)
 
-## 以后如何打开 Unity 工程
+## 如何打开 Unity 工程
 
-仓库里还没有 Unity 工程，也没有 `.unity` 场景。下一次 PR 会提交可打开的 Unity 6 LTS 工程（根目录出现 `ProjectSettings/ProjectVersion.txt`）。届时：
+工程在仓库根目录。用 Unity Hub 打开含 `ProjectSettings/ProjectVersion.txt` 的这一层。
 
-1. 安装该 PR 写明的 Unity 6 LTS 编辑器版本，并带上 Android、iOS 与 2D（URP）相关模块。
-2. 用 Unity Hub 打开含 `ProjectSettings/` 的仓库根目录。
-3. 本地缓存 `Library/`、`Temp/`、`Logs/`、`UserSettings/` 由 [.gitignore](.gitignore) 排除，不要提交。
+- 编辑器：Unity **6.3 LTS**，`6000.3.28f1`，changeset `8f082d2fe476`。
+- 包：URP `17.3.0`（2D Renderer）与 Input System，见 `Packages/manifest.json`。
+- Hub 模块：Android Build Support（含 SDK、NDK、OpenJDK）和 iOS Build Support。打 iOS 包需要 macOS。2D / URP 来自 `Packages/`，不是单独的 Hub 模块。
 
-在那之前，阅读文档和样例 JSON 即可。
+打开后：
+
+1. 首次打开会重新导入并生成 `Library/`。本环境没有 Unity Editor，骨架是按上述版本手写的。
+2. 不要提交 `Library/`、`Temp/`、`Obj/`、`Logs/`、`UserSettings/`。规则在 [.gitignore](.gitignore)。
+3. 打开 `Assets/Game/Scenes/Boot.unity` 并 Play。Boot 只走 UGS Anonymous / Guest（设备）桩，再按该玩家 id 读云存档桩，然后进入 `Hub`。
+4. 横屏：允许左右横屏，关闭竖屏。默认游戏视图 1920×1080，这不是已锁定的参考分辨率。
+5. 包名占位是 `com.yichuansu.shanhaidingguard`。首发是海外 / 非大陆商店。
+
+`Assets/Game/` 按架构分层。`IAuthService` 与 `ICloudSaveService` 在 `Assets/Game/Services/`。`Assets/Settings/` 是 URP 2D 管线资产。
+
+## 登录与云存档桩
+
+默认路径与文档一致：**UGS Anonymous / Guest（设备）→ Cloud Save**。当前没有引用 `com.unity.services.authentication` 或 `com.unity.services.cloudsave`。PlayFab 仅为应急，MVP 不并行评估，工程里没有 PlayFab 包。
+
+| 路径 | 现在 | Spike 替换成 |
+| --- | --- | --- |
+| `Assets/Game/Services/Auth/IAuthService.cs` | 主入口 `SignInGuestAsync` | `AuthenticationService.SignInAnonymouslyAsync` |
+| `Assets/Game/Services/Auth/DevAuthService.cs` | 本地游客 id `dev.guest`，不联网 | 同上，使用 UGS PlayerId |
+| `Assets/Game/Services/CloudSave/ICloudSaveService.cs` | 按游客 id 读写 `shdg.save` | `CloudSaveService.Instance.Data.Player` |
+| `Assets/Game/Services/CloudSave/FakeRemoteCloudSaveService.cs` | 假远端 + 本地缓存 | 同上，键 `shdg.save` |
+
+Apple / Google Sign-In 与账号绑定是 POST-MVP / M2+，不进 M1 验收，Boot 不调用。没有玩家 id 时，本地缓存不是进度。
 
 ## 下一步
 
-1. 用后续 PR 生成 Unity 6 LTS 空工程（URP 2D Renderer + C#）。该 PR 提交源码与 `ProjectSettings` / `Packages`，不提交 `Library/`。
-2. 在该工程上提供 `IAuthService` / `ICloudSaveService` stub，默认走游客路径，并做 UGS Anonymous 登录与 Cloud Save spike。不并行评估 PlayFab，也不把 Apple / Google 登录列为 M1 阻塞项。
-3. 再做 M1 竖切。微信小游戏、大陆 App Store 与国内安卓渠道留在后置阶段，不进入这些 PR，也不作为 M0/M1 阻塞。
+1. 在本机用 Unity `6000.3.28f1` 打开仓库根目录，确认 Boot 进入 Hub。
+2. 把桩换成 UGS Anonymous 登录与 Cloud Save。同一游客写入一份最小档案，另一次会话读回。冲突规则写回 `docs/TECH_STACK.md`。不并行评估 PlayFab，也不把 Apple / Google 列为 M1 阻塞项。
+3. 再做 M1 竖切。微信小游戏、大陆 App Store 与国内安卓渠道留在 phase 2+，不作为 M0/M1 阻塞。
 
 ## 贡献
 

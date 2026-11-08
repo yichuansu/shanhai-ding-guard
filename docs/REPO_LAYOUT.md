@@ -1,6 +1,6 @@
 # 仓库布局
 
-本文件描述两套目录：现在就有的文档与数据，以及下一次 PR 才创建的 Unity 工程。引擎、v1 平台（仅 iOS + Android，首发为海外 / 非大陆）、云存档，以及云后端（Unity Gaming Services）已于 2026-11-08 锁定。当前提交只创建第一套。
+本文件描述仓库根目录。文档、内容样例与 Unity 6.3 LTS 工程并列。引擎、v1 平台（仅 iOS + Android，首发为海外 / 非大陆）、云存档，以及云后端（Unity Gaming Services）已于 2026-11-08 锁定。
 
 ## 现在
 
@@ -19,7 +19,12 @@
 │       ├── tower_jin.json
 │       ├── enemy_dangkang.json
 │       └── level_jizhou_01_waves.json
-└── tools/                  # 未来的校验与导入脚本，目前只有 .gitkeep
+├── tools/                  # 未来的校验与导入脚本，目前只有 .gitkeep
+├── Assets/
+│   ├── Game/               # 代码、asmdef、Boot / Hub / Battle
+│   └── Settings/           # URP 2D Renderer 与管线资产
+├── Packages/
+└── ProjectSettings/
 ```
 
 约定：
@@ -27,11 +32,12 @@
 - `docs/` 是技术文档。产品设计全文不放这里。
 - `content/examples/` 给程序和策划对齐字段名。正式数值进 M1 时写入正式表，或在替换样例时于提交说明里写清楚。
 - `tools/` 预留给 JSON 校验、以及把 JSON 导入引擎资产的脚本。本 PR 不放可执行脚本。
-- 没有 `Assets/`、没有 `.meta`、没有 `.unity` 场景。这是故意的，方便先合并文档。
+- Unity 工程在仓库根目录。缓存目录被 `.gitignore` 排除。v1 只有这一套 Unity 工程。
+- 若工程尚未在 Unity Editor 中导入过，首次打开会重新生成 `Library/`。不要提交 `Library/`。
 
-## 以后（Unity 6 LTS）
+## Unity 工程（仓库根目录）
 
-下一次 PR 把 Unity 工程放到仓库根目录，与 `docs/`、`content/` 并列。缓存目录继续被 `.gitignore` 排除。v1 只有这一套 Unity 工程。
+游戏代码在 `Assets/Game/`。正式内容表仍按下面的 `content/` 子目录在后续里程碑添加。v1 只有这一套 Unity 工程。
 
 ```text
 /
@@ -83,4 +89,4 @@
 - Addressables 的 `addressables_content_state.bin` 与 `ServerData/`
 - 任何只为占位而建、离开编辑器就无法合并的场景实验
 
-`docs/`、`content/`、`tools/` 留在根上。当前提交还没有 `Assets/`。CloudSave 的本地缓存写在运行时目录，不作为仓库里的另一套进度源。`Assets/Game/Services/Auth/` 的默认实现是 UGS Anonymous / Guest（设备登录），经 `IAuthService` 交给 `CloudSave/` 的 `ICloudSaveService`。Apple / Google Sign-In 与账号绑定不放进 M1。微信小游戏是二期（方案 D），v1 不另建客户端目录。
+`docs/`、`content/`、`tools/` 留在根上。CloudSave 的本地缓存和引导工程里的假远端都写在运行时目录，不作为仓库里的另一套进度源。`Assets/Game/Services/Auth/` 的默认实现是 UGS Anonymous / Guest（设备登录），经 `IAuthService` 交给 `CloudSave/` 的 `ICloudSaveService`。Apple / Google Sign-In 与账号绑定不放进 M1。微信小游戏是二期（方案 D），v1 不另建客户端目录。
