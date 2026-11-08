@@ -83,4 +83,4 @@
 - Addressables 的 `addressables_content_state.bin` 与 `ServerData/`
 - 任何只为占位而建、离开编辑器就无法合并的场景实验
 
-`docs/`、`content/`、`tools/` 留在根上。当前提交还没有 `Assets/`。CloudSave 的本地缓存写在运行时目录，不作为仓库里的另一套进度源。微信小游戏不在 v1，不另建客户端目录。
+`docs/`、`content/`、`tools/` 留在根上。当前提交还没有 `Assets/`。CloudSave 的本地缓存写在运行时目录，不作为仓库里的另一套进度源。微信小游戏是二期（方案 D），v1 不另建客户端目录。
