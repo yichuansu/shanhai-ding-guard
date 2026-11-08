@@ -1,6 +1,6 @@
 # 仓库布局
 
-本文件描述两套目录：现在就有的文档与数据，以及后续 PR 才创建的 Unity 工程。引擎已于 2026-11-08 锁定为 Unity 6 LTS。当前提交只创建第一套。
+本文件描述两套目录：现在就有的文档与数据，以及微信导出方案 A–D 锁定之后才创建的工程。引擎族已于 2026-11-08 锁定为 Unity 6 LTS。当前提交只创建第一套。
 
 ## 现在
 
@@ -29,9 +29,9 @@
 - `tools/` 预留给 JSON 校验、以及把 JSON 导入引擎资产的脚本。本 PR 不放可执行脚本。
 - 没有 `Assets/`、没有 `.meta`、没有 `.unity` 场景。这是故意的，方便先合并文档。
 
-## 以后（Unity 6 LTS）
+## 以后（路径锁定之后）
 
-引擎已锁定为 Unity。工程放在仓库根目录，与 `docs/`、`content/` 并列。缓存目录继续被 `.gitignore` 排除。
+完整工程在方案 A–D 书面选定后才放到仓库根目录，与 `docs/`、`content/` 并列。缓存目录继续被 `.gitignore` 排除。下面是方案仍沿 Unity / 团结引擎时的目录。方案 C 会改掉 `Assets/` 这一支。方案 B 才会另加微信客户端目录，现在不建。
 
 ```text
 /
@@ -62,10 +62,11 @@
 │       │   ├── Shanhaijing/
 │       │   └── Economy/
 │       ├── Services/
+│       │   ├── Auth/
+│       │   ├── CloudSave/
 │       │   ├── Ads/
 │       │   ├── Iap/
-│       │   ├── Analytics/
-│       │   └── Save/
+│       │   └── Analytics/
 │       └── Content/              # 导入后的资产与加载器，不是源 JSON
 ├── ProjectSettings/
 ├── Packages/
@@ -82,4 +83,4 @@
 - Addressables 的 `addressables_content_state.bin` 与 `ServerData/`
 - 任何只为占位而建、离开编辑器就无法合并的场景实验
 
-资产目录按 `Assets/Game/` 实施。仅当微信小游戏日后成为硬需求并重新打开选型时，才另议引擎目录；在那之前不并行 Cocos 或 Godot 工程。`docs/`、`content/`、`tools/` 仍然留在根上。
+`docs/`、`content/`、`tools/` 留在根上。Godot 不在导出方案里。微信导出未选定前，不提交 `Assets/` 工程。CloudSave 的本地缓存写在运行时目录，不作为仓库里的另一套进度源。
