@@ -1,0 +1,39 @@
+{
+  "schema": "shdg.level.waves",
+  "schemaVersion": 0,
+  "id": "level_jizhou_01",
+  "displayName": "冀州 · 01",
+  "placeholder": true,
+  "notes": "M1 垂直切片的关卡形状：一条路径、三波、胜负规则 id。坐标、刷怪数量和间隔留空，避免把占位折线当成正式路径。",
+  "pathId": "path_jizhou_01",
+  "space": "normalized_playfield",
+  "waypoints": [
+    { "id": "wp_a", "x": null, "y": null },
+    { "id": "wp_b", "x": null, "y": null },
+    { "id": "wp_c", "x": null, "y": null }
+  ],
+  "waves": [
+    {
+      "id": "wave_01",
+      "spawns": [
+        { "enemyId": "enemy_dangkang", "count": null, "intervalTicks": null }
+      ]
+    },
+    {
+      "id": "wave_02",
+      "spawns": [
+        { "enemyId": "enemy_dangkang", "count": null, "intervalTicks": null }
+      ]
+    },
+    {
+      "id": "wave_03",
+      "spawns": [
+        { "enemyId": "enemy_dangkang", "count": null, "intervalTicks": null }
+      ]
+    }
+  ],
+  "outcome": {
+    "win": "all_waves_cleared",
+    "lose": "leak_rule_tbd"
+  }
+}

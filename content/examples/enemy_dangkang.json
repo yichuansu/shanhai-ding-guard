@@ -1,0 +1,18 @@
+{
+  "schema": "shdg.enemy",
+  "schemaVersion": 0,
+  "id": "enemy_dangkang",
+  "displayName": "当康",
+  "placeholder": true,
+  "notes": "M1 唯一敌人的字段样例。五行归属留空，M1 不结算相克；M2 前必须填 element。生命、速度、漏怪计量与奖励都等待数值表。",
+  "element": null,
+  "combat": {
+    "maxHp": null,
+    "speed": null,
+    "leakDamage": null
+  },
+  "reward": {
+    "currencyId": null,
+    "amount": null
+  }
+}

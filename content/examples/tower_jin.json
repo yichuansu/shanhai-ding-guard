@@ -1,0 +1,24 @@
+{
+  "schema": "shdg.tower",
+  "schemaVersion": 0,
+  "id": "tower_jin",
+  "displayName": "金",
+  "placeholder": true,
+  "notes": "M1 唯一防御塔的字段样例。造价与战斗数字留空，等数值表填写。相生相克不写在单塔上，走全局元素表。",
+  "element": "jin",
+  "role": "tower",
+  "economy": {
+    "buildCost": null,
+    "upgradeCosts": []
+  },
+  "combat": {
+    "damage": null,
+    "range": null,
+    "attackIntervalTicks": null,
+    "targetPriority": "first_along_path"
+  },
+  "merge": {
+    "enabled": false,
+    "tier": null
+  }
+}
