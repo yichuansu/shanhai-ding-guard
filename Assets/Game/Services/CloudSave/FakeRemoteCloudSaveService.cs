@@ -7,9 +7,9 @@ using UnityEngine;
 namespace ShanhaiDingGuard.Services.CloudSave
 {
     /// <summary>
-    /// UGS Anonymous / Guest 会话上的云存档桩。读假远端，并把同一份 JSON 写入本地缓存。
+    /// 编辑器与离线回退。读假远端，并把同一份 JSON 写入本地缓存。
     /// 假远端只存在于本机 persistentDataPath，不是 UGS Cloud Save。
-    /// Spike 改为 CloudSaveService.Instance.Data.Player，键 <see cref="CloudSaveKeys.PlayerProfile"/>。
+    /// 有 Dashboard Project ID 且未强制离线时，Boot 改用 UgsCloudSaveService，键仍是 <see cref="CloudSaveKeys.PlayerProfile"/>。
     /// 只有缓存、没有假远端时，不把缓存当成进度。PlayFab 仅为应急，这里不实现。
     /// </summary>
     public sealed class FakeRemoteCloudSaveService : ICloudSaveService

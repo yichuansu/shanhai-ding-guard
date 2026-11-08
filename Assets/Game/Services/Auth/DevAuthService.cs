@@ -4,9 +4,9 @@ using System.Threading.Tasks;
 namespace ShanhaiDingGuard.Services.Auth
 {
     /// <summary>
-    /// UGS Anonymous / Guest（设备）登录桩。不访问网络，也不调用 UGS。
-    /// Spike 改为 AuthenticationService.Instance.SignInAnonymouslyAsync()，
-    /// 并用返回的 PlayerId 替换 <see cref="DevGuestPlayerId"/>。
+    /// 编辑器与离线回退。不访问网络，也不调用 UGS。玩家 id 固定为 <see cref="DevGuestPlayerId"/>。
+    /// 有 Dashboard Project ID 且未强制离线时，Boot 改用 UgsAuthService。
+    /// 强制回退：UgsConfig.forceOfflineStubs，或脚本定义符号 SHDG_FORCE_DEV_SERVICES。
     /// Apple / Google Sign-In 与账号绑定为 POST-MVP / M2+，不进 M1 验收。
     /// </summary>
     public sealed class DevAuthService : IAuthService

@@ -13,7 +13,8 @@
 │   ├── TECH_STACK.md
 │   ├── ARCHITECTURE.md
 │   ├── MILESTONES.md
-│   └── REPO_LAYOUT.md
+│   ├── REPO_LAYOUT.md
+│   └── UGS_SETUP.md          # Dashboard Project ID、包版本、Dev/Fake 开关
 ├── content/
 │   └── examples/           # schema 形状样例，数值为 null
 │       ├── tower_jin.json
@@ -68,8 +69,9 @@
 │       │   ├── Shanhaijing/
 │       │   └── Economy/
 │       ├── Services/
-│       │   ├── Auth/
-│       │   ├── CloudSave/
+│       │   ├── Auth/             # IAuthService、UgsAuthService、DevAuthService
+│       │   ├── CloudSave/        # ICloudSaveService、UgsCloudSaveService、假远端
+│       │   ├── Ugs/              # UgsConfig 与 Resources/UgsConfig.asset（Project ID 占位）
 │       │   ├── Ads/
 │       │   ├── Iap/
 │       │   └── Analytics/
@@ -89,4 +91,4 @@
 - Addressables 的 `addressables_content_state.bin` 与 `ServerData/`
 - 任何只为占位而建、离开编辑器就无法合并的场景实验
 
-`docs/`、`content/`、`tools/` 留在根上。CloudSave 的本地缓存和引导工程里的假远端都写在运行时目录，不作为仓库里的另一套进度源。`Assets/Game/Services/Auth/` 的默认实现是 UGS Anonymous / Guest（设备登录），经 `IAuthService` 交给 `CloudSave/` 的 `ICloudSaveService`。Apple / Google Sign-In 与账号绑定不放进 M1。微信小游戏是二期（方案 D），v1 不另建客户端目录。
+`docs/`、`content/`、`tools/` 留在根上。CloudSave 的本地缓存和离线假远端都写在运行时目录，不作为仓库里的另一套进度源。有 Dashboard Project ID 时，`UgsAuthService` 做 UGS Anonymous / Guest，再经 `ICloudSaveService` 交给 `UgsCloudSaveService`。未配置时用 Dev/Fake。Apple / Google Sign-In 与账号绑定不放进 M1。微信小游戏是二期（方案 D），v1 不另建客户端目录。

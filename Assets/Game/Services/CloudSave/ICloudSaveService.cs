@@ -61,9 +61,9 @@ namespace ShanhaiDingGuard.Services.CloudSave
 
     /// <summary>
     /// 按 UGS Anonymous / Guest 的玩家 id 读写一份 shdg.save。
-    /// 生产实现调用 CloudSaveService.Instance.Data.Player 的 LoadAsync / SaveAsync，
+    /// UgsCloudSaveService 调用 CloudSaveService.Instance.Data.Player 的 LoadAsync / SaveAsync，
     /// 键为 <see cref="CloudSaveKeys.PlayerProfile"/>。
-    /// 当前桩写本地缓存，并写一份假远端；假远端才是桩里的进度来源。
+    /// 未配置 Dashboard Project ID，或打开离线开关时，FakeRemoteCloudSaveService 写本地假远端。
     /// 没有玩家 id 时不把缓存当成进度。PlayFab 仅为应急，MVP 不并行实现。
     /// </summary>
     public interface ICloudSaveService

@@ -8,15 +8,15 @@
 
 **目标**
 
-文档记录上述锁定。Unity 6.3 LTS 空工程在仓库根目录，并提供 `IAuthService` / `ICloudSaveService` stub，默认实现走游客路径（UGS Anonymous → Cloud Save）。PlayFab 不并行评估。Spike 仍待做。
+文档记录上述锁定。Unity 6.3 LTS 工程在仓库根目录，并提供 `IAuthService` / `ICloudSaveService`。有 Dashboard Project ID 时走 UGS Anonymous → Cloud Save；否则走 Dev/Fake。PlayFab 不并行评估。同一游客的云端往返仍待 Editor 与真实 Project ID。
 
 **退出标准**
 
 - 文档已写明引擎、v1 平台、MVP 进度、云后端（UGS Authentication + Cloud Save）、MVP 登录（游客 / 设备 → 云存档）和首发发行范围（海外 / 非大陆 iOS + Android，不含中国大陆渠道）。PlayFab 仅为应急。Apple / Google Sign-In 与 link 标为 POST-MVP / M2+。大陆渠道与大陆合规不作为 M0/M1 阻塞。微信小游戏为二期（方案 D，已延后）。这一条由当前文档 PR 完成。
 - Unity 6.3 LTS 空工程提交源码与 `ProjectSettings` / `Packages`，不提交 `Library/`。目标是编辑器中打开并进入横屏场景。若尚未用 Editor 导入，首次打开会重新导入。
-- 同一工程提供 `IAuthService` 与 `ICloudSaveService` stub。默认实现走游客路径：UGS Anonymous / Guest（设备）登录后读写 Cloud Save。当前实现是本地游客桩加假远端，不是已接入的 UGS SDK。不并行实现 PlayFab，也不在此 stub 上接 Apple / Google。
-- Spike：同一游客账号登录，写入一份最小档案，在另一次会话读回。冲突规则写回 `docs/TECH_STACK.md`。平台登录不是本 spike 的退出条件。
-- 文档锁定与工程引导可以分成 PR。Spike 仍是 M0 未完成项。
+- 同一工程提供 `IAuthService` 与 `ICloudSaveService`。UGS 实现调用 Anonymous 登录与 Cloud Save 玩家数据，键为 `shdg.save`。未填 Project ID 时仍是本地游客桩加假远端。不并行实现 PlayFab，也不接 Apple / Google。
+- Spike：同一游客账号登录，写入一份最小档案，在另一次会话读回。代码路径已接上，实机往返还要 Dashboard Project ID 与 Unity Editor。冲突规则仍 OPEN，见 `docs/TECH_STACK.md` 与 `UgsCloudSaveService` 注释。平台登录不是本 spike 的退出条件。
+- 文档锁定与工程引导可以分成 PR。云端往返与冲突规则仍是 M0 未完成项。
 
 **范围外**
 
