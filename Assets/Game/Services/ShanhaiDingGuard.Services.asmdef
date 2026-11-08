@@ -1,7 +1,12 @@
 {
   "name": "ShanhaiDingGuard.Services",
   "rootNamespace": "ShanhaiDingGuard.Services",
-  "references": [],
+  "references": [
+    "Unity.Services.Authentication",
+    "Unity.Services.CloudSave",
+    "Unity.Services.Core",
+    "Unity.Services.Core.Environments"
+  ],
   "includePlatforms": [],
   "excludePlatforms": [],
   "allowUnsafeCode": false,

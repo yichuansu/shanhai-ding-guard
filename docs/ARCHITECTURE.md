@@ -81,7 +81,7 @@ M1 实现 Path、Wave、Towers（仅 `tower_jin`）、CombatSimulation。Hero �
 
 Auth 对外只暴露登录、登出和当前账号 id。令牌留在服务内部。MVP 的登录就是游客 / 设备登录，不要求 Apple 或 Google。CloudSave 对外只暴露按账号加载和保存档案。Meta 是二者的唯一玩法侧调用方。
 
-供应商已锁定为 Unity Gaming Services（Authentication + Cloud Save），见 [TECH_STACK.md](TECH_STACK.md)。PlayFab 仅为应急，MVP 不并行实现。Services 只把 `IAuthService` 与 `ICloudSaveService` 暴露给玩法层，不把 UGS 类型漏进 Gameplay 或 Meta。M0 的默认实现走游客路径：Anonymous / Guest 登录成功后再读写 Cloud Save。
+供应商已锁定为 Unity Gaming Services（Authentication + Cloud Save），见 [TECH_STACK.md](TECH_STACK.md)。PlayFab 仅为应急，MVP 不并行实现。Services 只把 `IAuthService` 与 `ICloudSaveService` 暴露给玩法层，不把 UGS 类型漏进 Gameplay 或 Meta。游客路径的实现是 `UgsAuthService` 与 `UgsCloudSaveService`。未配置 Project ID 时组合根改用 Dev/Fake。接入见 [UGS_SETUP.md](UGS_SETUP.md)。
 
 首发发行范围已锁定为海外 / 非大陆 iOS + Android，**不含中国大陆渠道**。大陆 App Store 与国内安卓渠道为 phase 2+。本阶段不接国内渠道 SDK，大陆合规不作为 M0/M1 阻塞。
 
@@ -226,5 +226,5 @@ MVP 的进度是登录后的云存档。档案带 `schemaVersion` 和账号 id�
 - `levelProgress` 的值形状在 M1 再定，至少能表达某关卡 id 已胜利，并经 CloudSave 写回。
 - `shanhaijingUnlocks` 是异兽 id 列表。M5 写入一条，同样走 CloudSave。
 - 设置里的倍速只记住玩家偏好，默认 1。
-- 两台设备同时写入时的冲突规则由登录与云存档 spike 选定，再写回本文。现在不锁后写覆盖或按字段合并。
+- 两台设备同时写入时的冲突规则仍是 OPEN。临时的后写覆盖只记在 `UgsCloudSaveService` 注释里（不带 writeLock；服务端 updated_at 为 `Item.Modified`）。选定后再写回本文。
 - IAP 权益以后走服务端。广告奖励若会改档案，必须经 Meta，再由 CloudSave 提交。

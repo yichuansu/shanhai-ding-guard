@@ -61,13 +61,19 @@ namespace ShanhaiDingGuard.Services.Auth
         {
             return new AuthResult(AuthStatus.Unavailable, AuthSession.SignedOut, error);
         }
+
+        public static AuthResult Failed(string error)
+        {
+            return new AuthResult(AuthStatus.Failed, AuthSession.SignedOut, error);
+        }
     }
 
     /// <summary>
-    /// 登录边界。生产实现包 Unity.Services.Authentication.AuthenticationService。
-    /// 默认路径是 UGS Anonymous / Guest（设备）登录，对应 SignInAnonymouslyAsync，再交给 Cloud Save。
+    /// 登录边界。UgsAuthService 调用 AuthenticationService.SignInAnonymouslyAsync。
+    /// 默认路径是 UGS Anonymous / Guest（设备）登录，再交给 Cloud Save。
+    /// 未配置 Dashboard Project ID，或打开离线开关时，用 DevAuthService。
     /// PlayerId 对应 AuthenticationService.PlayerId，并写入 shdg.save 的 accountId。
-    /// 访问令牌留在未来的 UGS 实现内部。接口不暴露 UGS SDK 类型。
+    /// 访问令牌留在 UGS 实现内部。接口不暴露 UGS SDK 类型。
     /// PlayFab 仅为应急，MVP 不并行评估，这里不引用。
     /// 首发是海外 / 非大陆 iOS 与 Android，不含中国大陆渠道登录。
     /// </summary>

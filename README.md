@@ -23,6 +23,7 @@
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | 客户端分层、Auth / CloudSave、内容 schema、战斗循环 |
 | [docs/MILESTONES.md](docs/MILESTONES.md) | M0–M6 可交付里程碑 |
 | [docs/REPO_LAYOUT.md](docs/REPO_LAYOUT.md) | 根目录 Unity 工程与 `Assets/Game/` 布局 |
+| [docs/UGS_SETUP.md](docs/UGS_SETUP.md) | UGS 包、Project ID 占位、Dev/Fake 开关、冲突规则仍 OPEN |
 
 样例数据在 [content/examples/](content/examples/)。字段是形状说明，数值为空，不代表策划表。
 
@@ -46,30 +47,36 @@
 
 1. 首次打开会重新导入并生成 `Library/`。本环境没有 Unity Editor，骨架是按上述版本手写的。
 2. 不要提交 `Library/`、`Temp/`、`Obj/`、`Logs/`、`UserSettings/`。规则在 [.gitignore](.gitignore)。
-3. 打开 `Assets/Game/Scenes/Boot.unity` 并 Play。Boot 只走 UGS Anonymous / Guest（设备）桩，再按该玩家 id 读云存档桩，然后进入 `Hub`。
+3. 打开 `Assets/Game/Scenes/Boot.unity` 并 Play。未填 Dashboard Project ID 时，Boot 走 Dev/Fake，然后进入 `Hub`。填上并链到工程后走 UGS Anonymous 与 Cloud Save。见 [docs/UGS_SETUP.md](docs/UGS_SETUP.md)。
 4. 横屏：允许左右横屏，关闭竖屏。默认游戏视图 1920×1080，这不是已锁定的参考分辨率。
 5. 包名占位是 `com.yichuansu.shanhaidingguard`。首发是海外 / 非大陆商店。
 
 `Assets/Game/` 按架构分层。`IAuthService` 与 `ICloudSaveService` 在 `Assets/Game/Services/`。`Assets/Settings/` 是 URP 2D 管线资产。
 
-## 登录与云存档桩
+## 登录与云存档
 
-默认路径与文档一致：**UGS Anonymous / Guest（设备）→ Cloud Save**。当前没有引用 `com.unity.services.authentication` 或 `com.unity.services.cloudsave`。PlayFab 仅为应急，MVP 不并行评估，工程里没有 PlayFab 包。
+默认路径：**UGS Anonymous / Guest（设备）→ Cloud Save**。`Packages/manifest.json` 引用 `com.unity.services.authentication` 3.8.1 与 `com.unity.services.cloudsave` 3.4.2。PlayFab 仅为应急，工程里没有 PlayFab 包。
 
-| 路径 | 现在 | Spike 替换成 |
-| --- | --- | --- |
-| `Assets/Game/Services/Auth/IAuthService.cs` | 主入口 `SignInGuestAsync` | `AuthenticationService.SignInAnonymouslyAsync` |
-| `Assets/Game/Services/Auth/DevAuthService.cs` | 本地游客 id `dev.guest`，不联网 | 同上，使用 UGS PlayerId |
-| `Assets/Game/Services/CloudSave/ICloudSaveService.cs` | 按游客 id 读写 `shdg.save` | `CloudSaveService.Instance.Data.Player` |
-| `Assets/Game/Services/CloudSave/FakeRemoteCloudSaveService.cs` | 假远端 + 本地缓存 | 同上，键 `shdg.save` |
+`Assets/Game/Services/Ugs/Resources/UgsConfig.asset` 的 `projectId` 仍是 `REPLACE_WITH_DASHBOARD_PROJECT_ID`。这不是真实工程。未配置时 Boot 使用 Dev/Fake，游戏仍可离线进 Hub。
 
-Apple / Google Sign-In 与账号绑定是 POST-MVP / M2+，不进 M1 验收，Boot 不调用。没有玩家 id 时，本地缓存不是进度。
+| 路径 | 作用 |
+| --- | --- |
+| `Assets/Game/Services/Auth/UgsAuthService.cs` | `SignInGuestAsync` → `AuthenticationService.SignInAnonymouslyAsync` |
+| `Assets/Game/Services/Auth/DevAuthService.cs` | 离线游客 id `dev.guest` |
+| `Assets/Game/Services/CloudSave/UgsCloudSaveService.cs` | `CloudSaveService.Instance.Data.Player`，键 `shdg.save` |
+| `Assets/Game/Services/CloudSave/FakeRemoteCloudSaveService.cs` | 离线假远端 + 本地缓存 |
+| `Assets/Game/App/GameServices.cs` | 有 Project ID 时选 UGS，否则选 Dev/Fake |
+
+改回桩：`UgsConfig.forceOfflineStubs`，或脚本定义符号 `SHDG_FORCE_DEV_SERVICES`。步骤在 [docs/UGS_SETUP.md](docs/UGS_SETUP.md)。
+
+Apple / Google Sign-In 与账号绑定是 POST-MVP / M2+，不进 M1 验收，Boot 不调用。没有玩家 id 时，本地缓存不是进度。多设备冲突规则仍是 OPEN。
 
 ## 下一步
 
-1. 在本机用 Unity `6000.3.28f1` 打开仓库根目录，确认 Boot 进入 Hub。
-2. 把桩换成 UGS Anonymous 登录与 Cloud Save。同一游客写入一份最小档案，另一次会话读回。冲突规则写回 `docs/TECH_STACK.md`。不并行评估 PlayFab，也不把 Apple / Google 列为 M1 阻塞项。
-3. 再做 M1 竖切。微信小游戏、大陆 App Store 与国内安卓渠道留在 phase 2+，不作为 M0/M1 阻塞。
+1. 在本机用 Unity `6000.3.28f1` 打开仓库根目录，确认未填 Project ID 时 Boot 以 `services=dev` 进入 Hub。
+2. 按 [docs/UGS_SETUP.md](docs/UGS_SETUP.md) 创建 Dashboard 工程，启用 Authentication（Anonymous）与 Cloud Save，把真实 Project ID 贴进 `UgsConfig` 和 `cloudProjectId`。同一游客写入一份最小档案，另一次会话读回。
+3. 冲突规则仍 OPEN。临时后写覆盖只写在 `UgsCloudSaveService` 的注释里，确认后再写回 `docs/TECH_STACK.md`。
+4. 再做 M1 竖切。微信小游戏、大陆 App Store 与国内安卓渠道留在 phase 2+，不作为 M0/M1 阻塞。
 
 ## 贡献
 

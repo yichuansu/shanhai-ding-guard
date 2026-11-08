@@ -7,8 +7,9 @@ using UnityEngine.SceneManagement;
 namespace ShanhaiDingGuard.App
 {
     /// <summary>
-    /// 启动时只走 UGS Anonymous / Guest（设备）桩，再按该玩家 id 读云存档桩。
-    /// 不调用 Apple / Google Sign-In 或账号绑定（POST-MVP / M2+）。
+    /// 启动时走游客登录，再按该玩家 id 读云存档。
+    /// 有 Dashboard Project ID 时用 UGS Anonymous 与 Cloud Save，否则用 Dev/Fake。
+    /// 切换方式见 docs/UGS_SETUP.md。不调用 Apple / Google Sign-In 或账号绑定（POST-MVP / M2+）。
     /// </summary>
     public sealed class BootEntry : MonoBehaviour
     {
@@ -29,11 +30,12 @@ namespace ShanhaiDingGuard.App
 
         private static async System.Threading.Tasks.Task BootAsync(CancellationToken cancellationToken)
         {
-            GameServices.ConfigureStubs();
+            GameServices.Configure();
+            Debug.Log("[Boot] services=" + GameServices.Mode);
             var auth = await GameServices.Auth.SignInGuestAsync(cancellationToken);
             if (!auth.Session.IsSignedIn)
             {
-                Debug.LogWarning("[Boot] 游客登录未完成。云存档不可用，本地缓存不会当作进度。");
+                Debug.LogWarning("[Boot] 游客登录未完成。云存档不可用，本地缓存不会当作进度。status=" + auth.Status + " " + auth.Error);
                 return;
             }
 

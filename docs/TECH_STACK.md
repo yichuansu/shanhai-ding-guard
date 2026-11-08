@@ -25,7 +25,7 @@
 - 商业化：Services 层预留广告与 Unity IAP。垂直切片不接 SDK。首发不含中国大陆渠道，本阶段不接国内渠道 SDK，大陆合规不进入 M0/M1。
 - 进度：MVP 走 UGS Anonymous（游客 / 设备）登录，再写入 Cloud Save。见 [ARCHITECTURE.md](ARCHITECTURE.md)。
 
-Unity 6.3 LTS 工程在仓库根目录（`6000.3.28f1`）。`IAuthService` / `ICloudSaveService` 的默认实现走游客路径。UGS SDK 仍由后续 spike 接入。本环境没有 Editor 时，工程是手写骨架，首次打开会重新导入。
+Unity 6.3 LTS 工程在仓库根目录（`6000.3.28f1`）。`IAuthService` / `ICloudSaveService` 的游客路径已接上 UGS Authentication 与 Cloud Save。`UgsConfig` 的 Project ID 仍是占位符；未填写时 Boot 使用 Dev/Fake。接入步骤见 [UGS_SETUP.md](UGS_SETUP.md)。本环境没有 Editor 时，工程是手写骨架，首次打开会重新导入。
 
 ## 云后端（LOCKED）
 
@@ -35,11 +35,11 @@ MVP 用现成的登录 + 玩家数据服务，不自建完整账号平台。供�
 
 原评估顺序见工程负责人的 [Notion 提案](https://app.notion.com/p/412a33c747a981bb8b69ff360926c96e)。该页保留为提案记录；以本次锁定为准。
 
-两台设备同时写入的冲突规则随 UGS spike 一起定，现在不锁。IAP 票据校验晚于这个 spike。
+两台设备同时写入的冲突规则仍是 **OPEN**，本文件不锁后写覆盖或按字段合并。`UgsCloudSaveService` 的注释里有一条临时行为：保存不带 writeLock，后写覆盖整份档案；服务端 `Item.Modified` 是 updated_at。这不是已接受的规则。IAP 票据校验晚于这个决定。
 
 ## 登录（LOCKED：游客 / 设备）
 
-默认路径已锁定：**UGS Anonymous / Guest（设备）登录 → Cloud Save**。M0 的 `IAuthService` / `ICloudSaveService` stub 默认走这条路径。M1 验收只要求游客登录后能从云端恢复进度。
+默认路径已锁定：**UGS Anonymous / Guest（设备）登录 → Cloud Save**。`UgsAuthService.SignInGuestAsync` 调用 `SignInAnonymouslyAsync`。未配置 Project ID 或打开离线开关时用 `DevAuthService`。M1 验收只要求游客登录后能从云端恢复进度。
 
 **Apple / Google Sign-In 与账号绑定（link）为 POST-MVP / M2+，不进 M1 验收**，也不阻塞 M1。iOS 若在该后置阶段提供第三方登录，需要同时提供 Sign in with Apple。具体登录按钮清单不在本文指定。
 
@@ -70,4 +70,4 @@ Godot 与 Cocos Creator 不用于 v1。
 
 - 引擎、v1 平台、云存档要求、云后端供应商（Unity Gaming Services Authentication + Cloud Save）、MVP 登录（UGS Anonymous / Guest → Cloud Save），以及首发发行范围（海外 / 非大陆 iOS + Android，不含中国大陆渠道）均为 LOCKED。PlayFab 仅为应急，不进入 MVP 并行评估。Apple / Google Sign-In 与账号绑定为 POST-MVP / M2+。大陆 App Store 与国内安卓渠道为 phase 2+。
 - Unity 6.3 LTS 空工程在仓库根目录，含 `ProjectSettings/` 与 `Packages/`，不提交 `Library/`。
-- 工程内已有 `IAuthService` / `ICloudSaveService` stub，默认走 UGS Anonymous / Guest（设备）→ Cloud Save。下一步把桩换成 UGS SDK，再做 M1 竖切。不并行对接 PlayFab，不把平台登录列为 M1 阻塞项，也不把大陆渠道或大陆合规列为 M0/M1 阻塞。
+- 工程内 `IAuthService` / `ICloudSaveService` 的 UGS 实现已接上 Anonymous / Guest → Cloud Save。Dashboard Project ID 仍待人工填写。不并行对接 PlayFab，不把平台登录列为 M1 阻塞项，也不把大陆渠道或大陆合规列为 M0/M1 阻塞。
