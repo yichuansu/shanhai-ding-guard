@@ -2,6 +2,7 @@
   "name": "ShanhaiDingGuard.Meta",
   "rootNamespace": "ShanhaiDingGuard.Meta",
   "references": [
+    "ShanhaiDingGuard.Content",
     "ShanhaiDingGuard.Services"
   ],
   "includePlatforms": [],

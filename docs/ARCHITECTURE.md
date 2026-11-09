@@ -153,9 +153,11 @@ Auth 对外只暴露登录、登出和当前账号 id。令牌留在服务内部
 | `waypoints` | 有序折线 `{ id, x, y }`。敌人只沿折线移动，不用自由导航 |
 | `waves[]` | M1 垂直切片为 3 波。每波含 `spawns[]`：`enemyId`、`count`、`intervalTicks` |
 | `outcome.win` | M1：`all_waves_cleared` |
-| `outcome.lose` | 规则 id。样例为 `leak_rule_tbd`，等策划表指定漏怪如何失败 |
+| `outcome.lose` | 规则 id。形状样例为 `leak_rule_tbd`。M1 可玩切片使用 `leak_count` |
 
-样例里的坐标、数量、间隔为 `null`，只说明字段形状。M1 补全第一条真实路径和三波数量后才可玩。
+样例里的坐标、数量、间隔为 `null`，只说明字段形状。M1 可玩数字写在 `content/towers/`、`content/enemies/`、`content/levels/`，不回写形状样例。
+
+切片关卡 `content/levels/level_jizhou_01.json` 的失败规则是 `leak_count`：漏出终点的敌人数达到 `outcome.loseLeakCount` 即负。`leakDamage` 按每次漏出累加，交给这条规则记账，但不折成基地生命。`loseLeakCount` 在切片表里是 1。形状样例的 `leak_rule_tbd` 不能开打。可建造格 `buildCells` 也只写在这张切片表上。
 
 ### 英雄 `shdg.hero`（M3，本 PR 不附样例文件）
 

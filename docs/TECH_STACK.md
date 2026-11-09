@@ -60,7 +60,7 @@ Godot 与 Cocos Creator 不用于 v1。
 这些不推翻上面的锁定，也不挡住 Unity 空工程。下列问题尚未回答，本文不代答。
 
 1. 相生邻接是四向还是八向，加成作用在伤害还是攻击间隔？见 [ARCHITECTURE.md](ARCHITECTURE.md)。
-2. 漏怪失败条件的规则 id 由策划表定义。工程只预留字段。
+2. 漏怪失败条件的正式规则仍可由策划表替换。M1 切片表暂用 `leak_count`（达到 `loseLeakCount` 即负），不是基地生命公式。形状样例仍是 `leak_rule_tbd`。
 3. 英雄移动空间：沿路径、可建造区，或固定站位？M3 用桩。
 4. 运行时直接读 JSON，还是导入为 ScriptableObject 再打 Addressables？源 JSON 入库评审，M1 可直读。
 
