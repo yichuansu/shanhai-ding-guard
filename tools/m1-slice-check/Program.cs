@@ -61,10 +61,13 @@ internal static class Program
     /// <summary>
     /// tick 基线取 m1-slice-check 实测，断言为该值的 ±5%。灵石和漏怪数仍是精确值。
     /// 数值策划预期是 1 塔约 1786 tick、无塔约 944 tick；实测 1815（+29，+1.6%）与 947（+3，+0.3%）。
+    /// 3 塔通关 tick 与 1 塔同为 1815，同样 ±5%，漏怪必须为 0。终局灵石只做精确回归。
     /// </summary>
     private const int OneTowerClearTicksBaseline = 1815;
 
     private const int NoTowerLoseTicksBaseline = 947;
+
+    private const int ThreeTowerClearTicksBaseline = 1815;
 
     private const double TickTolerance = 0.05;
 
@@ -745,13 +748,18 @@ internal static class Program
             return;
         }
 
+        if (!WithinTickTolerance(sim.TickCount, ThreeTowerClearTicksBaseline))
+        {
+            failures.Add("3 tower clear ticks " + sim.TickCount + " outside ±5% of calibrated " + ThreeTowerClearTicksBaseline + ", leaks=" + sim.LeakCount);
+        }
+
         if (sim.Balance != 440)
         {
             failures.Add("3 tower final balance " + sim.Balance + " != 440");
             return;
         }
 
-        Notes.Add("three towers: spend 300, leaks=0, ticks=" + sim.TickCount + ", final balance=" + sim.Balance);
+        Notes.Add("three towers: spend 300, leaks=0, ticks=" + sim.TickCount + " (±5% of " + ThreeTowerClearTicksBaseline + "), final balance=" + sim.Balance);
     }
 
     private static void CheckWaveClearPaysWhenLeaked(SliceBattleContent content, List<string> failures)
