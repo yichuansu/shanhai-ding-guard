@@ -4,8 +4,8 @@
   "id": "level_jizhou_01",
   "displayName": "冀州 · 01",
   "placeholder": false,
-  "slice": "m1",
-  "notes": "M1 垂直切片用表，不是 content/examples/level_jizhou_01_waves.json。形状样例的坐标、数量和 leak_rule_tbd 保持原样。坐标系 normalized_playfield：x 向右、y 向上，可玩区域约 0 到 1。buildCells 只在这张切片表里，样例不编造格子。失败规则 leak_count：漏出终点的敌人数达到 loseLeakCount 即负。loseLeakCount 为 1，所以不放塔时第一只当康漏出就失败；开战前放上金塔则应能清完全部三波。leakDamage 只累计，不另写基地生命公式。",
+  "slice": "jizhou_01_formal",
+  "notes": "冀州第1关正式数值（8波、仅当康、仅金塔）。逻辑Tick锁定10Hz。失败：leak_count + loseLeakCount=3（铜鼎3血，leakDamage=1/只）。开局灵石120；波次清场奖15+5×(w-1)。路径沿用M1折线（长≈1.28）。建造格增至3以便第2波后可再建一座金塔。hpMultiplier为新增字段。",
   "pathId": "path_jizhou_01",
   "space": "normalized_playfield",
   "waypoints": [
@@ -15,31 +15,69 @@
     { "id": "wp_exit", "x": 0.94, "y": 0.70 }
   ],
   "buildCells": [
-    { "id": "cell_jin_01", "x": 0.50, "y": 0.50 }
+    { "id": "cell_jin_01", "x": 0.50, "y": 0.50 },
+    { "id": "cell_jin_02", "x": 0.32, "y": 0.50 },
+    { "id": "cell_jin_03", "x": 0.68, "y": 0.50 }
   ],
+  "economy": {
+    "currencyId": "lingshi",
+    "startingAmount": 120,
+    "waveClearBase": 15,
+    "waveClearPerWaveIndex": 5
+  },
   "waves": [
     {
       "id": "wave_01",
       "spawns": [
-        { "enemyId": "enemy_dangkang", "count": 3, "intervalTicks": 20 }
+        { "enemyId": "enemy_dangkang", "count": 4, "intervalTicks": 48, "hpMultiplier": 1.0 }
       ]
     },
     {
       "id": "wave_02",
       "spawns": [
-        { "enemyId": "enemy_dangkang", "count": 4, "intervalTicks": 18 }
+        { "enemyId": "enemy_dangkang", "count": 4, "intervalTicks": 44, "hpMultiplier": 1.0 }
       ]
     },
     {
       "id": "wave_03",
       "spawns": [
-        { "enemyId": "enemy_dangkang", "count": 4, "intervalTicks": 16 }
+        { "enemyId": "enemy_dangkang", "count": 5, "intervalTicks": 40, "hpMultiplier": 1.0 }
+      ]
+    },
+    {
+      "id": "wave_04",
+      "spawns": [
+        { "enemyId": "enemy_dangkang", "count": 5, "intervalTicks": 36, "hpMultiplier": 1.0 }
+      ]
+    },
+    {
+      "id": "wave_05",
+      "spawns": [
+        { "enemyId": "enemy_dangkang", "count": 6, "intervalTicks": 34, "hpMultiplier": 1.0 }
+      ]
+    },
+    {
+      "id": "wave_06",
+      "spawns": [
+        { "enemyId": "enemy_dangkang", "count": 6, "intervalTicks": 30, "hpMultiplier": 1.0 }
+      ]
+    },
+    {
+      "id": "wave_07",
+      "spawns": [
+        { "enemyId": "enemy_dangkang", "count": 7, "intervalTicks": 28, "hpMultiplier": 1.0 }
+      ]
+    },
+    {
+      "id": "wave_08",
+      "spawns": [
+        { "enemyId": "enemy_dangkang", "count": 8, "intervalTicks": 26, "hpMultiplier": 1.1 }
       ]
     }
   ],
   "outcome": {
     "win": "all_waves_cleared",
     "lose": "leak_count",
-    "loseLeakCount": 1
+    "loseLeakCount": 3
   }
 }
