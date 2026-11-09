@@ -872,6 +872,12 @@ namespace ShanhaiDingGuard.Content
                 return false;
             }
 
+            LevelEconomyDefinition economy;
+            if (!ReadEconomy(map, out economy, out error))
+            {
+                return false;
+            }
+
             level = new LevelDefinition
             {
                 Id = id,
@@ -881,6 +887,7 @@ namespace ShanhaiDingGuard.Content
                 Waypoints = waypoints,
                 Waves = waves,
                 BuildCells = cells,
+                Economy = economy,
                 WinRule = winRule,
                 LoseRule = loseRule,
                 LoseLeakCount = loseLeakCount,
@@ -923,6 +930,45 @@ namespace ShanhaiDingGuard.Content
                 return false;
             }
 
+            if (!AcceptPlayableSlice(root.Object, out error))
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        private static bool AcceptPlayableSlice(Dictionary<string, JsonNode> map, out string error)
+        {
+            JsonNode placeholder;
+            if (map.TryGetValue("placeholder", out placeholder) && placeholder != null)
+            {
+                if (placeholder.Kind != JsonKind.Bool)
+                {
+                    error = "placeholder 无法识别，已保留原文件";
+                    return false;
+                }
+
+                if (placeholder.Bool)
+                {
+                    error = "placeholder 表不能进入战斗，已保留原文件";
+                    return false;
+                }
+            }
+
+            string slice;
+            if (!ReadString(map, "slice", out slice, out error))
+            {
+                return false;
+            }
+
+            if (!SliceRules.IsAcceptedSlice(slice))
+            {
+                error = "slice 无法识别，已保留原文件";
+                return false;
+            }
+
+            error = null;
             return true;
         }
 
@@ -1042,13 +1088,83 @@ namespace ShanhaiDingGuard.Content
                         return false;
                     }
 
-                    spawns.Add(new SpawnDefinition { EnemyId = enemyId, Count = count, IntervalTicks = interval });
+                    double hpMultiplier = 1.0;
+                    JsonNode hpNode;
+                    if (spawn.Object.TryGetValue("hpMultiplier", out hpNode))
+                    {
+                        if (hpNode == null || !hpNode.TryGetDouble(out hpMultiplier) || hpMultiplier <= 0)
+                        {
+                            error = "hpMultiplier 无法识别，已保留原文件";
+                            return false;
+                        }
+
+                        if (double.IsNaN(hpMultiplier) || double.IsInfinity(hpMultiplier))
+                        {
+                            error = "hpMultiplier 无法识别，已保留原文件";
+                            return false;
+                        }
+                    }
+
+                    spawns.Add(new SpawnDefinition
+                    {
+                        EnemyId = enemyId,
+                        Count = count,
+                        IntervalTicks = interval,
+                        HpMultiplier = hpMultiplier,
+                    });
                 }
 
                 list.Add(new WaveDefinition { Id = id, Spawns = spawns });
             }
 
             waves = list;
+            error = null;
+            return true;
+        }
+
+        private static bool ReadEconomy(Dictionary<string, JsonNode> map, out LevelEconomyDefinition economy, out string error)
+        {
+            economy = null;
+            JsonNode node;
+            if (!ReadObject(map, "economy", out node, out error))
+            {
+                return false;
+            }
+
+            string currencyId;
+            int starting;
+            int waveBase;
+            int perWave;
+            if (!ReadString(node.Object, "currencyId", out currencyId, out error))
+            {
+                return false;
+            }
+
+            if (!ReadInt(node.Object, "startingAmount", out starting, out error) || starting < 0)
+            {
+                error = error ?? "startingAmount 无法识别，已保留原文件";
+                return false;
+            }
+
+            if (!ReadInt(node.Object, "waveClearBase", out waveBase, out error) || waveBase < 0)
+            {
+                error = error ?? "waveClearBase 无法识别，已保留原文件";
+                return false;
+            }
+
+            if (!ReadInt(node.Object, "waveClearPerWaveIndex", out perWave, out error) || perWave < 0)
+            {
+                error = error ?? "waveClearPerWaveIndex 无法识别，已保留原文件";
+                return false;
+            }
+
+            economy = new LevelEconomyDefinition
+            {
+                CurrencyId = currencyId,
+                StartingAmount = starting,
+                WaveClearBase = waveBase,
+                WaveClearPerWaveIndex = perWave,
+            };
             error = null;
             return true;
         }

@@ -4,8 +4,8 @@
   "id": "enemy_dangkang",
   "displayName": "当康",
   "placeholder": false,
-  "slice": "m1",
-  "notes": "M1 垂直切片用表，不是 content/examples/enemy_dangkang.json。element 保持 null：M1 不结算相克。speed 是每个 tick 沿路径前进的 normalized_playfield 距离。leakDamage 只交给失败规则累计，切片规则 leak_count 不把它折成生命。reward 的 slice_coin 只是占位货币 id，本局模拟不发放。",
+  "slice": "jizhou_01_formal",
+  "notes": "冀州第1关正式数值。element=null：第1关不结算相克（第2关狸力再教克制）。speed=每tick沿路径的normalized_playfield距离；10Hz下0.004/tick=0.04单位/秒。leakDamage=1，配合关卡loseLeakCount=3等价铜鼎3血。reward改为灵石lingshi、击杀掉落8（已拍板）。",
   "element": null,
   "combat": {
     "maxHp": 40,
@@ -13,7 +13,7 @@
     "leakDamage": 1
   },
   "reward": {
-    "currencyId": "slice_coin",
-    "amount": 1
+    "currencyId": "lingshi",
+    "amount": 8
   }
 }

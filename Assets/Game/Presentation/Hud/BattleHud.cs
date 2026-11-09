@@ -9,8 +9,10 @@ using UnityEngine.SceneManagement;
 namespace ShanhaiDingGuard.Presentation
 {
     /// <summary>
-    /// M1 战斗桩：开战、放置金塔、胜、负、1x/2x。表现只读快照，不改生命。
+    /// 冀州 01 战斗桩：开战、放置剑阵、胜、负、1x/2x。表现只读快照，不改生命。
     /// 倍速交给 SimClock，不乘进伤害。
+    /// 建造格按表顺序对应数字键 1/2/3（以及小键盘），也可直接点格子。
+    /// T 或「放置剑阵」放到下一个空闲格。余额不足时模拟拒绝，这里只显示快照里的短提示。
     /// </summary>
     public sealed class BattleHud : MonoBehaviour
     {
@@ -40,7 +42,8 @@ namespace ShanhaiDingGuard.Presentation
         private bool _started;
         private bool _reported;
         private Transform _viewRoot;
-        private Transform _towerMarker;
+        private readonly Dictionary<string, Transform> _towerMarks = new Dictionary<string, Transform>();
+        private int _cellCursor;
         private Sprite _pixel;
 
         public event Action<BattleFinished> Finished;
@@ -92,9 +95,29 @@ namespace ShanhaiDingGuard.Presentation
                 _sim.Begin();
             }
 
-            if (Pressed(PlaceRect()) || PressedKey(Key.T))
+            if (PressedKey(Key.Digit1) || PressedKey(Key.Numpad1))
             {
-                PlaceTower();
+                PlaceCell(0);
+            }
+            else if (PressedKey(Key.Digit2) || PressedKey(Key.Numpad2))
+            {
+                PlaceCell(1);
+            }
+            else if (PressedKey(Key.Digit3) || PressedKey(Key.Numpad3))
+            {
+                PlaceCell(2);
+            }
+            else if (Pressed(PlaceRect()) || PressedKey(Key.T))
+            {
+                PlaceNextFree();
+            }
+            else
+            {
+                int clicked;
+                if (ClickedCell(out clicked))
+                {
+                    PlaceCell(clicked);
+                }
             }
 
             if (Pressed(SpeedRect()) || PressedKey(Key.X))
@@ -118,39 +141,50 @@ namespace ShanhaiDingGuard.Presentation
         private void OnGUI()
         {
             DrawButton(StartRect(), _started ? "进行中" : "开战");
-            DrawButton(PlaceRect(), TowerPlaced() ? "金塔已放置" : "放置金塔");
+            DrawButton(PlaceRect(), PlaceLabel());
             DrawButton(SpeedRect(), "倍速 " + _clock.Speed + "x");
             DrawButton(BackRect(), "回枢纽");
 
             var style = Style(18, TextAnchor.UpperLeft);
             var status = _error;
+            string note = null;
             if (_sim != null && _content != null)
             {
                 var snapshot = _sim.Snapshot;
+                note = snapshot.Note;
                 status = _content.Level.DisplayName
                     + "\n"
                     + PhaseLabel(snapshot.Phase)
                     + "  tick "
                     + snapshot.Tick
+                    + "  波次 "
+                    + snapshot.WaveNumber
+                    + "/"
+                    + snapshot.WaveCount
                     + "  场上 "
                     + snapshot.Enemies.Count
+                    + "\n灵石 "
+                    + snapshot.Balance
+                    + "\n"
+                    + DingHearts(snapshot.LeakCount, snapshot.LoseLeakCount)
                     + "  漏怪 "
                     + snapshot.LeakCount
                     + "/"
-                    + snapshot.LoseLeakCount
-                    + " ("
-                    + snapshot.LoseRule
-                    + ")";
-                if (!string.IsNullOrEmpty(snapshot.Note))
-                {
-                    status += "\n" + snapshot.Note;
-                }
+                    + snapshot.LoseLeakCount;
             }
 
-            GUI.Label(new Rect(250f, 24f, Screen.width - 280f, 140f), status ?? string.Empty, style);
+            GUI.Label(new Rect(250f, 24f, Screen.width - 280f, 160f), status ?? string.Empty, style);
+            if (!string.IsNullOrEmpty(note))
+            {
+                var hint = Style(18, TextAnchor.MiddleLeft);
+                hint.normal.textColor = new Color(1f, 0.86f, 0.45f, 1f);
+                GUI.Label(new Rect(24f, 244f, 460f, 32f), note, hint);
+            }
+
+            DrawCellLabels();
             GUI.Label(
-                new Rect(24f, Screen.height - 88f, Screen.width - 48f, 72f),
-                "先放金塔再开战会清完三波并胜利。不放塔直接开战，第一只当康漏出即失败。X 或「倍速」在 1x / 2x 间切换，只加快模拟 tick。T 放置，Enter 开战，Esc 回枢纽。",
+                new Rect(24f, Screen.height - 96f, Screen.width - 48f, 80f),
+                "数字键 1/2/3 或点击建造格放置剑阵，T 放到下一个空格。开战前放 1 座可清完 8 波。不放塔则第 3 只漏出即失败。灵石不足会拒绝放置且不扣费。X 倍速，Enter 开战，Esc 回枢纽。",
                 Style(16, TextAnchor.UpperLeft));
 
             if (_sim != null && (_sim.Phase == BattlePhase.Won || _sim.Phase == BattlePhase.Lost))
@@ -162,37 +196,163 @@ namespace ShanhaiDingGuard.Presentation
             }
         }
 
-        private void PlaceTower()
+        private string PlaceLabel()
         {
-            if (_sim == null || _content == null || TowerPlaced())
+            if (_sim == null || _content == null || _sim.Snapshot == null)
+            {
+                return "放置剑阵";
+            }
+
+            var used = 0;
+            var cells = _sim.Snapshot.Cells;
+            for (var i = 0; i < cells.Count; i++)
+            {
+                if (cells[i].Occupied || cells[i].Queued)
+                {
+                    used++;
+                }
+            }
+
+            return "放置剑阵 " + used + "/" + _content.Level.BuildCells.Count;
+        }
+
+        private void PlaceNextFree()
+        {
+            if (_sim == null || _content == null)
             {
                 return;
             }
 
-            _sim.EnqueuePlace(_content.Tower.Id, _content.Level.BuildCells[0].Id);
+            var count = _content.Level.BuildCells.Count;
+            if (count == 0)
+            {
+                return;
+            }
+
+            for (var n = 0; n < count; n++)
+            {
+                var index = (_cellCursor + n) % count;
+                if (CellFree(index))
+                {
+                    _cellCursor = (index + 1) % count;
+                    PlaceCell(index);
+                    return;
+                }
+            }
+
+            PlaceCell(_cellCursor % count);
         }
 
-        private bool TowerPlaced()
+        private void PlaceCell(int index)
         {
-            if (_sim == null || _sim.Snapshot == null)
+            if (_sim == null || _content == null)
+            {
+                return;
+            }
+
+            var cells = _content.Level.BuildCells;
+            if (index < 0 || index >= cells.Count)
+            {
+                return;
+            }
+
+            _sim.EnqueuePlace(_content.Tower.Id, cells[index].Id);
+        }
+
+        private bool CellFree(int index)
+        {
+            if (_sim == null || _sim.Snapshot == null || _content == null)
             {
                 return false;
             }
 
-            if (_sim.Snapshot.Towers.Count > 0)
+            var id = _content.Level.BuildCells[index].Id;
+            var cells = _sim.Snapshot.Cells;
+            for (var i = 0; i < cells.Count; i++)
             {
-                return true;
-            }
-
-            for (var i = 0; i < _sim.Snapshot.Cells.Count; i++)
-            {
-                if (_sim.Snapshot.Cells[i].Queued)
+                if (cells[i].Id == id)
                 {
-                    return true;
+                    return !cells[i].Occupied && !cells[i].Queued;
                 }
             }
 
-            return false;
+            return true;
+        }
+
+        private bool ClickedCell(out int index)
+        {
+            index = -1;
+            Vector2 gui;
+            if (!TryPointerDown(out gui) || _content == null)
+            {
+                return false;
+            }
+
+            if (StartRect().Contains(gui) || PlaceRect().Contains(gui) || SpeedRect().Contains(gui) || BackRect().Contains(gui))
+            {
+                return false;
+            }
+
+            var camera = Camera.main;
+            if (camera == null)
+            {
+                return false;
+            }
+
+            var best = 36f * 36f;
+            var cells = _content.Level.BuildCells;
+            for (var i = 0; i < cells.Count; i++)
+            {
+                var screen = camera.WorldToScreenPoint(ToWorld(cells[i].X, cells[i].Y));
+                var dx = screen.x - gui.x;
+                var dy = (Screen.height - screen.y) - gui.y;
+                var distance = (dx * dx) + (dy * dy);
+                if (distance <= best)
+                {
+                    best = distance;
+                    index = i;
+                }
+            }
+
+            return index >= 0;
+        }
+
+        private void DrawCellLabels()
+        {
+            if (_content == null)
+            {
+                return;
+            }
+
+            var camera = Camera.main;
+            if (camera == null)
+            {
+                return;
+            }
+
+            var style = Style(16, TextAnchor.MiddleCenter);
+            var cells = _content.Level.BuildCells;
+            for (var i = 0; i < cells.Count; i++)
+            {
+                var screen = camera.WorldToScreenPoint(ToWorld(cells[i].X, cells[i].Y));
+                GUI.Label(new Rect(screen.x - 18f, (Screen.height - screen.y) - 36f, 36f, 22f), (i + 1).ToString(), style);
+            }
+        }
+
+        private static string DingHearts(int leaks, int max)
+        {
+            var left = max - leaks;
+            if (left < 0)
+            {
+                left = 0;
+            }
+
+            if (left > max)
+            {
+                left = max;
+            }
+
+            return "铜鼎 " + new string('♥', left) + new string('♡', max - left) + " " + left + "/" + max;
         }
 
         private void ReportIfFinished()
@@ -244,14 +404,19 @@ namespace ShanhaiDingGuard.Presentation
             exitMark.position = ToWorld(exit.X, exit.Y);
             exitMark.localScale = new Vector3(0.28f, 0.28f, 1f);
 
-            var cell = _content.Level.BuildCells[0];
-            var cellMark = CreateSprite("BuildCell", new Color(0.95f, 0.78f, 0.28f, 0.35f), 2);
-            cellMark.position = ToWorld(cell.X, cell.Y);
-            cellMark.localScale = new Vector3(0.55f, 0.55f, 1f);
+            var cells = _content.Level.BuildCells;
+            for (var i = 0; i < cells.Count; i++)
+            {
+                var cell = cells[i];
+                var cellMark = CreateSprite("BuildCell-" + cell.Id, new Color(0.95f, 0.78f, 0.28f, 0.35f), 2);
+                cellMark.position = ToWorld(cell.X, cell.Y);
+                cellMark.localScale = new Vector3(0.55f, 0.55f, 1f);
 
-            _towerMarker = CreateSprite("TowerJin", new Color(0.96f, 0.82f, 0.28f, 1f), 4);
-            _towerMarker.gameObject.SetActive(false);
-            _towerMarker.localScale = new Vector3(0.42f, 0.42f, 1f);
+                var tower = CreateSprite("TowerJin-" + cell.Id, new Color(0.96f, 0.82f, 0.28f, 1f), 4);
+                tower.gameObject.SetActive(false);
+                tower.localScale = new Vector3(0.42f, 0.42f, 1f);
+                _towerMarks.Add(cell.Id, tower);
+            }
         }
 
         private void SyncView()
@@ -262,31 +427,47 @@ namespace ShanhaiDingGuard.Presentation
             }
 
             var snapshot = _sim.Snapshot;
-            if (snapshot.Towers.Count > 0)
+            var shown = new HashSet<string>();
+            for (var i = 0; i < snapshot.Towers.Count; i++)
             {
-                var tower = snapshot.Towers[0];
-                _towerMarker.gameObject.SetActive(true);
-                _towerMarker.position = ToWorld(tower.X, tower.Y);
-            }
-            else
-            {
-                var queued = false;
-                for (var i = 0; i < snapshot.Cells.Count; i++)
+                var tower = snapshot.Towers[i];
+                Transform marker;
+                if (!_towerMarks.TryGetValue(tower.CellId, out marker))
                 {
-                    if (!snapshot.Cells[i].Queued)
-                    {
-                        continue;
-                    }
-
-                    queued = true;
-                    _towerMarker.gameObject.SetActive(true);
-                    _towerMarker.position = ToWorld(snapshot.Cells[i].X, snapshot.Cells[i].Y);
-                    break;
+                    continue;
                 }
 
-                if (!queued)
+                marker.gameObject.SetActive(true);
+                marker.position = ToWorld(tower.X, tower.Y);
+                marker.GetComponent<SpriteRenderer>().color = new Color(0.96f, 0.82f, 0.28f, 1f);
+                shown.Add(tower.CellId);
+            }
+
+            for (var i = 0; i < snapshot.Cells.Count; i++)
+            {
+                var cell = snapshot.Cells[i];
+                if (!cell.Queued || shown.Contains(cell.Id))
                 {
-                    _towerMarker.gameObject.SetActive(false);
+                    continue;
+                }
+
+                Transform marker;
+                if (!_towerMarks.TryGetValue(cell.Id, out marker))
+                {
+                    continue;
+                }
+
+                marker.gameObject.SetActive(true);
+                marker.position = ToWorld(cell.X, cell.Y);
+                marker.GetComponent<SpriteRenderer>().color = new Color(0.96f, 0.82f, 0.28f, 0.55f);
+                shown.Add(cell.Id);
+            }
+
+            foreach (var pair in _towerMarks)
+            {
+                if (!shown.Contains(pair.Key))
+                {
+                    pair.Value.gameObject.SetActive(false);
                 }
             }
 
