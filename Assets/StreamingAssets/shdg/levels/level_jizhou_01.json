@@ -5,19 +5,23 @@
   "displayName": "冀州 · 01",
   "placeholder": false,
   "slice": "jizhou_01_formal",
-  "notes": "冀州第1关正式数值（8波、仅当康、仅金塔）。逻辑Tick锁定10Hz。失败：leak_count + loseLeakCount=3（铜鼎3血，leakDamage=1/只）。开局灵石120；波次清场奖15+5×(w-1)。路径沿用M1折线（长≈1.28）。建造格增至3以便第2波后可再建一座金塔。hpMultiplier为新增字段。",
+  "notes": "冀州第1关正式数值（8波、仅当康、仅金塔）。逻辑Tick锁定10Hz。坐标系 height_units_16x9：x∈[0,1.778] 左到右，y∈[0,1] 下到上，(0,0) 左下。四段横道，右上出发，终点铜鼎，折线长约5.09。建造格仅 cell_jin_01/02/03。失败：leak_count + loseLeakCount=3（铜鼎3血，leakDamage=1/只）。开局灵石120；击杀8。清场：某一波已全部刷出，且该波每一只敌人都已结算（击杀或漏入终点）即视为清场，发放 waveClearBase + waveClearPerWaveIndex×(w-1)，w 从 1 起。漏入不发击杀奖，但计入清场。出怪间隔、血量、hpMultiplier、经济与 loseLeakCount 相对上一张正式表不变。",
   "pathId": "path_jizhou_01",
-  "space": "normalized_playfield",
+  "space": "height_units_16x9",
   "waypoints": [
-    { "id": "wp_spawn", "x": 0.06, "y": 0.30 },
-    { "id": "wp_east", "x": 0.50, "y": 0.30 },
-    { "id": "wp_south", "x": 0.50, "y": 0.70 },
-    { "id": "wp_exit", "x": 0.94, "y": 0.70 }
+    { "id": "wp_spawn", "x": 1.46, "y": 0.85 },
+    { "id": "wp_lane1_west", "x": 0.32, "y": 0.85 },
+    { "id": "wp_lane2_west", "x": 0.32, "y": 0.62 },
+    { "id": "wp_lane2_east", "x": 1.42, "y": 0.62 },
+    { "id": "wp_lane3_east", "x": 1.42, "y": 0.44 },
+    { "id": "wp_lane3_west", "x": 0.36, "y": 0.44 },
+    { "id": "wp_lane4_west", "x": 0.36, "y": 0.23 },
+    { "id": "wp_ding", "x": 1.53, "y": 0.23 }
   ],
   "buildCells": [
-    { "id": "cell_jin_01", "x": 0.50, "y": 0.50 },
-    { "id": "cell_jin_02", "x": 0.32, "y": 0.50 },
-    { "id": "cell_jin_03", "x": 0.68, "y": 0.50 }
+    { "id": "cell_jin_01", "x": 0.90, "y": 0.735 },
+    { "id": "cell_jin_02", "x": 1.20, "y": 0.53 },
+    { "id": "cell_jin_03", "x": 0.60, "y": 0.335 }
   ],
   "economy": {
     "currencyId": "lingshi",

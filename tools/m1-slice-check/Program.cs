@@ -24,6 +24,7 @@ internal static class Program
         else
         {
             CheckShape(content, failures);
+            CheckSpace(root, failures);
             CheckHpMultiplierDefault(root, failures);
             CheckWin(content, failures);
             CheckLose(content, failures);
@@ -56,6 +57,16 @@ internal static class Program
     }
 
     private static readonly List<string> Notes = new List<string>();
+
+    /// <summary>
+    /// tick 基线取 m1-slice-check 实测，断言为该值的 ±5%。灵石和漏怪数仍是精确值。
+    /// 数值策划预期是 1 塔约 1786 tick、无塔约 944 tick；实测 1815（+29，+1.6%）与 947（+3，+0.3%）。
+    /// </summary>
+    private const int OneTowerClearTicksBaseline = 1815;
+
+    private const int NoTowerLoseTicksBaseline = 947;
+
+    private const double TickTolerance = 0.05;
 
     private static void CheckExamplesStayPlaceholders(string root, List<string> failures)
     {
@@ -197,6 +208,55 @@ internal static class Program
             failures.Add("tower damage/interval drifted from 10 / 8");
         }
 
+        if (Math.Abs(content.Tower.Range - 0.28) > 1e-9)
+        {
+            failures.Add("tower range drifted from 0.28 height units");
+        }
+
+        if (Math.Abs(content.Enemy.Speed - 0.006) > 1e-12)
+        {
+            failures.Add("dangkang speed drifted from 0.006 per tick, got " + content.Enemy.Speed);
+        }
+
+        if (content.Level.Space != SliceRules.SpaceHeightUnits16x9)
+        {
+            failures.Add("level space is not height_units_16x9");
+        }
+
+        if (!ExpectPoint(content.Level.Waypoints, 0, "wp_spawn", 1.46, 0.85, failures)
+            || !ExpectPoint(content.Level.Waypoints, 1, "wp_lane1_west", 0.32, 0.85, failures)
+            || !ExpectPoint(content.Level.Waypoints, 2, "wp_lane2_west", 0.32, 0.62, failures)
+            || !ExpectPoint(content.Level.Waypoints, 3, "wp_lane2_east", 1.42, 0.62, failures)
+            || !ExpectPoint(content.Level.Waypoints, 4, "wp_lane3_east", 1.42, 0.44, failures)
+            || !ExpectPoint(content.Level.Waypoints, 5, "wp_lane3_west", 0.36, 0.44, failures)
+            || !ExpectPoint(content.Level.Waypoints, 6, "wp_lane4_west", 0.36, 0.23, failures)
+            || !ExpectPoint(content.Level.Waypoints, 7, "wp_ding", 1.53, 0.23, failures))
+        {
+            return;
+        }
+
+        if (content.Level.Waypoints.Count != 8)
+        {
+            failures.Add("expected 8 waypoints, got " + content.Level.Waypoints.Count);
+        }
+
+        if (!ExpectCell(content.Level.BuildCells, 0, "cell_jin_01", 0.90, 0.735, failures)
+            || !ExpectCell(content.Level.BuildCells, 1, "cell_jin_02", 1.20, 0.53, failures)
+            || !ExpectCell(content.Level.BuildCells, 2, "cell_jin_03", 0.60, 0.335, failures))
+        {
+            return;
+        }
+
+        var path = new ShanhaiDingGuard.Gameplay.Path.PathCurve(content.Level.Waypoints);
+        if (Math.Abs(path.Length - 5.09) > 1e-9)
+        {
+            failures.Add("path length " + path.Length.ToString("0.0000") + " is not 5.09");
+        }
+        else
+        {
+            Notes.Add("path length=" + path.Length.ToString("0.0000"));
+        }
+
         if (content.Tower.BuildCost != 100)
         {
             failures.Add("build cost drifted from 100");
@@ -318,11 +378,21 @@ internal static class Program
             return;
         }
 
-        Notes.Add("win: 1 tower, leaks=0, ticks=" + sim.TickCount + " (" + (sim.TickCount * SimClock.TickSeconds).ToString("0.0") + "s at 1x), balance=" + sim.Balance);
+        Notes.Add("win: 1 tower, leaks=0, ticks=" + sim.TickCount + " (" + (sim.TickCount * SimClock.TickSeconds).ToString("0.0") + "s at 1x), balance=" + sim.Balance + ", designTicks=1786, delta=" + (sim.TickCount - 1786));
 
         if (sim.LeakCount != 0)
         {
             failures.Add("win should have zero leaks");
+        }
+
+        if (sim.Balance != 640)
+        {
+            failures.Add("1 tower final balance " + sim.Balance + " != 640");
+        }
+
+        if (!WithinTickTolerance(sim.TickCount, OneTowerClearTicksBaseline))
+        {
+            failures.Add("1 tower clear ticks " + sim.TickCount + " outside ±5% of calibrated " + OneTowerClearTicksBaseline);
         }
 
         if (hits.Count == 0)
@@ -384,7 +454,11 @@ internal static class Program
         }
         else
         {
-            Notes.Add("lose: no tower, leaks=3 at tick " + sim.TickCount);
+            Notes.Add("lose: no tower, leaks=3 at tick " + sim.TickCount + ", designTicks=944, delta=" + (sim.TickCount - 944));
+            if (!WithinTickTolerance(sim.TickCount, NoTowerLoseTicksBaseline))
+            {
+                failures.Add("no-tower lose ticks " + sim.TickCount + " outside ±5% of calibrated " + NoTowerLoseTicksBaseline);
+            }
         }
 
         if (sim.AccumulatedLeakDamage != content.Enemy.LeakDamage * sim.LeakCount)
@@ -677,7 +751,7 @@ internal static class Program
             return;
         }
 
-        Notes.Add("three towers: spend 300, leaks=0, final balance=" + sim.Balance);
+        Notes.Add("three towers: spend 300, leaks=0, ticks=" + sim.TickCount + ", final balance=" + sim.Balance);
     }
 
     private static void CheckWaveClearPaysWhenLeaked(SliceBattleContent content, List<string> failures)
@@ -724,6 +798,106 @@ internal static class Program
         {
             content.Level.LoseLeakCount = original;
         }
+    }
+
+    private static void CheckSpace(string root, List<string> failures)
+    {
+        var levelPath = Path.Combine(root, "content", "levels", "level_jizhou_01.json");
+        var level = File.ReadAllText(levelPath);
+        RejectLevel(level.Replace("\"x\": 1.46", "\"x\": 1.9"), "x above 1.778", failures);
+        RejectLevel(level.Replace("\"y\": 0.23", "\"y\": 1.2"), "y above 1", failures);
+        RejectLevel(level.Replace("\"x\": 0.32", "\"x\": -0.01"), "negative x", failures);
+        RejectLevel(level.Replace("\"space\": \"height_units_16x9\"", "\"space\": \"normalized_playfield\""), "formal points are outside normalized_playfield", failures);
+        RejectLevel(level.Replace("\"space\": \"height_units_16x9\"", "\"space\": \"world_units\""), "unknown space", failures);
+
+        LevelDefinition parsed;
+        string error;
+        if (!SliceTables.TryParseLevel(LegacyNormalizedLevel(), out parsed, out error))
+        {
+            failures.Add("normalized_playfield inside [0,1] should still load: " + error);
+        }
+        else if (parsed.Space != SliceRules.SpaceNormalizedPlayfield)
+        {
+            failures.Add("legacy space was rewritten");
+        }
+
+        if (SliceTables.TryParseLevel(LegacyNormalizedLevel().Replace("\"x\":1", "\"x\":1.001"), out parsed, out error))
+        {
+            failures.Add("normalized_playfield should reject x=1.001");
+        }
+
+        var onEdge = level.Replace("\"x\": 1.53", "\"x\": 1.778").Replace("\"y\": 0.23", "\"y\": 1");
+        if (!SliceTables.TryParseLevel(onEdge, out parsed, out error))
+        {
+            failures.Add("height_units_16x9 should accept the closed edge 1.778,1: " + error);
+        }
+
+    }
+
+    private static void RejectLevel(string json, string label, List<string> failures)
+    {
+        LevelDefinition parsed;
+        string error;
+        if (SliceTables.TryParseLevel(json, out parsed, out error))
+        {
+            failures.Add(label + " was accepted");
+        }
+    }
+
+    private static string LegacyNormalizedLevel()
+    {
+        return "{"
+            + "\"schema\":\"shdg.level.waves\",\"schemaVersion\":0,\"id\":\"level_jizhou_01\","
+            + "\"displayName\":\"legacy\",\"placeholder\":false,\"slice\":\"jizhou_01_formal\","
+            + "\"pathId\":\"path_jizhou_01\",\"space\":\"normalized_playfield\","
+            + "\"waypoints\":[{\"id\":\"a\",\"x\":0,\"y\":0},{\"id\":\"b\",\"x\":1,\"y\":1}],"
+            + "\"buildCells\":[{\"id\":\"cell_jin_01\",\"x\":0.5,\"y\":0.5}],"
+            + "\"economy\":{\"currencyId\":\"lingshi\",\"startingAmount\":120,\"waveClearBase\":15,\"waveClearPerWaveIndex\":5},"
+            + "\"waves\":[{\"id\":\"wave_01\",\"spawns\":[{\"enemyId\":\"enemy_dangkang\",\"count\":1,\"intervalTicks\":48}]}],"
+            + "\"outcome\":{\"win\":\"all_waves_cleared\",\"lose\":\"leak_count\",\"loseLeakCount\":3}"
+            + "}";
+    }
+
+    private static bool ExpectPoint(List<WaypointDefinition> points, int index, string id, double x, double y, List<string> failures)
+    {
+        if (points.Count <= index)
+        {
+            failures.Add("missing waypoint " + id);
+            return false;
+        }
+
+        var point = points[index];
+        if (point.Id != id || Math.Abs(point.X - x) > 1e-9 || Math.Abs(point.Y - y) > 1e-9)
+        {
+            failures.Add("waypoint " + index + " is " + point.Id + " (" + point.X + "," + point.Y + "), expected " + id + " (" + x + "," + y + ")");
+            return false;
+        }
+
+        return true;
+    }
+
+    private static bool ExpectCell(List<BuildCellDefinition> cells, int index, string id, double x, double y, List<string> failures)
+    {
+        if (cells.Count <= index)
+        {
+            failures.Add("missing build cell " + id);
+            return false;
+        }
+
+        var cell = cells[index];
+        if (cell.Id != id || Math.Abs(cell.X - x) > 1e-9 || Math.Abs(cell.Y - y) > 1e-9)
+        {
+            failures.Add("cell " + index + " is " + cell.Id + " (" + cell.X + "," + cell.Y + "), expected " + id + " (" + x + "," + y + ")");
+            return false;
+        }
+
+        return true;
+    }
+
+    private static bool WithinTickTolerance(int actual, int baseline)
+    {
+        var limit = baseline * TickTolerance;
+        return Math.Abs(actual - baseline) <= limit;
     }
 
     private static string Join(List<int> values)

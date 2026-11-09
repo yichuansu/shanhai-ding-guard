@@ -32,7 +32,12 @@ namespace ShanhaiDingGuard.Presentation
             public int LeakCount { get; }
         }
 
-        private const float PlayfieldSize = 9f;
+        private const float WorldUnitsPerHeight = 9f;
+        private const float PlayfieldWorldWidth = 16f;
+        private const float PlayfieldWorldHeight = 9f;
+        private const float BattleCameraSize = 4.5f;
+        private const float RefWidth = 1920f;
+        private const float RefHeight = 1080f;
 
         private readonly SimClock _clock = new SimClock();
         private readonly Dictionary<int, Transform> _enemies = new Dictionary<int, Transform>();
@@ -48,8 +53,14 @@ namespace ShanhaiDingGuard.Presentation
 
         public event Action<BattleFinished> Finished;
 
+        private void Awake()
+        {
+            FitBattleCamera();
+        }
+
         private async void Start()
         {
+            FitBattleCamera();
             var loaded = await SliceContentLoader.LoadSliceAsync();
             if (!isActiveAndEnabled)
             {
@@ -173,24 +184,24 @@ namespace ShanhaiDingGuard.Presentation
                     + snapshot.LoseLeakCount;
             }
 
-            GUI.Label(new Rect(250f, 24f, Screen.width - 280f, 160f), status ?? string.Empty, style);
+            GUI.Label(StatusRect(), status ?? string.Empty, style);
             if (!string.IsNullOrEmpty(note))
             {
-                var hint = Style(18, TextAnchor.MiddleLeft);
+                var hint = Style(16, TextAnchor.MiddleLeft);
                 hint.normal.textColor = new Color(1f, 0.86f, 0.45f, 1f);
-                GUI.Label(new Rect(24f, 244f, 460f, 32f), note, hint);
+                GUI.Label(NoteRect(), note, hint);
             }
 
             DrawCellLabels();
             GUI.Label(
-                new Rect(24f, Screen.height - 96f, Screen.width - 48f, 80f),
+                HelpRect(),
                 "数字键 1/2/3 或点击建造格放置剑阵，T 放到下一个空格。开战前放 1 座可清完 8 波。不放塔则第 3 只漏出即失败。灵石不足会拒绝放置且不扣费。X 倍速，Enter 开战，Esc 回枢纽。",
                 Style(16, TextAnchor.UpperLeft));
 
             if (_sim != null && (_sim.Phase == BattlePhase.Won || _sim.Phase == BattlePhase.Lost))
             {
                 var banner = _sim.Phase == BattlePhase.Won ? "胜利" : "失败";
-                var rect = new Rect((Screen.width * 0.5f) - 160f, (Screen.height * 0.5f) - 40f, 320f, 80f);
+                var rect = BannerRect();
                 GUI.Box(rect, GUIContent.none);
                 GUI.Label(rect, banner, Style(40, TextAnchor.MiddleCenter));
             }
@@ -377,10 +388,14 @@ namespace ShanhaiDingGuard.Presentation
 
         private void BuildView()
         {
+            FitBattleCamera();
             _pixel = Pixel();
             _viewRoot = new GameObject("SliceView").transform;
             var board = CreateSprite("Playfield", new Color(0.1f, 0.12f, 0.14f, 1f), 0);
-            board.localScale = new Vector3(PlayfieldSize, PlayfieldSize, 1f);
+            var legacySquare = _content.Level.Space == SliceRules.SpaceNormalizedPlayfield;
+            board.localScale = legacySquare
+                ? new Vector3(PlayfieldWorldHeight, PlayfieldWorldHeight, 1f)
+                : new Vector3(PlayfieldWorldWidth, PlayfieldWorldHeight, 1f);
 
             var waypoints = _content.Level.Waypoints;
             for (var i = 1; i < waypoints.Count; i++)
@@ -533,9 +548,31 @@ namespace ShanhaiDingGuard.Presentation
             return Sprite.Create(texture, new Rect(0f, 0f, 1f, 1f), new Vector2(0.5f, 0.5f), 1f);
         }
 
-        private static Vector3 ToWorld(double x, double y)
+        /// <summary>
+        /// height_units_16x9：ToWorld(x,y) = ((x − 0.889) * 9, (y − 0.5) * 9)，战场 16×9，正交相机 size 4.5。
+        /// 旧 normalized_playfield 仍映射成 9×9 方场，方便对照迁移前的表。
+        /// </summary>
+        private Vector3 ToWorld(double x, double y)
         {
-            return new Vector3((float)((x - 0.5) * PlayfieldSize), (float)((y - 0.5) * PlayfieldSize), 0f);
+            if (_content != null && _content.Level.Space == SliceRules.SpaceNormalizedPlayfield)
+            {
+                return new Vector3((float)((x - 0.5) * WorldUnitsPerHeight), (float)((y - 0.5) * WorldUnitsPerHeight), 0f);
+            }
+
+            return new Vector3((float)((x - 0.889) * WorldUnitsPerHeight), (float)((y - 0.5) * WorldUnitsPerHeight), 0f);
+        }
+
+        private static void FitBattleCamera()
+        {
+            var camera = Camera.main;
+            if (camera == null)
+            {
+                return;
+            }
+
+            camera.orthographic = true;
+            camera.orthographicSize = BattleCameraSize;
+            camera.transform.position = new Vector3(0f, 0f, -10f);
         }
 
         private static string PhaseLabel(BattlePhase phase)
@@ -555,24 +592,71 @@ namespace ShanhaiDingGuard.Presentation
             }
         }
 
+        /// <summary>
+        /// 按钮和说明落在 1920×1080 参考下的 HUD 安全区：顶 120px、底 100px、左右各 120px。
+        /// 路径和建造格在这块之外。非 16:9 时按宽高分别缩放，左右裁切不在这里补黑边。
+        /// </summary>
         private static Rect StartRect()
         {
-            return new Rect(24f, 24f, 200f, 46f);
+            return new Rect(Sx(24f), Sy(28f), Sx(200f), Sy(64f));
         }
 
         private static Rect PlaceRect()
         {
-            return new Rect(24f, 78f, 200f, 46f);
+            return new Rect(Sx(240f), Sy(28f), Sx(250f), Sy(64f));
         }
 
         private static Rect SpeedRect()
         {
-            return new Rect(24f, 132f, 200f, 46f);
+            return new Rect(Sx(506f), Sy(28f), Sx(170f), Sy(64f));
         }
 
         private static Rect BackRect()
         {
-            return new Rect(24f, 186f, 200f, 46f);
+            return new Rect(Sx(692f), Sy(28f), Sx(170f), Sy(64f));
+        }
+
+        private static Rect StatusRect()
+        {
+            return new Rect(Sx(880f), Sy(12f), Mathf.Max(120f, Screen.width - Sx(904f)), Sy(100f));
+        }
+
+        private static Rect NoteRect()
+        {
+            return new Rect(Sx(24f), Screen.height - Sy(100f), Mathf.Max(120f, Screen.width - Sx(48f)), Sy(30f));
+        }
+
+        private static Rect HelpRect()
+        {
+            return new Rect(Sx(24f), Screen.height - Sy(68f), Mathf.Max(120f, Screen.width - Sx(48f)), Sy(60f));
+        }
+
+        private static Rect BannerRect()
+        {
+            var width = Sx(320f);
+            var height = Sy(80f);
+            return new Rect((Screen.width - width) * 0.5f, (Screen.height - height) * 0.5f, width, height);
+        }
+
+        private static float Sx(float referenceX)
+        {
+            return referenceX * Screen.width / RefWidth;
+        }
+
+        private static float Sy(float referenceY)
+        {
+            return referenceY * Screen.height / RefHeight;
+        }
+
+        private static float UiScale()
+        {
+            var scale = Mathf.Min(Screen.width / RefWidth, Screen.height / RefHeight);
+            if (scale < 0.65f)
+            {
+                return 0.65f;
+            }
+
+            return scale;
         }
 
         private static void DrawButton(Rect rect, string label)
@@ -584,7 +668,7 @@ namespace ShanhaiDingGuard.Presentation
         private static GUIStyle Style(int size, TextAnchor anchor)
         {
             var style = new GUIStyle(GUI.skin.label);
-            style.fontSize = size;
+            style.fontSize = Mathf.Max(10, Mathf.RoundToInt(size * UiScale()));
             style.alignment = anchor;
             style.normal.textColor = Color.white;
             style.wordWrap = true;

@@ -48,7 +48,7 @@
 1. 首次打开会重新导入并生成 `Library/`。本环境没有 Unity Editor，骨架是按上述版本手写的。
 2. 不要提交 `Library/`、`Temp/`、`Obj/`、`Logs/`、`UserSettings/`。规则在 [.gitignore](.gitignore)。
 3. 打开 `Assets/Game/Scenes/Boot.unity` 并 Play。未填 Dashboard Project ID 时，Boot 走 Dev/Fake，然后进入 `Hub`。填上并链到工程后走 UGS Anonymous 与 Cloud Save。见 [docs/UGS_SETUP.md](docs/UGS_SETUP.md)。
-4. 横屏：允许左右横屏，关闭竖屏。默认游戏视图 1920×1080，这不是已锁定的参考分辨率。
+4. 横屏：允许左右横屏，关闭竖屏。战斗参考 1920×1080。HUD 安全区为顶约 120px、底约 100px、左右各约 120px。战场 16×9 世界单位，正交相机 size 4.5。
 5. 包名占位是 `com.yichuansu.shanhaidingguard`。首发是海外 / 非大陆商店。
 
 `Assets/Game/` 按架构分层。`IAuthService` 与 `ICloudSaveService` 在 `Assets/Game/Services/`。`Assets/Settings/` 是 URP 2D 管线资产。

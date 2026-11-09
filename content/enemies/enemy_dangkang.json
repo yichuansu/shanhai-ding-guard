@@ -5,11 +5,11 @@
   "displayName": "当康",
   "placeholder": false,
   "slice": "jizhou_01_formal",
-  "notes": "冀州第1关正式数值。element=null：第1关不结算相克（第2关狸力再教克制）。speed=每tick沿路径的normalized_playfield距离；10Hz下0.004/tick=0.04单位/秒。leakDamage=1，配合关卡loseLeakCount=3等价铜鼎3血。reward改为灵石lingshi、击杀掉落8（已拍板）。",
+  "notes": "冀州第1关正式数值。element=null：第1关不结算相克（第2关狸力再教克制）。speed=每tick沿路径的高度单位距离（space=height_units_16x9）；10Hz下0.006/tick=0.06单位/秒。血量不变。leakDamage=1，配合关卡loseLeakCount=3等价铜鼎3血。reward为灵石lingshi、击杀掉落8。",
   "element": null,
   "combat": {
     "maxHp": 40,
-    "speed": 0.004,
+    "speed": 0.006,
     "leakDamage": 1
   },
   "reward": {

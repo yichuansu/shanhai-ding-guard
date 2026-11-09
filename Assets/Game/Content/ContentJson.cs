@@ -819,9 +819,10 @@ namespace ShanhaiDingGuard.Content
                 return false;
             }
 
-            if (space != SliceRules.SpaceNormalizedPlayfield)
+            double maxX;
+            double maxY;
+            if (!SliceRules.TryGetBounds(space, out maxX, out maxY, out error))
             {
-                error = "M1 只实现 normalized_playfield，已保留原文件";
                 return false;
             }
 
@@ -831,6 +832,11 @@ namespace ShanhaiDingGuard.Content
             if (!ReadWaypoints(map, out waypoints, out error)
                 || !ReadWaves(map, out waves, out error)
                 || !ReadCells(map, out cells, out error))
+            {
+                return false;
+            }
+
+            if (!WithinSpace(space, maxX, maxY, waypoints, cells, out error))
             {
                 return false;
             }
@@ -1213,6 +1219,49 @@ namespace ShanhaiDingGuard.Content
             cells = list;
             error = null;
             return true;
+        }
+
+        private static bool WithinSpace(
+            string space,
+            double maxX,
+            double maxY,
+            List<WaypointDefinition> waypoints,
+            List<BuildCellDefinition> cells,
+            out string error)
+        {
+            const double Epsilon = 1e-9;
+            for (var i = 0; i < waypoints.Count; i++)
+            {
+                var point = waypoints[i];
+                if (!Inside(point.X, point.Y, maxX, maxY, Epsilon))
+                {
+                    error = "坐标超出 " + space + "：" + point.Id + "，已保留原文件";
+                    return false;
+                }
+            }
+
+            for (var i = 0; i < cells.Count; i++)
+            {
+                var cell = cells[i];
+                if (!Inside(cell.X, cell.Y, maxX, maxY, Epsilon))
+                {
+                    error = "坐标超出 " + space + "：" + cell.Id + "，已保留原文件";
+                    return false;
+                }
+            }
+
+            error = null;
+            return true;
+        }
+
+        private static bool Inside(double x, double y, double maxX, double maxY, double epsilon)
+        {
+            if (double.IsNaN(x) || double.IsInfinity(x) || double.IsNaN(y) || double.IsInfinity(y))
+            {
+                return false;
+            }
+
+            return x >= -epsilon && y >= -epsilon && x <= maxX + epsilon && y <= maxY + epsilon;
         }
 
         private static bool ReadElement(Dictionary<string, JsonNode> map, string name, bool allowNull, out string element, out string error)
