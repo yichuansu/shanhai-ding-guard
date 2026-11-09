@@ -24,6 +24,16 @@ namespace ShanhaiDingGuard.Content
         public const string SliceTowerId = "tower_jin";
         public const string SliceEnemyId = "enemy_dangkang";
         public const string SliceLevelId = "level_jizhou_01";
+
+        /// <summary>M1 垂直切片。正式表改为 <see cref="SliceIdJizhou01Formal"/>，两者都可进战斗。</summary>
+        public const string SliceIdM1 = "m1";
+
+        public const string SliceIdJizhou01Formal = "jizhou_01_formal";
+
+        public static bool IsAcceptedSlice(string slice)
+        {
+            return slice == SliceIdM1 || slice == SliceIdJizhou01Formal;
+        }
     }
 
     public sealed class TowerDefinition
@@ -66,6 +76,9 @@ namespace ShanhaiDingGuard.Content
         public string EnemyId;
         public int Count;
         public int IntervalTicks;
+
+        /// <summary>缺省 1。生成 maxHp = round(敌人 maxHp × 本字段)。</summary>
+        public double HpMultiplier;
     }
 
     public sealed class WaveDefinition
@@ -81,6 +94,14 @@ namespace ShanhaiDingGuard.Content
         public double Y;
     }
 
+    public sealed class LevelEconomyDefinition
+    {
+        public string CurrencyId;
+        public int StartingAmount;
+        public int WaveClearBase;
+        public int WaveClearPerWaveIndex;
+    }
+
     public sealed class LevelDefinition
     {
         public string Id;
@@ -90,6 +111,7 @@ namespace ShanhaiDingGuard.Content
         public List<WaypointDefinition> Waypoints;
         public List<WaveDefinition> Waves;
         public List<BuildCellDefinition> BuildCells;
+        public LevelEconomyDefinition Economy;
         public string WinRule;
         public string LoseRule;
         public int LoseLeakCount;

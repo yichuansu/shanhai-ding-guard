@@ -34,6 +34,7 @@ namespace ShanhaiDingGuard.Content
     /// <summary>
     /// M1 直接读 JSON。编辑器优先读仓库 content/，玩家包读 StreamingAssets/shdg。
     /// 不使用 Addressables。源表仍在 content/，StreamingAssets 只是进包副本。
+    /// 可玩表的 slice 接受 m1 与 jizhou_01_formal。content/examples 的 placeholder 仍拒绝。
     /// </summary>
     public static class SliceContentLoader
     {
