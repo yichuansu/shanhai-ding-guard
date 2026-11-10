@@ -5,7 +5,7 @@ using ShanhaiDingGuard.Content;
 namespace ShanhaiDingGuard.Gameplay.Path
 {
     /// <summary>
-    /// 折线路径。距离是 normalized_playfield 上的欧氏长度，敌人只沿折线前进。
+    /// 折线路径。距离是关卡 space 上的欧氏长度（冀州 01 为 height_units_16x9 的高度单位），敌人只沿折线前进。
     /// </summary>
     public sealed class PathCurve
     {

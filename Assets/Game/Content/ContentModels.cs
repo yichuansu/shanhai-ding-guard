@@ -11,7 +11,46 @@ namespace ShanhaiDingGuard.Content
         public const string TowerSchema = "shdg.tower";
         public const string EnemySchema = "shdg.enemy";
         public const string LevelSchema = "shdg.level.waves";
+        /// <summary>
+        /// 旧切片坐标系：x、y 都在 [0, 1]。冀州 01 已迁到 <see cref="SpaceHeightUnits16x9"/>。
+        /// 加载器仍接受这套边界，避免旧表直接读失败。
+        /// </summary>
         public const string SpaceNormalizedPlayfield = "normalized_playfield";
+
+        /// <summary>
+        /// 16:9 高度单位。x ∈ [0, 1.778] 从左到右，y ∈ [0, 1] 从下到上，(0,0) 为左下。
+        /// 1.778 是 16/9 保留三位小数。射程和沿路径速度都用这一套单位。
+        /// </summary>
+        public const string SpaceHeightUnits16x9 = "height_units_16x9";
+
+        public const double HeightUnits16x9MaxX = 1.778;
+        public const double HeightUnits16x9MaxY = 1.0;
+        public const double NormalizedPlayfieldMax = 1.0;
+
+        public static bool TryGetBounds(string space, out double maxX, out double maxY, out string error)
+        {
+            if (space == SpaceHeightUnits16x9)
+            {
+                maxX = HeightUnits16x9MaxX;
+                maxY = HeightUnits16x9MaxY;
+                error = null;
+                return true;
+            }
+
+            if (space == SpaceNormalizedPlayfield)
+            {
+                maxX = NormalizedPlayfieldMax;
+                maxY = NormalizedPlayfieldMax;
+                error = null;
+                return true;
+            }
+
+            maxX = 0;
+            maxY = 0;
+            error = "space 无法识别，已保留原文件";
+            return false;
+        }
+
         public const string TargetFirstAlongPath = "first_along_path";
         public const string WinAllWavesCleared = "all_waves_cleared";
 
@@ -108,6 +147,9 @@ namespace ShanhaiDingGuard.Content
         public string DisplayName;
         public string PathId;
         public string Space;
+
+        /// <summary>可选。战斗背景 sprite 名，与 pathId 绑定。缺省表示没有定稿背景。</summary>
+        public string Background;
         public List<WaypointDefinition> Waypoints;
         public List<WaveDefinition> Waves;
         public List<BuildCellDefinition> BuildCells;

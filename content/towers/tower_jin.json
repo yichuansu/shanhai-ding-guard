@@ -5,7 +5,7 @@
   "displayName": "剑阵",
   "placeholder": false,
   "slice": "jizhou_01_formal",
-  "notes": "冀州第1关正式数值。Tick锁定10Hz（0.1s/tick）。attackIntervalTicks=8 → 墙钟0.8s。damage不乘五行（第1关敌人element为null）。upgradeCosts暂空（第1关不教升级）。",
+  "notes": "冀州第1关正式数值。Tick锁定10Hz（0.1s/tick）。attackIntervalTicks=8 → 墙钟0.8s。range=0.28，单位是关卡高度单位（height_units_16x9），不另做缩放。damage不乘五行（第1关敌人element为null）。upgradeCosts暂空（第1关不教升级）。",
   "element": "jin",
   "role": "tower",
   "economy": {

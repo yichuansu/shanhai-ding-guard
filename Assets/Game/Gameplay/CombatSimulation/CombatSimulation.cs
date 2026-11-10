@@ -555,6 +555,10 @@ namespace ShanhaiDingGuard.Gameplay.CombatSimulation
             }
         }
 
+        /// <summary>
+        /// 清场：该波已全部刷出，且每一只都已结算（击杀或漏入终点）才发放波次奖励。
+        /// 漏入不发击杀奖，但计入清场。
+        /// </summary>
         private void GrantWaveClears()
         {
             var economy = _content.Level.Economy;

@@ -43,7 +43,23 @@ flowchart TB
 
 ### Presentation
 
-横屏。安全区与参考分辨率在工程创建时再定，本文不锁像素。
+横屏。战斗参考 1920×1080：HUD 安全区为顶部约 120px、底部约 100px、左右各约 120px，按钮和说明放在这里，路径与建造格避开。战场逻辑是 16×9 世界单位，正交相机 size 4.5，`ToWorld(x,y)=((x−0.889)×9,(y−0.5)×9)` 不变。
+
+### 战斗背景
+
+1920×1080 是安全区。战斗背景按这张画布、Pixels Per Unit **120** 导入，正好 16×9 world。像素（左上原点，py 向下）到 world：
+
+`wx = (px − 960) / 120`
+
+`wy = (540 − py) / 120`
+
+Pivot 在中心，正图 Transform Position (0, 0)、Scale 1。不要用 Scale 0.8333，也不要改逻辑坐标。
+
+以后正式背景按 **2340×1440** 画布交付，中间 1920×1080 是安全区。当前冀州 01 定稿仍是 1920×1080。PPU 120 下它正好盖住 16×9：19.5:9 左右各缺约 1.75 world。场景在正图下面放一层用背景边缘像素拉伸的出血 sprite（约 24×13.5 world，Default 层 Order -110），相机清屏色用草场 `#9DB22A`，这块缺口不露黑边。4:3 若做宽度适配（正交 size 最大约 6），上下各缺约 1.5 world，同一层出血盖住。
+
+导入：Sprite (2D and UI)、Single、Filter Bilinear、关 Mipmap、Max Size 2048、Wrap Clamp、Alpha Is Transparency 关。iOS（`iPhone`）与 Android 的平台覆盖是 ASTC 6×6（`textureFormat: 50`），写在纹理 `.meta` 里。没有单独的 Background 排序层，正图用 Default 层 Order -100，在路径和敌人下面。
+
+冀州 01 的图是 `bg_jizhou01_battle`，与 `path_jizhou_01` 绑定，改航点必须同步改图。入口外的土路只是画面，敌人从航点 0 开始走，不另加航点。
 
 M1 只需要开战、胜、负、倍速桩。M2 起 HUD 四角放五行与资源占位，具体锚点跟着 UI 壳走。M6 的局外枢纽是另一套横屏界面，不塞进战斗 HUD。
 
@@ -123,7 +139,7 @@ Auth 对外只暴露登录、登出和当前账号 id。令牌留在服务内部
 | `economy.buildCost` | 建造花费，数值待表 |
 | `economy.upgradeCosts` | 升级花费列表，可空 |
 | `combat.damage` | 基础伤害，待表 |
-| `combat.range` | 射程，单位与坐标系一起定 |
+| `combat.range` | 射程，单位与关卡 `space` 相同。冀州 01 是高度单位，金塔为 0.28 |
 | `combat.attackIntervalTicks` | 两次攻击之间的 tick 数 |
 | `combat.targetPriority` | 提案枚举：`first_along_path`、`last_along_path`、`nearest`、`strongest`。M1 只实现 `first_along_path` |
 | `merge.enabled` / `merge.tier` | 合成。M1–M2 关闭 |
@@ -137,7 +153,7 @@ Auth 对外只暴露登录、登出和当前账号 id。令牌留在服务内部
 | `id` | 如 `enemy_dangkang` |
 | `element` | 五行 id，或 `null` 表示尚未指定。M1 不结算相克，M2 前必须填上 |
 | `combat.maxHp` | 生命，待表 |
-| `combat.speed` | 沿路径速度，单位待定（建议：每 tick 的路径距离） |
+| `combat.speed` | 沿折线速度，单位与关卡 `space` 相同，每 tick 的路径距离。冀州 01 当康为 0.006 高度单位/tick |
 | `combat.leakDamage` | 漏到底时对失败规则的计量，规则本身待定 |
 | `reward` | `currencyId` + `amount`，货币 id 待定 |
 
@@ -149,15 +165,17 @@ Auth 对外只暴露登录、登出和当前账号 id。令牌留在服务内部
 | --- | --- |
 | `id` | 如 `level_jizhou_01` |
 | `pathId` | 以后路径可拆成独立资产时的 id |
-| `space` | 坐标系 id。提案 `normalized_playfield`：相对可玩区域，原点与轴向在工程里定 |
-| `waypoints` | 有序折线 `{ id, x, y }`。敌人只沿折线移动，不用自由导航 |
+| `space` | 坐标系 id。冀州 01 使用 `height_units_16x9`：x ∈ [0, 1.778]（左→右），y ∈ [0, 1]（下→上），(0,0) 为左下。世界坐标 `ToWorld(x,y)=((x−0.889)×9,(y−0.5)×9)`。加载器按 `space` 做闭区间边界校验，越界拒绝整张表。旧 `normalized_playfield`（x、y ∈ [0, 1]）仍可加载，正式关已迁出 |
+| `waypoints` | 有序折线 `{ id, x, y }`。敌人只沿折线移动，不用自由导航。坐标必须落在 `space` 边界内 |
 | `waves[]` | M1 垂直切片为 3 波。每波含 `spawns[]`：`enemyId`、`count`、`intervalTicks` |
 | `outcome.win` | M1：`all_waves_cleared` |
 | `outcome.lose` | 规则 id。形状样例为 `leak_rule_tbd`。M1 可玩切片使用 `leak_count` |
 
 样例里的坐标、数量、间隔为 `null`，只说明字段形状。M1 可玩数字写在 `content/towers/`、`content/enemies/`、`content/levels/`，不回写形状样例。
 
-切片关卡 `content/levels/level_jizhou_01.json` 的失败规则是 `leak_count`：漏出终点的敌人数达到 `outcome.loseLeakCount` 即负。`leakDamage` 按每次漏出累加，交给这条规则记账，但不折成基地生命。`loseLeakCount` 在切片表里是 1。形状样例的 `leak_rule_tbd` 不能开打。可建造格 `buildCells` 也只写在这张切片表上。
+切片关卡 `content/levels/level_jizhou_01.json` 的失败规则是 `leak_count`：漏出终点的敌人数达到 `outcome.loseLeakCount` 即负。`leakDamage` 按每次漏出累加，交给这条规则记账，但不折成基地生命。`loseLeakCount` 在这张表里是 3。形状样例的 `leak_rule_tbd` 不能开打。可建造格 `buildCells` 也只写在这张切片表上。
+
+清场口径：某一波已经全部刷出，并且该波每一只敌人都已结算（被击杀，或漏入终点），即视为这一波清场，发放 `waveClearBase + waveClearPerWaveIndex × (w−1)`（w 从 1 起）。漏入的敌人不发击杀奖励，但计入清场。胜负另算：全部波次都清场且场上没有敌人则胜；漏出次数达到 `loseLeakCount` 则负，不必等这一波清场。
 
 ### 英雄 `shdg.hero`（M3，本 PR 不附样例文件）
 
@@ -171,7 +189,7 @@ Auth 对外只暴露登录、登出和当前账号 id。令牌留在服务内部
 
 权威模拟用固定 tick，表现用帧更新。这样暂停和 2 倍速只改模拟时钟，不改伤害公式。跨设备回放若成为需求，再把模拟里的浮点改成整数；M1 允许浮点，不承诺跨设备逐位一致。
 
-tick 的墙钟长度不在本文锁定，垂直切片时测手感再记到技术笔记。M1 的 2 倍速是桩：模拟时钟相对 1 倍速按 2 倍推进，渲染仍跟显示刷新。实现可以「每帧多跑 tick」或「缩短 tick 间隔」，两选一即可。
+逻辑 tick 锁定 10Hz：`SimClock.TickSeconds` 为 0.1 秒墙钟，行为保持「累计墙钟、满 0.1 秒出一个 tick」。2 倍速只让同一帧里的累计更快，从而多跑 tick；不缩短 `TickSeconds`，也不把倍速乘进伤害。渲染仍跟显示刷新。
 
 ```mermaid
 sequenceDiagram
@@ -197,8 +215,9 @@ sequenceDiagram
 2. Wave 按表生成敌人。
 3. 敌人沿折线增加 `distanceAlongPath`。越过终点记一次漏出，并按 `leakDamage` 交给失败规则。
 4. 塔若攻击间隔到达，按 `targetPriority` 选一个敌人，伤害乘元素表倍率后扣生命。
-5. 英雄技能队列在本 tick 结算。M1 队列为空。
-6. 全部波次清空且场上无敌人则胜。失败规则 id 命中则负。
+5. 已刷完的波若每一只都已结算（击杀或漏入），按清场口径发波次奖励。
+6. 英雄技能队列在本 tick 结算。M1 队列为空。
+7. 全部波次都已清场且场上没有敌人则胜。失败规则 id 命中则负。
 
 触控在 tick 之间进入意图队列，下一个 tick 才生效，避免倍速时输入和模拟各算各的。
 

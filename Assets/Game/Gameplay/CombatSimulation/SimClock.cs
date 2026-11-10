@@ -1,8 +1,8 @@
 namespace ShanhaiDingGuard.Gameplay.CombatSimulation
 {
     /// <summary>
-    /// 把墙钟推进换成模拟 tick。倍速只放大这里的累计时间。
-    /// 1 倍速下每个 tick 是 0.1 秒墙钟（10 Hz）。这是切片手感，不是已锁定的设计值。
+    /// 把墙钟推进换成模拟 tick。倍速只放大这里累计的墙钟，不改 <see cref="TickSeconds"/>，也不乘进伤害。
+    /// 逻辑 tick 锁定 10Hz：1 倍速下每个 tick 是 0.1 秒墙钟。
     /// </summary>
     public sealed class SimClock
     {
