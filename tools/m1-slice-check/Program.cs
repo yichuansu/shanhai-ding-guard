@@ -25,6 +25,7 @@ internal static class Program
         {
             CheckShape(content, failures);
             CheckBattleBackground(root, content, failures);
+            CheckBattleArt(root, failures);
             CheckSpace(root, failures);
             CheckHpMultiplierDefault(root, failures);
             CheckWin(content, failures);
@@ -869,6 +870,88 @@ internal static class Program
             || meta.IndexOf("textureFormat: 50", StringComparison.Ordinal) < 0)
         {
             failures.Add("battle background is missing iOS/Android ASTC 6x6 override");
+        }
+    }
+
+    private static void CheckBattleArt(string root, List<string> failures)
+    {
+        var bleed = Path.Combine(root, "Assets", "Game", "Art", "Backgrounds", "bg_jizhou01_battle_bleed.png");
+        var bleedMetaPath = bleed + ".meta";
+        if (!File.Exists(bleed) || !File.Exists(bleedMetaPath))
+        {
+            failures.Add("battle bleed sprite or meta is missing");
+            return;
+        }
+
+        var header = File.ReadAllBytes(bleed);
+        if (header.Length < 24
+            || header[16] != 0
+            || header[17] != 0
+            || header[18] != 9
+            || header[19] != 0x24
+            || header[20] != 0
+            || header[21] != 0
+            || header[22] != 5
+            || header[23] != 0xA0)
+        {
+            failures.Add("battle bleed is not a 2340x1440 PNG");
+        }
+
+        var bleedMeta = File.ReadAllText(bleedMetaPath);
+        if (bleedMeta.IndexOf("spritePixelsToUnits: 120", StringComparison.Ordinal) < 0
+            || bleedMeta.IndexOf("enableMipMap: 0", StringComparison.Ordinal) < 0
+            || bleedMeta.IndexOf("filterMode: 1", StringComparison.Ordinal) < 0
+            || bleedMeta.IndexOf("maxTextureSize: 4096", StringComparison.Ordinal) < 0
+            || bleedMeta.IndexOf("alphaIsTransparency: 0", StringComparison.Ordinal) < 0
+            || bleedMeta.IndexOf("width: 2340", StringComparison.Ordinal) < 0
+            || bleedMeta.IndexOf("height: 1440", StringComparison.Ordinal) < 0)
+        {
+            failures.Add("battle bleed import settings drifted from PPU 120 / 2340x1440 / max 4096");
+        }
+
+        if (bleedMeta.IndexOf("textureFormat: 50", StringComparison.Ordinal) < 0)
+        {
+            failures.Add("battle bleed is missing ASTC 6x6 override");
+        }
+
+        var scene = File.ReadAllText(Path.Combine(root, "Assets", "Game", "Scenes", "Battle.unity"));
+        if (scene.IndexOf("m_Name: BattleBackgroundBleed", StringComparison.Ordinal) < 0
+            || scene.IndexOf("m_SortingOrder: -110", StringComparison.Ordinal) < 0
+            || scene.IndexOf("m_Size: {x: 19.5, y: 12}", StringComparison.Ordinal) < 0
+            || scene.IndexOf("m_LocalScale: {x: 15, y: 15, z: 1}", StringComparison.Ordinal) >= 0)
+        {
+            failures.Add("battle scene bleed is not a 19.5x12 sprite under the main background");
+        }
+
+        ExpectArtMeta(root, "tower_jin_body.png", new[] { "spritePixelsToUnits: 160", "alphaIsTransparency: 1", "spriteMode: 1", "textureFormat: 50" }, failures);
+        ExpectArtMeta(root, "tower_jin_fx.png", new[] { "spritePixelsToUnits: 160", "spriteMode: 2", "name: fx_0", "name: fx_3", "textureFormat: 50" }, failures);
+        ExpectArtMeta(root, "enemy_dangkang_walk.png", new[] { "spritePixelsToUnits: 160", "spriteMode: 2", "name: walk_0", "name: walk_7", "alphaIsTransparency: 1" }, failures);
+        ExpectArtMeta(root, "ding_bronze.png", new[] { "spritePixelsToUnits: 170", "alphaIsTransparency: 1" }, failures);
+        ExpectArtMeta(root, "buildslot_states.png", new[] { "spritePixelsToUnits: 200", "spriteMode: 2", "name: slot_normal", "name: slot_selected", "name: slot_disabled" }, failures);
+        ExpectArtMeta(root, "hud_lingshi.png", new[] { "spritePixelsToUnits: 160", "alphaIsTransparency: 1" }, failures);
+        ExpectArtMeta(root, "hud_heart.png", new[] { "spritePixelsToUnits: 160" }, failures);
+        ExpectArtMeta(root, "hud_wave.png", new[] { "spritePixelsToUnits: 160" }, failures);
+        ExpectArtMeta(root, "enemy_dangkang_hit_flash_white.png", new[] { "spritePixelsToUnits: 160" }, failures);
+        ExpectArtMeta(root, "enemy_dangkang_hit_flash_red.png", new[] { "spritePixelsToUnits: 160" }, failures);
+        ExpectArtMeta(root, "enemy_dangkang_death.png", new[] { "spritePixelsToUnits: 160" }, failures);
+    }
+
+    private static void ExpectArtMeta(string root, string fileName, string[] needles, List<string> failures)
+    {
+        var path = Path.Combine(root, "Assets", "Game", "Resources", "BattleArt", fileName);
+        if (!File.Exists(path) || !File.Exists(path + ".meta"))
+        {
+            failures.Add("missing battle art " + fileName);
+            return;
+        }
+
+        var meta = File.ReadAllText(path + ".meta");
+        for (var i = 0; i < needles.Length; i++)
+        {
+            if (meta.IndexOf(needles[i], StringComparison.Ordinal) < 0)
+            {
+                failures.Add(fileName + " meta missing " + needles[i]);
+            }
         }
     }
 
