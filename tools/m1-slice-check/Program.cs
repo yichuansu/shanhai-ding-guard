@@ -60,16 +60,28 @@ internal static class Program
 
     /// <summary>
     /// tick 基线取 m1-slice-check 实测，断言为该值的 ±5%。灵石和漏怪数仍是精确值。
-    /// 数值策划预期是 1 塔约 1786 tick、无塔约 944 tick；实测 1815（+29，+1.6%）与 947（+3，+0.3%）。
-    /// 3 塔通关 tick 与 1 塔同为 1815，同样 ±5%，漏怪必须为 0。终局灵石只做精确回归。
+    /// 22 航点路径的策划预期：1 塔约 1761 tick、无塔约 943 tick。
+    /// 实测 1785（+24，+1.4%）与 946（+3，+0.3%）。3 塔通关 tick 实测 1785，同样 ±5%，漏怪为 0。终局灵石只做精确回归。
     /// </summary>
-    private const int OneTowerClearTicksBaseline = 1815;
+    private const int OneTowerClearTicksBaseline = 1785;
 
-    private const int NoTowerLoseTicksBaseline = 947;
+    private const int NoTowerLoseTicksBaseline = 946;
 
-    private const int ThreeTowerClearTicksBaseline = 1815;
+    private const int ThreeTowerClearTicksBaseline = 1785;
 
     private const double TickTolerance = 0.05;
+
+    private static readonly double[] ExpectedPathX =
+    {
+        1.470, 1.240, 0.980, 0.700, 0.480, 0.390, 0.400, 0.600, 0.880, 1.160, 1.420,
+        1.520, 1.360, 1.060, 0.740, 0.440, 0.270, 0.330, 0.660, 1.000, 1.300, 1.530,
+    };
+
+    private static readonly double[] ExpectedPathY =
+    {
+        0.870, 0.820, 0.860, 0.790, 0.800, 0.700, 0.600, 0.550, 0.610, 0.570, 0.580,
+        0.480, 0.380, 0.400, 0.340, 0.390, 0.300, 0.170, 0.190, 0.140, 0.200, 0.230,
+    };
 
     private static void CheckExamplesStayPlaceholders(string root, List<string> failures)
     {
@@ -226,34 +238,32 @@ internal static class Program
             failures.Add("level space is not height_units_16x9");
         }
 
-        if (!ExpectPoint(content.Level.Waypoints, 0, "wp_spawn", 1.46, 0.85, failures)
-            || !ExpectPoint(content.Level.Waypoints, 1, "wp_lane1_west", 0.32, 0.85, failures)
-            || !ExpectPoint(content.Level.Waypoints, 2, "wp_lane2_west", 0.32, 0.62, failures)
-            || !ExpectPoint(content.Level.Waypoints, 3, "wp_lane2_east", 1.42, 0.62, failures)
-            || !ExpectPoint(content.Level.Waypoints, 4, "wp_lane3_east", 1.42, 0.44, failures)
-            || !ExpectPoint(content.Level.Waypoints, 5, "wp_lane3_west", 0.36, 0.44, failures)
-            || !ExpectPoint(content.Level.Waypoints, 6, "wp_lane4_west", 0.36, 0.23, failures)
-            || !ExpectPoint(content.Level.Waypoints, 7, "wp_ding", 1.53, 0.23, failures))
+        if (content.Level.Waypoints.Count != ExpectedPathX.Length)
         {
+            failures.Add("expected " + ExpectedPathX.Length + " waypoints, got " + content.Level.Waypoints.Count);
             return;
         }
 
-        if (content.Level.Waypoints.Count != 8)
+        for (var i = 0; i < ExpectedPathX.Length; i++)
         {
-            failures.Add("expected 8 waypoints, got " + content.Level.Waypoints.Count);
+            var id = "wp_" + i.ToString("00");
+            if (!ExpectPoint(content.Level.Waypoints, i, id, ExpectedPathX[i], ExpectedPathY[i], failures))
+            {
+                return;
+            }
         }
 
-        if (!ExpectCell(content.Level.BuildCells, 0, "cell_jin_01", 0.90, 0.735, failures)
-            || !ExpectCell(content.Level.BuildCells, 1, "cell_jin_02", 1.20, 0.53, failures)
-            || !ExpectCell(content.Level.BuildCells, 2, "cell_jin_03", 0.60, 0.335, failures))
+        if (!ExpectCell(content.Level.BuildCells, 0, "cell_jin_01", 0.660, 0.690, failures)
+            || !ExpectCell(content.Level.BuildCells, 1, "cell_jin_02", 1.130, 0.300, failures)
+            || !ExpectCell(content.Level.BuildCells, 2, "cell_jin_03", 0.520, 0.280, failures))
         {
             return;
         }
 
         var path = new ShanhaiDingGuard.Gameplay.Path.PathCurve(content.Level.Waypoints);
-        if (Math.Abs(path.Length - 5.09) > 1e-9)
+        if (Math.Abs(path.Length - 5.086) > 0.0005)
         {
-            failures.Add("path length " + path.Length.ToString("0.0000") + " is not 5.09");
+            failures.Add("path length " + path.Length.ToString("0.0000") + " is not about 5.086");
         }
         else
         {
@@ -381,7 +391,7 @@ internal static class Program
             return;
         }
 
-        Notes.Add("win: 1 tower, leaks=0, ticks=" + sim.TickCount + " (" + (sim.TickCount * SimClock.TickSeconds).ToString("0.0") + "s at 1x), balance=" + sim.Balance + ", designTicks=1786, delta=" + (sim.TickCount - 1786));
+        Notes.Add("win: 1 tower, leaks=0, ticks=" + sim.TickCount + " (" + (sim.TickCount * SimClock.TickSeconds).ToString("0.0") + "s at 1x), balance=" + sim.Balance + ", designTicks=1761, delta=" + (sim.TickCount - 1761));
 
         if (sim.LeakCount != 0)
         {
@@ -457,7 +467,7 @@ internal static class Program
         }
         else
         {
-            Notes.Add("lose: no tower, leaks=3 at tick " + sim.TickCount + ", designTicks=944, delta=" + (sim.TickCount - 944));
+            Notes.Add("lose: no tower, leaks=3 at tick " + sim.TickCount + ", designTicks=943, delta=" + (sim.TickCount - 943));
             if (!WithinTickTolerance(sim.TickCount, NoTowerLoseTicksBaseline))
             {
                 failures.Add("no-tower lose ticks " + sim.TickCount + " outside ±5% of calibrated " + NoTowerLoseTicksBaseline);
@@ -812,9 +822,9 @@ internal static class Program
     {
         var levelPath = Path.Combine(root, "content", "levels", "level_jizhou_01.json");
         var level = File.ReadAllText(levelPath);
-        RejectLevel(level.Replace("\"x\": 1.46", "\"x\": 1.9"), "x above 1.778", failures);
-        RejectLevel(level.Replace("\"y\": 0.23", "\"y\": 1.2"), "y above 1", failures);
-        RejectLevel(level.Replace("\"x\": 0.32", "\"x\": -0.01"), "negative x", failures);
+        RejectLevel(level.Replace("\"x\": 1.470", "\"x\": 1.9"), "x above 1.778", failures);
+        RejectLevel(level.Replace("\"y\": 0.140", "\"y\": 1.2"), "y above 1", failures);
+        RejectLevel(level.Replace("\"x\": 0.270", "\"x\": -0.01"), "negative x", failures);
         RejectLevel(level.Replace("\"space\": \"height_units_16x9\"", "\"space\": \"normalized_playfield\""), "formal points are outside normalized_playfield", failures);
         RejectLevel(level.Replace("\"space\": \"height_units_16x9\"", "\"space\": \"world_units\""), "unknown space", failures);
 
@@ -834,7 +844,7 @@ internal static class Program
             failures.Add("normalized_playfield should reject x=1.001");
         }
 
-        var onEdge = level.Replace("\"x\": 1.53", "\"x\": 1.778").Replace("\"y\": 0.23", "\"y\": 1");
+        var onEdge = level.Replace("\"x\": 1.530", "\"x\": 1.778").Replace("\"y\": 0.230", "\"y\": 1");
         if (!SliceTables.TryParseLevel(onEdge, out parsed, out error))
         {
             failures.Add("height_units_16x9 should accept the closed edge 1.778,1: " + error);
