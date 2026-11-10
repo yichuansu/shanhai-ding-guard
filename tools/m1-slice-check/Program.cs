@@ -28,7 +28,7 @@ internal static class Program
             CheckBattleArt(root, failures);
             CheckSpace(root, failures);
             CheckHpMultiplierDefault(root, failures);
-            CheckWin(content, failures);
+            CheckOneTowerLoses(content, "cell_jin_01", OneTowerLoseTicksBaseline, 321, 1751, failures);
             CheckOneTowerLoses(content, "cell_jin_02", OneTowerCell02LoseTicksBaseline, 449, 2099, failures);
             CheckOneTowerLoses(content, "cell_jin_03", OneTowerCell03LoseTicksBaseline, 313, 1717, failures);
             CheckLose(content, failures);
@@ -79,6 +79,16 @@ internal static class Program
     private const int TwoTowerClearTicksBaseline = 1977;
 
     private const int ThreeTowerClearTicksBaseline = 1977;
+
+    /// <summary>
+    /// 三塔按这个格子顺序建造。选择不跟建造格表或快照的遍历顺序走。
+    /// </summary>
+    private static readonly string[] ThreeTowerBuildOrder =
+    {
+        "cell_jin_01",
+        "cell_jin_02",
+        "cell_jin_03",
+    };
 
     private const double TickTolerance = 0.05;
 
@@ -358,11 +368,6 @@ internal static class Program
         }
     }
 
-    private static void CheckWin(SliceBattleContent content, List<string> failures)
-    {
-        CheckOneTowerLoses(content, "cell_jin_01", OneTowerLoseTicksBaseline, 321, 1751, failures);
-    }
-
     private static void CheckOneTowerLoses(SliceBattleContent content, string cellId, int tickBaseline, int expectedBalance, int designTicks, List<string> failures)
     {
         var sim = StartPlacedOn(content, cellId);
@@ -407,12 +412,11 @@ internal static class Program
             return;
         }
 
-        Notes.Add("lose: 1 tower " + cellId + ", leaks=" + sim.LeakCount + ", ticks=" + sim.TickCount + " (" + (sim.TickCount * SimClock.TickSeconds).ToString("0.0") + "s at 1x), balance=" + sim.Balance + ", designTicks=" + designTicks + ", delta=" + (sim.TickCount - designTicks));
+        Notes.Add("lose: 1 tower " + cellId + ", leaks=" + sim.LeakCount + ", leakTicks=" + leakTicks.Count + " (" + Join(leakTicks) + "), ticks=" + sim.TickCount + " (" + (sim.TickCount * SimClock.TickSeconds).ToString("0.0") + "s at 1x), balance=" + sim.Balance + ", designTicks=" + designTicks + ", delta=" + (sim.TickCount - designTicks));
 
-        var thirdLeakTick = leakTicks.Count == 0 ? 0 : leakTicks[leakTicks.Count - 1];
-        if (sim.LeakCount != 3 || sim.TickCount != thirdLeakTick)
+        if (leakTicks.Count != 3 || sim.LeakCount != 3 || sim.TickCount != leakTicks[2])
         {
-            failures.Add(cellId + " loss was not exactly the 3rd leak: leaks=" + sim.LeakCount + " tick=" + sim.TickCount + " leakTicks=" + Join(leakTicks));
+            failures.Add(cellId + " loss was not exactly the 3rd leak: leaks=" + sim.LeakCount + " tick=" + sim.TickCount + " leakTicks=" + Join(leakTicks) + " leakTickCount=" + leakTicks.Count);
         }
 
         if (sim.Snapshot.Towers.Count != 1 || sim.Snapshot.Towers[0].CellId != cellId || sim.TotalBuildSpent != 100)
@@ -791,9 +795,33 @@ internal static class Program
         Notes.Add("two towers: 01 then 02, spend 200, leaks=0, ticks=" + sim.TickCount + " (±5% of " + TwoTowerClearTicksBaseline + ", designTicks=1932, delta=" + (sim.TickCount - 1932) + "), final balance=" + sim.Balance);
     }
 
+    private static string NextBuildCell(CombatSimulation sim, string[] order)
+    {
+        var cells = sim.Snapshot.Cells;
+        for (var i = 0; i < order.Length; i++)
+        {
+            for (var c = 0; c < cells.Count; c++)
+            {
+                if (cells[c].Id != order[i])
+                {
+                    continue;
+                }
+
+                if (!cells[c].Occupied && !cells[c].Queued)
+                {
+                    return order[i];
+                }
+
+                break;
+            }
+        }
+
+        return null;
+    }
+
     private static void CheckThreeTowers(SliceBattleContent content, List<string> failures)
     {
-        var sim = StartPlaced(content);
+        var sim = StartPlacedOn(content, ThreeTowerBuildOrder[0]);
         var triedFourth = false;
         var guard = 0;
         var leakTicks = new List<int>();
@@ -818,7 +846,7 @@ internal static class Program
                 {
                     var balance = sim.Balance;
                     var spent = sim.TotalBuildSpent;
-                    sim.EnqueuePlace(content.Tower.Id, content.Level.BuildCells[0].Id);
+                    sim.EnqueuePlace(content.Tower.Id, ThreeTowerBuildOrder[0]);
                     triedFourth = true;
                     if (sim.Balance != balance || sim.TotalBuildSpent != spent || sim.Snapshot.Towers.Count != 3)
                     {
@@ -839,17 +867,7 @@ internal static class Program
                 continue;
             }
 
-            string free = null;
-            var cells = sim.Snapshot.Cells;
-            for (var i = 0; i < cells.Count; i++)
-            {
-                if (!cells[i].Occupied && !cells[i].Queued)
-                {
-                    free = cells[i].Id;
-                    break;
-                }
-            }
-
+            var free = NextBuildCell(sim, ThreeTowerBuildOrder);
             if (free != null)
             {
                 sim.EnqueuePlace(content.Tower.Id, free);
@@ -868,6 +886,18 @@ internal static class Program
             return;
         }
 
+        for (var i = 0; i < ThreeTowerBuildOrder.Length; i++)
+        {
+            if (sim.Snapshot.Towers[i].CellId != ThreeTowerBuildOrder[i])
+            {
+                failures.Add("3 towers were not built cell_jin_01 then cell_jin_02 then cell_jin_03, got "
+                    + sim.Snapshot.Towers[0].CellId + " "
+                    + sim.Snapshot.Towers[1].CellId + " "
+                    + sim.Snapshot.Towers[2].CellId);
+                return;
+            }
+        }
+
         if (!WithinTickTolerance(sim.TickCount, ThreeTowerClearTicksBaseline))
         {
             failures.Add("3 tower clear ticks " + sim.TickCount + " outside ±5% of calibrated " + ThreeTowerClearTicksBaseline + ", leaks=" + sim.LeakCount);
@@ -879,7 +909,7 @@ internal static class Program
             return;
         }
 
-        Notes.Add("three towers: spend 300, leaks=0, ticks=" + sim.TickCount + " (±5% of " + ThreeTowerClearTicksBaseline + "), final balance=" + sim.Balance);
+        Notes.Add("three towers: 01 then 02 then 03, spend 300, leaks=0, ticks=" + sim.TickCount + " (±5% of " + ThreeTowerClearTicksBaseline + "), final balance=" + sim.Balance);
     }
 
     private static void CheckWaveClearPaysWhenLeaked(SliceBattleContent content, List<string> failures)
