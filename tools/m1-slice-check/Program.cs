@@ -29,10 +29,13 @@ internal static class Program
             CheckSpace(root, failures);
             CheckHpMultiplierDefault(root, failures);
             CheckWin(content, failures);
+            CheckOneTowerLoses(content, "cell_jin_02", OneTowerCell02LoseTicksBaseline, 449, 2099, failures);
+            CheckOneTowerLoses(content, "cell_jin_03", OneTowerCell03LoseTicksBaseline, 313, 1717, failures);
             CheckLose(content, failures);
             CheckSpeedDoesNotChangeDamageOrTickCount(content, failures);
             CheckTickBeforeBeginDoesNothing(content, failures);
             CheckEconomy(content, failures);
+            CheckTwoTowers(content, failures);
             CheckThreeTowers(content, failures);
             CheckWaveClearPaysWhenLeaked(content, failures);
         }
@@ -61,15 +64,21 @@ internal static class Program
     private static readonly List<string> Notes = new List<string>();
 
     /// <summary>
-    /// tick 基线取 m1-slice-check 实测，断言为该值的 ±5%。灵石和漏怪数仍是精确值。
-    /// 22 航点路径的策划预期：1 塔约 1761 tick、无塔约 943 tick。
-    /// 实测 1785（+24，+1.4%）与 946（+3，+0.3%）。3 塔通关 tick 实测 1785，同样 ±5%，漏怪为 0。终局灵石只做精确回归。
+    /// tick 基线取 m1-slice-check 的 C# 实测，断言为该值的 ±5%。灵石和漏怪数是精确值。
+    /// 当康 maxHp=60。Nora 模拟：无塔判负 943；1 塔 01/02/03 判负 1751/2099/1717；2 塔与 3 塔通关 1932。
+    /// C# 实测：无塔 946；1 塔 01/02/03 判负 1806/2135/1775，余额 321/449/313；2 塔与 3 塔通关 1977，余额 540/440。
     /// </summary>
-    private const int OneTowerClearTicksBaseline = 1785;
+    private const int OneTowerLoseTicksBaseline = 1806;
+
+    private const int OneTowerCell02LoseTicksBaseline = 2135;
+
+    private const int OneTowerCell03LoseTicksBaseline = 1775;
 
     private const int NoTowerLoseTicksBaseline = 946;
 
-    private const int ThreeTowerClearTicksBaseline = 1785;
+    private const int TwoTowerClearTicksBaseline = 1977;
+
+    private const int ThreeTowerClearTicksBaseline = 1977;
 
     private const double TickTolerance = 0.05;
 
@@ -277,7 +286,7 @@ internal static class Program
             failures.Add("build cost drifted from 100");
         }
 
-        if (content.Enemy.MaxHp != 40 || content.Enemy.RewardAmount != 8 || content.Enemy.RewardCurrencyId != "lingshi")
+        if (content.Enemy.MaxHp != 60 || content.Enemy.RewardAmount != 8 || content.Enemy.RewardCurrencyId != "lingshi")
         {
             failures.Add("enemy hp or lingshi reward drifted");
         }
@@ -319,7 +328,7 @@ internal static class Program
             failures.Add("expected 45 enemies, got " + enemies);
         }
 
-        if (CombatSimulation.ScaleMaxHp(40, 1.1) != 44 || CombatSimulation.ScaleMaxHp(40, 1.0) != 40)
+        if (CombatSimulation.ScaleMaxHp(60, 1.1) != 66 || CombatSimulation.ScaleMaxHp(60, 1.0) != 60)
         {
             failures.Add("hp scale round failed");
         }
@@ -351,11 +360,16 @@ internal static class Program
 
     private static void CheckWin(SliceBattleContent content, List<string> failures)
     {
-        var sim = StartPlaced(content);
+        CheckOneTowerLoses(content, "cell_jin_01", OneTowerLoseTicksBaseline, 321, 1751, failures);
+    }
+
+    private static void CheckOneTowerLoses(SliceBattleContent content, string cellId, int tickBaseline, int expectedBalance, int designTicks, List<string> failures)
+    {
+        var sim = StartPlacedOn(content, cellId);
         var hits = new List<int>();
         var leakTicks = new List<int>();
-        var saw40 = false;
-        var saw44 = false;
+        var saw60 = false;
+        var saw66 = false;
         var guard = 0;
         var previousLeaks = 0;
         while (sim.Phase == BattlePhase.Running && guard++ < 20000)
@@ -375,58 +389,64 @@ internal static class Program
             var enemies = sim.Snapshot.Enemies;
             for (var i = 0; i < enemies.Count; i++)
             {
-                if (enemies[i].MaxHp == 40)
+                if (enemies[i].MaxHp == 60)
                 {
-                    saw40 = true;
+                    saw60 = true;
                 }
 
-                if (enemies[i].MaxHp == 44)
+                if (enemies[i].MaxHp == 66)
                 {
-                    saw44 = true;
+                    saw66 = true;
                 }
             }
         }
 
-        if (sim.Phase != BattlePhase.Won)
+        if (sim.Phase != BattlePhase.Lost)
         {
-            failures.Add("placed tower should win, phase=" + sim.Phase + " tick=" + sim.TickCount + " leaks=" + sim.LeakCount + " alive=" + sim.Snapshot.Enemies.Count + " leakTicks=" + Join(leakTicks) + " balance=" + sim.Balance);
+            failures.Add(cellId + " one tower should lose, phase=" + sim.Phase + " tick=" + sim.TickCount + " leaks=" + sim.LeakCount + " alive=" + sim.Snapshot.Enemies.Count + " leakTicks=" + Join(leakTicks) + " balance=" + sim.Balance);
             return;
         }
 
-        Notes.Add("win: 1 tower, leaks=0, ticks=" + sim.TickCount + " (" + (sim.TickCount * SimClock.TickSeconds).ToString("0.0") + "s at 1x), balance=" + sim.Balance + ", designTicks=1761, delta=" + (sim.TickCount - 1761));
+        Notes.Add("lose: 1 tower " + cellId + ", leaks=" + sim.LeakCount + ", ticks=" + sim.TickCount + " (" + (sim.TickCount * SimClock.TickSeconds).ToString("0.0") + "s at 1x), balance=" + sim.Balance + ", designTicks=" + designTicks + ", delta=" + (sim.TickCount - designTicks));
 
-        if (sim.LeakCount != 0)
+        var thirdLeakTick = leakTicks.Count == 0 ? 0 : leakTicks[leakTicks.Count - 1];
+        if (sim.LeakCount != 3 || sim.TickCount != thirdLeakTick)
         {
-            failures.Add("win should have zero leaks");
+            failures.Add(cellId + " loss was not exactly the 3rd leak: leaks=" + sim.LeakCount + " tick=" + sim.TickCount + " leakTicks=" + Join(leakTicks));
         }
 
-        if (sim.Balance != 640)
+        if (sim.Snapshot.Towers.Count != 1 || sim.Snapshot.Towers[0].CellId != cellId || sim.TotalBuildSpent != 100)
         {
-            failures.Add("1 tower final balance " + sim.Balance + " != 640");
+            failures.Add(cellId + " expected one tower and spend 100, towers=" + sim.Snapshot.Towers.Count + " spent=" + sim.TotalBuildSpent);
         }
 
-        if (!WithinTickTolerance(sim.TickCount, OneTowerClearTicksBaseline))
+        if (sim.Balance != expectedBalance)
         {
-            failures.Add("1 tower clear ticks " + sim.TickCount + " outside ±5% of calibrated " + OneTowerClearTicksBaseline);
+            failures.Add(cellId + " final balance " + sim.Balance + " != " + expectedBalance);
+        }
+
+        if (!WithinTickTolerance(sim.TickCount, tickBaseline))
+        {
+            failures.Add(cellId + " lose ticks " + sim.TickCount + " outside ±5% of calibrated " + tickBaseline);
         }
 
         if (hits.Count == 0)
         {
-            failures.Add("tower never fired");
+            failures.Add(cellId + " tower never fired");
         }
 
         for (var i = 0; i < hits.Count; i++)
         {
             if (hits[i] != content.Tower.Damage || hits[i] != 10)
             {
-                failures.Add("hit damage " + hits[i] + " != table damage " + content.Tower.Damage);
+                failures.Add(cellId + " hit damage " + hits[i] + " != table damage " + content.Tower.Damage);
                 break;
             }
         }
 
-        if (!saw40 || !saw44)
+        if (!saw60 || !saw66)
         {
-            failures.Add("expected spawned maxHp 40 and wave-8 maxHp 44, saw40=" + saw40 + " saw44=" + saw44);
+            failures.Add(cellId + " expected spawned maxHp 60 and wave-8 maxHp 66, saw60=" + saw60 + " saw66=" + saw66);
         }
     }
 
@@ -469,11 +489,16 @@ internal static class Program
         }
         else
         {
-            Notes.Add("lose: no tower, leaks=3 at tick " + sim.TickCount + ", designTicks=943, delta=" + (sim.TickCount - 943));
+            Notes.Add("lose: no tower, leaks=3 at tick " + sim.TickCount + ", balance=" + sim.Balance + ", designTicks=943, delta=" + (sim.TickCount - 943));
             if (!WithinTickTolerance(sim.TickCount, NoTowerLoseTicksBaseline))
             {
                 failures.Add("no-tower lose ticks " + sim.TickCount + " outside ±5% of calibrated " + NoTowerLoseTicksBaseline);
             }
+        }
+
+        if (sim.Balance != 120)
+        {
+            failures.Add("no-tower final balance " + sim.Balance + " != 120");
         }
 
         if (sim.AccumulatedLeakDamage != content.Enemy.LeakDamage * sim.LeakCount)
@@ -486,16 +511,18 @@ internal static class Program
     {
         int frames1;
         int ticks1;
+        BattlePhase phase1;
         int frames2;
         int ticks2;
-        if (!RunClock(content, 1, out frames1, out ticks1, failures) || !RunClock(content, 2, out frames2, out ticks2, failures))
+        BattlePhase phase2;
+        if (!RunClock(content, 1, out frames1, out ticks1, out phase1, failures) || !RunClock(content, 2, out frames2, out ticks2, out phase2, failures))
         {
             return;
         }
 
-        if (ticks1 != ticks2)
+        if (ticks1 != ticks2 || phase1 != phase2)
         {
-            failures.Add("2x changed the sim tick count " + ticks1 + " vs " + ticks2);
+            failures.Add("2x changed the sim outcome ticks " + ticks1 + " vs " + ticks2 + " phase " + phase1 + " vs " + phase2);
             return;
         }
 
@@ -505,13 +532,14 @@ internal static class Program
             return;
         }
 
-        Notes.Add("speed: hit damage stays 10, ticks=" + ticks1 + ", 1x frames=" + frames1 + ", 2x frames=" + frames2);
+        Notes.Add("speed: hit damage stays 10, phase=" + phase1 + ", ticks=" + ticks1 + ", 1x frames=" + frames1 + ", 2x frames=" + frames2);
     }
 
-    private static bool RunClock(SliceBattleContent content, int speed, out int frames, out int ticks, List<string> failures)
+    private static bool RunClock(SliceBattleContent content, int speed, out int frames, out int ticks, out BattlePhase phase, List<string> failures)
     {
         frames = 0;
         ticks = 0;
+        phase = BattlePhase.Ready;
         var sim = StartPlaced(content);
         var clock = new SimClock();
         clock.SetSpeed(speed);
@@ -532,9 +560,10 @@ internal static class Program
         }
 
         ticks = sim.TickCount;
-        if (sim.Phase != BattlePhase.Won)
+        phase = sim.Phase;
+        if (sim.Phase != BattlePhase.Won && sim.Phase != BattlePhase.Lost)
         {
-            failures.Add("speed " + speed + " did not win");
+            failures.Add("speed " + speed + " did not finish, phase=" + sim.Phase);
             return false;
         }
 
@@ -560,6 +589,11 @@ internal static class Program
 
     private static CombatSimulation StartPlaced(SliceBattleContent content)
     {
+        return StartPlacedOn(content, content.Level.BuildCells[0].Id);
+    }
+
+    private static CombatSimulation StartPlacedOn(SliceBattleContent content, string cellId)
+    {
         CombatSimulation sim;
         string error;
         if (!CombatSimulation.TryCreate(content, out sim, out error))
@@ -567,8 +601,57 @@ internal static class Program
             throw new InvalidOperationException(error);
         }
 
-        sim.EnqueuePlace(content.Tower.Id, content.Level.BuildCells[0].Id);
+        sim.EnqueuePlace(content.Tower.Id, cellId);
         sim.Begin();
+        return sim;
+    }
+
+    private static CombatSimulation RunAffordableTowers(SliceBattleContent content, int towerLimit, List<int> leakTicks)
+    {
+        var sim = StartPlaced(content);
+        var previousLeaks = 0;
+        var guard = 0;
+        while (sim.Phase == BattlePhase.Running && guard++ < 20000)
+        {
+            sim.Tick();
+            if (sim.LeakCount > previousLeaks)
+            {
+                leakTicks.Add(sim.TickCount);
+                previousLeaks = sim.LeakCount;
+            }
+
+            if (sim.Phase != BattlePhase.Running)
+            {
+                break;
+            }
+
+            if (sim.Snapshot.Towers.Count >= towerLimit)
+            {
+                continue;
+            }
+
+            if (sim.Balance < content.Tower.BuildCost)
+            {
+                continue;
+            }
+
+            string free = null;
+            var cells = sim.Snapshot.Cells;
+            for (var i = 0; i < cells.Count; i++)
+            {
+                if (!cells[i].Occupied && !cells[i].Queued)
+                {
+                    free = cells[i].Id;
+                    break;
+                }
+            }
+
+            if (free != null)
+            {
+                sim.EnqueuePlace(content.Tower.Id, free);
+            }
+        }
+
         return sim;
     }
 
@@ -629,19 +712,8 @@ internal static class Program
             failures.Add("balance below 100 should hint 灵石不足, got " + fresh.Snapshot.Note);
         }
 
-        var sim = StartPlaced(content);
         var leakTicks = new List<int>();
-        var previousLeaks = 0;
-        var guard = 0;
-        while (sim.Phase == BattlePhase.Running && guard++ < 20000)
-        {
-            sim.Tick();
-            if (sim.LeakCount > previousLeaks)
-            {
-                leakTicks.Add(sim.TickCount);
-                previousLeaks = sim.LeakCount;
-            }
-        }
+        var sim = RunAffordableTowers(content, 2, leakTicks);
 
         if (sim.Phase != BattlePhase.Won || sim.LeakCount != 0)
         {
@@ -649,9 +721,12 @@ internal static class Program
             return;
         }
 
-        if (sim.TotalBuildSpent != 100)
+        if (sim.Snapshot.Towers.Count != 2
+            || sim.Snapshot.Towers[0].CellId != "cell_jin_01"
+            || sim.Snapshot.Towers[1].CellId != "cell_jin_02"
+            || sim.TotalBuildSpent != 200)
         {
-            failures.Add("build spend " + sim.TotalBuildSpent + " != 100");
+            failures.Add("build spend " + sim.TotalBuildSpent + " != 200, towers=" + sim.Snapshot.Towers.Count);
         }
 
         if (sim.KilledEnemies != 45 || sim.TotalKillRewards != 45 * 8)
@@ -675,12 +750,45 @@ internal static class Program
             failures.Add("wave clear total " + sim.TotalWaveClearRewards + " formula " + clearSum);
         }
 
-        if (sim.Balance != 640)
+        if (sim.Balance != 540)
         {
-            failures.Add("final balance " + sim.Balance + " != 640");
+            failures.Add("final balance " + sim.Balance + " != 540");
         }
 
-        Notes.Add("economy: start 120, build -100, kill +8 x " + sim.KilledEnemies + ", wave clear " + sim.TotalWaveClearRewards + ", final " + sim.Balance);
+        Notes.Add("economy: start 120, build -200, kill +8 x " + sim.KilledEnemies + ", wave clear " + sim.TotalWaveClearRewards + ", final " + sim.Balance);
+    }
+
+    private static void CheckTwoTowers(SliceBattleContent content, List<string> failures)
+    {
+        var leakTicks = new List<int>();
+        var sim = RunAffordableTowers(content, 2, leakTicks);
+        if (sim.Phase != BattlePhase.Won || sim.LeakCount != 0)
+        {
+            failures.Add("2 towers should win with 0 leaks, phase=" + sim.Phase + " leaks=" + sim.LeakCount + " towers=" + sim.Snapshot.Towers.Count + " leakTicks=" + Join(leakTicks) + " balance=" + sim.Balance);
+            return;
+        }
+
+        if (sim.Snapshot.Towers.Count != 2
+            || sim.Snapshot.Towers[0].CellId != "cell_jin_01"
+            || sim.Snapshot.Towers[1].CellId != "cell_jin_02"
+            || sim.TotalBuildSpent != 200)
+        {
+            failures.Add("expected towers on cell_jin_01 then cell_jin_02 and spend 200, towers=" + sim.Snapshot.Towers.Count + " spent=" + sim.TotalBuildSpent + " balance=" + sim.Balance);
+            return;
+        }
+
+        if (!WithinTickTolerance(sim.TickCount, TwoTowerClearTicksBaseline))
+        {
+            failures.Add("2 tower clear ticks " + sim.TickCount + " outside ±5% of calibrated " + TwoTowerClearTicksBaseline + ", leaks=" + sim.LeakCount);
+        }
+
+        if (sim.Balance != 540)
+        {
+            failures.Add("2 tower final balance " + sim.Balance + " != 540");
+            return;
+        }
+
+        Notes.Add("two towers: 01 then 02, spend 200, leaks=0, ticks=" + sim.TickCount + " (±5% of " + TwoTowerClearTicksBaseline + ", designTicks=1932, delta=" + (sim.TickCount - 1932) + "), final balance=" + sim.Balance);
     }
 
     private static void CheckThreeTowers(SliceBattleContent content, List<string> failures)
