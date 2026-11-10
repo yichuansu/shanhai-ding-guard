@@ -884,12 +884,19 @@ namespace ShanhaiDingGuard.Content
                 return false;
             }
 
+            string background;
+            if (!TryReadOptionalString(map, "background", out background, out error))
+            {
+                return false;
+            }
+
             level = new LevelDefinition
             {
                 Id = id,
                 DisplayName = displayName,
                 PathId = pathId,
                 Space = space,
+                Background = background,
                 Waypoints = waypoints,
                 Waves = waves,
                 BuildCells = cells,
@@ -898,6 +905,27 @@ namespace ShanhaiDingGuard.Content
                 LoseRule = loseRule,
                 LoseLeakCount = loseLeakCount,
             };
+            error = null;
+            return true;
+        }
+
+        private static bool TryReadOptionalString(Dictionary<string, JsonNode> map, string name, out string value, out string error)
+        {
+            value = null;
+            JsonNode node;
+            if (!map.TryGetValue(name, out node) || node == null)
+            {
+                error = null;
+                return true;
+            }
+
+            if (node.Kind != JsonKind.String || string.IsNullOrEmpty(node.String))
+            {
+                error = name + " 无法识别，已保留原文件";
+                return false;
+            }
+
+            value = node.String;
             error = null;
             return true;
         }

@@ -48,6 +48,8 @@ namespace ShanhaiDingGuard.Presentation
         private bool _reported;
         private Transform _viewRoot;
         private readonly Dictionary<string, Transform> _towerMarks = new Dictionary<string, Transform>();
+        private readonly List<SpriteRenderer> _pathDebug = new List<SpriteRenderer>();
+        private bool _showPathDebug;
         private int _cellCursor;
         private Sprite _pixel;
 
@@ -136,6 +138,12 @@ namespace ShanhaiDingGuard.Presentation
                 _clock.ToggleSpeed();
             }
 
+            if (PressedKey(Key.P))
+            {
+                _showPathDebug = !_showPathDebug;
+                ApplyPathDebug();
+            }
+
             if (_started && _sim.Phase == BattlePhase.Running)
             {
                 var ticks = _clock.ConsumeTicks(Time.deltaTime);
@@ -195,7 +203,7 @@ namespace ShanhaiDingGuard.Presentation
             DrawCellLabels();
             GUI.Label(
                 HelpRect(),
-                "数字键 1/2/3 或点击建造格放置剑阵，T 放到下一个空格。开战前放 1 座可清完 8 波。不放塔则第 3 只漏出即失败。灵石不足会拒绝放置且不扣费。X 倍速，Enter 开战，Esc 回枢纽。",
+                "数字键 1/2/3 或点击建造格放置剑阵，T 放到下一个空格。开战前放 1 座可清完 8 波。不放塔则第 3 只漏出即失败。灵石不足会拒绝放置且不扣费。X 倍速，P 开关路径调试线，Enter 开战，Esc 回枢纽。",
                 Style(16, TextAnchor.UpperLeft));
 
             if (_sim != null && (_sim.Phase == BattlePhase.Won || _sim.Phase == BattlePhase.Lost))
@@ -391,18 +399,21 @@ namespace ShanhaiDingGuard.Presentation
             FitBattleCamera();
             _pixel = Pixel();
             _viewRoot = new GameObject("SliceView").transform;
-            var board = CreateSprite("Playfield", new Color(0.1f, 0.12f, 0.14f, 1f), 0);
-            var legacySquare = _content.Level.Space == SliceRules.SpaceNormalizedPlayfield;
-            board.localScale = legacySquare
-                ? new Vector3(PlayfieldWorldHeight, PlayfieldWorldHeight, 1f)
-                : new Vector3(PlayfieldWorldWidth, PlayfieldWorldHeight, 1f);
+            if (GameObject.Find("BattleBackground") == null)
+            {
+                var board = CreateSprite("Playfield", new Color(0.1f, 0.12f, 0.14f, 1f), 0);
+                var legacySquare = _content.Level.Space == SliceRules.SpaceNormalizedPlayfield;
+                board.localScale = legacySquare
+                    ? new Vector3(PlayfieldWorldHeight, PlayfieldWorldHeight, 1f)
+                    : new Vector3(PlayfieldWorldWidth, PlayfieldWorldHeight, 1f);
+            }
 
             var waypoints = _content.Level.Waypoints;
             for (var i = 1; i < waypoints.Count; i++)
             {
                 var from = ToWorld(waypoints[i - 1].X, waypoints[i - 1].Y);
                 var to = ToWorld(waypoints[i].X, waypoints[i].Y);
-                var segment = CreateSprite("Path", new Color(0.93f, 0.84f, 0.55f, 1f), 1);
+                var segment = CreateSprite("Path", new Color(0.93f, 0.84f, 0.55f, 0.45f), 1);
                 var delta = to - from;
                 var length = delta.magnitude;
                 segment.position = (from + to) * 0.5f;
@@ -412,18 +423,21 @@ namespace ShanhaiDingGuard.Presentation
                 }
 
                 segment.localScale = new Vector3(length, 0.08f, 1f);
+                _pathDebug.Add(segment.GetComponent<SpriteRenderer>());
             }
 
             var exit = waypoints[waypoints.Count - 1];
-            var exitMark = CreateSprite("Exit", new Color(0.85f, 0.25f, 0.22f, 1f), 2);
+            var exitMark = CreateSprite("Exit", new Color(0.85f, 0.25f, 0.22f, 0.45f), 2);
             exitMark.position = ToWorld(exit.X, exit.Y);
             exitMark.localScale = new Vector3(0.28f, 0.28f, 1f);
+            _pathDebug.Add(exitMark.GetComponent<SpriteRenderer>());
+            ApplyPathDebug();
 
             var cells = _content.Level.BuildCells;
             for (var i = 0; i < cells.Count; i++)
             {
                 var cell = cells[i];
-                var cellMark = CreateSprite("BuildCell-" + cell.Id, new Color(0.95f, 0.78f, 0.28f, 0.35f), 2);
+                var cellMark = CreateSprite("BuildCell-" + cell.Id, new Color(0.95f, 0.78f, 0.28f, 0.16f), 2);
                 cellMark.position = ToWorld(cell.X, cell.Y);
                 cellMark.localScale = new Vector3(0.55f, 0.55f, 1f);
 
@@ -572,7 +586,16 @@ namespace ShanhaiDingGuard.Presentation
 
             camera.orthographic = true;
             camera.orthographicSize = BattleCameraSize;
+            camera.backgroundColor = new Color(0.6156863f, 0.6980392f, 0.1647059f, 1f);
             camera.transform.position = new Vector3(0f, 0f, -10f);
+        }
+
+        private void ApplyPathDebug()
+        {
+            for (var i = 0; i < _pathDebug.Count; i++)
+            {
+                _pathDebug[i].enabled = _showPathDebug;
+            }
         }
 
         private static string PhaseLabel(BattlePhase phase)

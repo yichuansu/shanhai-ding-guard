@@ -5,8 +5,9 @@
   "displayName": "冀州 · 01",
   "placeholder": false,
   "slice": "jizhou_01_formal",
-  "notes": "冀州第1关正式数值（8波、仅当康、仅金塔）。逻辑Tick锁定10Hz。坐标系 height_units_16x9：x∈[0,1.778] 左到右，y∈[0,1] 下到上，(0,0) 左下。22 个航点，右上 (1.470,0.870) 出发，终点铜鼎 (1.530,0.230)，折线长约 5.086。建造格 cell_jin_01 (0.660,0.690)、cell_jin_02 (1.130,0.300)、cell_jin_03 (0.520,0.280)。失败：leak_count + loseLeakCount=3（铜鼎3血，leakDamage=1/只）。开局灵石120；击杀8。清场：某一波已全部刷出，且该波每一只敌人都已结算（击杀或漏入终点）即视为清场，发放 waveClearBase + waveClearPerWaveIndex×(w-1)，w 从 1 起。漏入不发击杀奖，但计入清场。速度 0.006、出怪间隔、血量、hpMultiplier、经济与 loseLeakCount 不变。",
+  "notes": "冀州第1关正式数值（8波、仅当康、仅金塔）。逻辑Tick锁定10Hz。坐标系 height_units_16x9：x∈[0,1.778] 左到右，y∈[0,1] 下到上，(0,0) 左下。22 个航点，右上 (1.470,0.870) 出发，终点铜鼎 (1.530,0.230)，折线长约 5.086。建造格 cell_jin_01 (0.660,0.690)、cell_jin_02 (1.130,0.300)、cell_jin_03 (0.520,0.280)。失败：leak_count + loseLeakCount=3（铜鼎3血，leakDamage=1/只）。开局灵石120；击杀8。清场：某一波已全部刷出，且该波每一只敌人都已结算（击杀或漏入终点）即视为清场，发放 waveClearBase + waveClearPerWaveIndex×(w-1)，w 从 1 起。漏入不发击杀奖，但计入清场。速度 0.006、出怪间隔、血量、hpMultiplier、经济与 loseLeakCount 不变。背景与 path_jizhou_01 绑定，改航点必须同步改图。入口外的土路只是画面，敌人从航点 0 出发，不另加航点。",
   "pathId": "path_jizhou_01",
+  "background": "bg_jizhou01_battle",
   "space": "height_units_16x9",
   "waypoints": [
     { "id": "wp_00", "x": 1.470, "y": 0.870 },

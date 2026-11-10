@@ -147,6 +147,9 @@ namespace ShanhaiDingGuard.Content
         public string DisplayName;
         public string PathId;
         public string Space;
+
+        /// <summary>可选。战斗背景 sprite 名，与 pathId 绑定。缺省表示没有定稿背景。</summary>
+        public string Background;
         public List<WaypointDefinition> Waypoints;
         public List<WaveDefinition> Waves;
         public List<BuildCellDefinition> BuildCells;

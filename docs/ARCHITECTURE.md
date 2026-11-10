@@ -43,7 +43,23 @@ flowchart TB
 
 ### Presentation
 
-横屏。战斗参考 1920×1080：HUD 安全区为顶部约 120px、底部约 100px、左右各约 120px，按钮和说明放在这里，路径与建造格避开。战场是 16×9 世界单位，正交相机 size 4.5。宽屏或 4:3 会在左右多露出或裁掉战场，本切片不加黑边。
+横屏。战斗参考 1920×1080：HUD 安全区为顶部约 120px、底部约 100px、左右各约 120px，按钮和说明放在这里，路径与建造格避开。战场逻辑是 16×9 世界单位，正交相机 size 4.5，`ToWorld(x,y)=((x−0.889)×9,(y−0.5)×9)` 不变。
+
+### 战斗背景
+
+1920×1080 是安全区。战斗背景按这张画布、Pixels Per Unit **120** 导入，正好 16×9 world。像素（左上原点，py 向下）到 world：
+
+`wx = (px − 960) / 120`
+
+`wy = (540 − py) / 120`
+
+Pivot 在中心，正图 Transform Position (0, 0)、Scale 1。不要用 Scale 0.8333，也不要改逻辑坐标。
+
+以后正式背景按 **2340×1440** 画布交付，中间 1920×1080 是安全区。当前冀州 01 定稿仍是 1920×1080。PPU 120 下它正好盖住 16×9：19.5:9 左右各缺约 1.75 world。场景在正图下面放一层用背景边缘像素拉伸的出血 sprite（约 24×13.5 world，Default 层 Order -110），相机清屏色用草场 `#9DB22A`，这块缺口不露黑边。4:3 若做宽度适配（正交 size 最大约 6），上下各缺约 1.5 world，同一层出血盖住。
+
+导入：Sprite (2D and UI)、Single、Filter Bilinear、关 Mipmap、Max Size 2048、Wrap Clamp、Alpha Is Transparency 关。iOS（`iPhone`）与 Android 的平台覆盖是 ASTC 6×6（`textureFormat: 50`），写在纹理 `.meta` 里。没有单独的 Background 排序层，正图用 Default 层 Order -100，在路径和敌人下面。
+
+冀州 01 的图是 `bg_jizhou01_battle`，与 `path_jizhou_01` 绑定，改航点必须同步改图。入口外的土路只是画面，敌人从航点 0 开始走，不另加航点。
 
 M1 只需要开战、胜、负、倍速桩。M2 起 HUD 四角放五行与资源占位，具体锚点跟着 UI 壳走。M6 的局外枢纽是另一套横屏界面，不塞进战斗 HUD。
 

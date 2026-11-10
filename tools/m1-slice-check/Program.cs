@@ -24,6 +24,7 @@ internal static class Program
         else
         {
             CheckShape(content, failures);
+            CheckBattleBackground(root, content, failures);
             CheckSpace(root, failures);
             CheckHpMultiplierDefault(root, failures);
             CheckWin(content, failures);
@@ -815,6 +816,59 @@ internal static class Program
         finally
         {
             content.Level.LoseLeakCount = original;
+        }
+    }
+
+    private static void CheckBattleBackground(string root, SliceBattleContent content, List<string> failures)
+    {
+        if (content.Level.Background != "bg_jizhou01_battle")
+        {
+            failures.Add("level background is not bg_jizhou01_battle");
+        }
+
+        var levelText = File.ReadAllText(Path.Combine(root, "content", "levels", "level_jizhou_01.json"));
+        if (levelText.IndexOf("背景与 path_jizhou_01 绑定，改航点必须同步改图", StringComparison.Ordinal) < 0)
+        {
+            failures.Add("level notes do not bind the background to path_jizhou_01");
+        }
+
+        var png = Path.Combine(root, "Assets", "Game", "Art", "Backgrounds", "bg_jizhou01_battle.png");
+        var metaPath = png + ".meta";
+        if (!File.Exists(png) || !File.Exists(metaPath))
+        {
+            failures.Add("battle background sprite or meta is missing");
+            return;
+        }
+
+        var header = File.ReadAllBytes(png);
+        if (header.Length < 24
+            || header[16] != 0
+            || header[17] != 0
+            || header[18] != 7
+            || header[19] != 128
+            || header[20] != 0
+            || header[21] != 0
+            || header[22] != 4
+            || header[23] != 56)
+        {
+            failures.Add("battle background is not a 1920x1080 PNG");
+        }
+
+        var meta = File.ReadAllText(metaPath);
+        if (meta.IndexOf("spritePixelsToUnits: 120", StringComparison.Ordinal) < 0
+            || meta.IndexOf("enableMipMap: 0", StringComparison.Ordinal) < 0
+            || meta.IndexOf("filterMode: 1", StringComparison.Ordinal) < 0
+            || meta.IndexOf("maxTextureSize: 2048", StringComparison.Ordinal) < 0
+            || meta.IndexOf("alphaIsTransparency: 0", StringComparison.Ordinal) < 0)
+        {
+            failures.Add("battle background import settings drifted from PPU 120 / no mipmap / bilinear / max 2048");
+        }
+
+        if (meta.IndexOf("buildTarget: Android", StringComparison.Ordinal) < 0
+            || meta.IndexOf("buildTarget: iPhone", StringComparison.Ordinal) < 0
+            || meta.IndexOf("textureFormat: 50", StringComparison.Ordinal) < 0)
+        {
+            failures.Add("battle background is missing iOS/Android ASTC 6x6 override");
         }
     }
 
