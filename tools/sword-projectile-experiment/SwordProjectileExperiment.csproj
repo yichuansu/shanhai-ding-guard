@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Program.cs" />
+    <Compile Include="..\..\Assets\Game\Content\ContentModels.cs" />
+    <Compile Include="..\..\Assets\Game\Content\ContentJson.cs" />
+    <Compile Include="..\..\Assets\Game\Gameplay\GameplayAssembly.cs" />
+    <Compile Include="..\..\Assets\Game\Gameplay\Path\PathCurve.cs" />
+    <Compile Include="..\..\Assets\Game\Gameplay\Wave\WaveDirector.cs" />
+    <Compile Include="..\..\Assets\Game\Gameplay\Towers\TowerTargeting.cs" />
+    <Compile Include="..\..\Assets\Game\Gameplay\Hero\IHeroActions.cs" />
+    <Compile Include="..\..\Assets\Game\Gameplay\Capture\ICaptureRules.cs" />
+    <Compile Include="..\..\Assets\Game\Gameplay\CombatSimulation\SimClock.cs" />
+    <Compile Include="..\..\Assets\Game\Gameplay\CombatSimulation\CombatSimulation.cs" />
+  </ItemGroup>
+</Project>

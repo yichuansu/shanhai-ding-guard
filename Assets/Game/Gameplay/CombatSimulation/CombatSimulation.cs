@@ -92,6 +92,11 @@ namespace ShanhaiDingGuard.Gameplay.CombatSimulation
     /// 金额 = waveClearBase + waveClearPerWaveIndex × (波序号 − 1)，波序号从 1 起。
     /// 漏出仍算该波已结算，所以有漏也会发波清奖。数值表的终局 640 按全程击杀、0 漏计算。
     /// 胜负只看漏出只数，不看 AccumulatedLeakDamage。
+    /// 默认即时命中，切片基线走这条路径。
+    /// EnableSwordProjectiles 打开实验飞剑：攻击拍只生成飞剑，伤害在命中拍结算。
+    /// 飞剑每 tick 朝目标当前位置移动（追踪），剩余距离 ≤ 速度则命中。不锁开火点，也不用命中半径。
+    /// 弹速至少 0.04 高度单位/tick。选项 R 为真弹道的正式索敌：跳过「当前生命 − 在途预定伤害 ≤ 0」的敌人；
+    /// 范围内都被预定则本拍不开火、冷却不加。reserveIncomingDamage 传 false 只作对照。
     /// </summary>
     public sealed class CombatSimulation
     {
@@ -99,6 +104,9 @@ namespace ShanhaiDingGuard.Gameplay.CombatSimulation
         public const string NoteCellTaken = "建造格已占用";
         public const string NotePlaced = "已放置剑阵";
         public const string NoteBattleOver = "战斗已结束";
+
+        /// <summary>真弹道速度下限，高度单位/tick。低于此值的锁定落点容易打空，实验不接受。</summary>
+        public const double MinSwordSpeedPerTick = 0.04;
 
         private readonly SliceBattleContent _content;
         private readonly WaveDirector _waves;
@@ -111,7 +119,14 @@ namespace ShanhaiDingGuard.Gameplay.CombatSimulation
         private readonly int[] _resolvedByWave;
         private readonly int[] _waveClearAmounts;
         private readonly bool[] _waveClearPaid;
+        private readonly List<SwordShot> _swords = new List<SwordShot>();
+        private readonly List<int> _leakRemainingHp = new List<int>();
         private int _nextEnemyId = 1;
+        private bool _swordsEnabled;
+        private bool _reserveIncoming;
+        private double _swordSpeed;
+        private int _maxSwordInFlight;
+        private bool _sawSurvivor;
 
         private CombatSimulation(SliceBattleContent content)
         {
@@ -154,6 +169,60 @@ namespace ShanhaiDingGuard.Gameplay.CombatSimulation
         public int TotalKillRewards { get; private set; }
 
         public int TotalWaveClearRewards { get; private set; }
+
+        public bool SwordProjectilesEnabled
+        {
+            get { return _swordsEnabled; }
+        }
+
+        public bool SwordReserveIncoming
+        {
+            get { return _reserveIncoming; }
+        }
+
+        public double SwordSpeedPerTick
+        {
+            get { return _swordSpeed; }
+        }
+
+        /// <summary>飞到最后位置后消散、没有造成伤害的飞剑。</summary>
+        public int DissipatedSwords { get; private set; }
+
+        /// <summary>终局时仍在飞、但目标已死或已漏，不可能再命中的飞剑。</summary>
+        public int UnresolvedDoomedSwords { get; private set; }
+
+        /// <summary>终局时仍追着活人的飞剑。战斗已停，不算浪费。</summary>
+        public int SwordsStillChasing { get; private set; }
+
+        public int OverkillDamage { get; private set; }
+
+        /// <summary>选项 R：范围内有敌人，但每只都被在途伤害预定致死，本拍没有开火的次数。</summary>
+        public int ReservedHoldShots { get; private set; }
+
+        public int SwordsFired { get; private set; }
+
+        public int SwordsLanded { get; private set; }
+
+        public int MaxSwordInFlightTotal
+        {
+            get { return _maxSwordInFlight; }
+        }
+
+        public int ClosestSurvivorTick { get; private set; }
+
+        public double ClosestSurvivorRemaining { get; private set; }
+
+        public int ClosestSurvivorHp { get; private set; }
+
+        public bool SawSurvivorApproach
+        {
+            get { return _sawSurvivor; }
+        }
+
+        public IReadOnlyList<int> LeakRemainingHp
+        {
+            get { return _leakRemainingHp; }
+        }
 
         public BattleSnapshot Snapshot { get; private set; }
 
@@ -230,6 +299,41 @@ namespace ShanhaiDingGuard.Gameplay.CombatSimulation
             return true;
         }
 
+        /// <summary>
+        /// 开战前打开追踪飞剑。默认关闭，即时命中基线不变。
+        /// reserveIncomingDamage 为 true 时使用正式索敌（选项 R）；false 只作对照。
+        /// 速度低于 0.04 高度单位/tick 会拒绝。逻辑 tick 仍是 10Hz，倍速不进这个方法。
+        /// </summary>
+        public void EnableSwordProjectiles(double speedPerTick, bool reserveIncomingDamage)
+        {
+            if (Phase != BattlePhase.Ready || TickCount != 0)
+            {
+                throw new InvalidOperationException("真弹道只能在开战前打开");
+            }
+
+            if (!(speedPerTick >= MinSwordSpeedPerTick))
+            {
+                throw new ArgumentOutOfRangeException("speedPerTick", "弹速必须 ≥ 0.04 高度单位/tick");
+            }
+
+            _swordsEnabled = true;
+            _swordSpeed = speedPerTick;
+            _reserveIncoming = reserveIncomingDamage;
+        }
+
+        public int MaxSwordInFlight(string cellId)
+        {
+            for (var i = 0; i < _towers.Count; i++)
+            {
+                if (_towers[i].CellId == cellId)
+                {
+                    return _towers[i].MaxInFlight;
+                }
+            }
+
+            return 0;
+        }
+
         public void EnqueuePlace(string towerId, string cellId)
         {
             if (Phase != BattlePhase.Ready && Phase != BattlePhase.Running)
@@ -272,12 +376,29 @@ namespace ShanhaiDingGuard.Gameplay.CombatSimulation
                 return;
             }
 
+            // TickCount 先加。开战前 EnqueuePlace 的塔在本拍 ApplyIntents 落地（第一次 Tick 即 tick 1），
+            // 同一拍可以开火。不要改成 tick 0 落地。
             TickCount++;
             LastHitDamage = 0;
             ApplyIntents();
             _waves.Tick(Spawn);
-            Move();
-            Attack();
+            if (_swordsEnabled)
+            {
+                // 刷怪仍在移动之前，新敌人本拍会走一步，与即时命中相同。
+                // 然后：敌人移动/漏怪 → 飞剑按创建序移动与命中 → 塔选目标并发射 → 下面的波次/经济。
+                // 建造意图留在拍首，是因为 tick 1 落地已经是现行口径，不宜挪到发射之后。
+                Move(true);
+                FlySwords();
+                _enemies.RemoveAll(enemy => !enemy.Alive);
+                FireSwords();
+            }
+            else
+            {
+                Move(false);
+                Attack();
+            }
+
+            NoteSurvivorApproach();
             GrantWaveClears();
             _hero.SettleTick();
             _capture.SettleTick();
@@ -461,7 +582,7 @@ namespace ShanhaiDingGuard.Gameplay.CombatSimulation
             }
         }
 
-        private void Move()
+        private void Move(bool deferDeadRemoval)
         {
             for (var i = 0; i < _enemies.Count; i++)
             {
@@ -482,6 +603,7 @@ namespace ShanhaiDingGuard.Gameplay.CombatSimulation
                     enemy.Alive = false;
                     LeakCount++;
                     AccumulatedLeakDamage += enemy.LeakDamage;
+                    _leakRemainingHp.Add(enemy.Hp);
                     MarkResolved(enemy);
                 }
                 else
@@ -492,7 +614,253 @@ namespace ShanhaiDingGuard.Gameplay.CombatSimulation
                 }
             }
 
-            _enemies.RemoveAll(enemy => !enemy.Alive);
+            // 飞剑要在本拍读到漏怪后的终点坐标，所以真弹道把移除推迟到飞剑结算之后。
+            if (!deferDeadRemoval)
+            {
+                _enemies.RemoveAll(enemy => !enemy.Alive);
+            }
+        }
+
+        private void FlySwords()
+        {
+            for (var i = 0; i < _swords.Count; i++)
+            {
+                var sword = _swords[i];
+                if (!sword.Active)
+                {
+                    continue;
+                }
+
+                FlyOne(sword);
+            }
+
+            _swords.RemoveAll(sword => !sword.Active);
+        }
+
+        private void FlyOne(SwordShot sword)
+        {
+            var enemy = FindEnemy(sword.TargetId);
+            var canHit = enemy != null && enemy.Alive && !sword.TargetLost;
+            if (enemy != null)
+            {
+                sword.AimX = enemy.X;
+                sword.AimY = enemy.Y;
+            }
+
+            if (!canHit)
+            {
+                sword.TargetLost = true;
+            }
+
+            var dx = sword.AimX - sword.X;
+            var dy = sword.AimY - sword.Y;
+            var dist = Math.Sqrt((dx * dx) + (dy * dy));
+            if (dist <= _swordSpeed + 1e-9)
+            {
+                if (canHit)
+                {
+                    ApplySwordHit(sword, enemy);
+                }
+                else
+                {
+                    DissipatedSwords++;
+                    Deactivate(sword);
+                }
+
+                return;
+            }
+
+            var scale = _swordSpeed / dist;
+            sword.X += dx * scale;
+            sword.Y += dy * scale;
+        }
+
+        private void ApplySwordHit(SwordShot sword, EnemyUnit target)
+        {
+            var before = target.Hp;
+            target.Hp -= sword.Damage;
+            LastHitDamage = sword.Damage;
+            SwordsLanded++;
+            if (before < sword.Damage)
+            {
+                OverkillDamage += sword.Damage - before;
+            }
+
+            Deactivate(sword);
+            if (target.Hp <= 0 && target.Alive)
+            {
+                target.Alive = false;
+                GrantKill();
+                MarkResolved(target);
+            }
+        }
+
+        private void FireSwords()
+        {
+            var damage = _content.Tower.Damage;
+            for (var i = 0; i < _towers.Count; i++)
+            {
+                var tower = _towers[i];
+                if (tower.Cooldown > 0)
+                {
+                    tower.Cooldown--;
+                }
+
+                if (tower.Cooldown != 0)
+                {
+                    continue;
+                }
+
+                var inRange = TowerTargeting.FirstAlongPath(_enemies, tower.X, tower.Y, tower.Range);
+                var target = inRange;
+                if (_reserveIncoming && inRange != null)
+                {
+                    target = TowerTargeting.FirstAlongPath(_enemies, tower.X, tower.Y, tower.Range, StillNeedsDamage);
+                }
+
+                if (target == null)
+                {
+                    // 正式规则：全部被预定则不开火，也不开始攻击间隔，下一拍再选。
+                    if (inRange != null)
+                    {
+                        ReservedHoldShots++;
+                    }
+
+                    continue;
+                }
+
+                _swords.Add(new SwordShot
+                {
+                    TowerIndex = i,
+                    TargetId = target.InstanceId,
+                    X = tower.X,
+                    Y = tower.Y,
+                    AimX = target.X,
+                    AimY = target.Y,
+                    Damage = damage,
+                    Active = true,
+                });
+                tower.Cooldown = _content.Tower.AttackIntervalTicks;
+                tower.InFlight++;
+                if (tower.InFlight > tower.MaxInFlight)
+                {
+                    tower.MaxInFlight = tower.InFlight;
+                }
+
+                SwordsFired++;
+                NoteSwordPeak();
+            }
+        }
+
+        private bool StillNeedsDamage(EnemyUnit enemy)
+        {
+            return enemy.Hp - ReservedDamage(enemy.InstanceId) > 0;
+        }
+
+        private int ReservedDamage(int instanceId)
+        {
+            var reserved = 0;
+            for (var i = 0; i < _swords.Count; i++)
+            {
+                var sword = _swords[i];
+                if (sword.Active && !sword.TargetLost && sword.TargetId == instanceId)
+                {
+                    reserved += sword.Damage;
+                }
+            }
+
+            return reserved;
+        }
+
+        private EnemyUnit FindEnemy(int instanceId)
+        {
+            for (var i = 0; i < _enemies.Count; i++)
+            {
+                if (_enemies[i].InstanceId == instanceId)
+                {
+                    return _enemies[i];
+                }
+            }
+
+            return null;
+        }
+
+        private void Deactivate(SwordShot sword)
+        {
+            if (!sword.Active)
+            {
+                return;
+            }
+
+            sword.Active = false;
+            var tower = _towers[sword.TowerIndex];
+            if (tower.InFlight > 0)
+            {
+                tower.InFlight--;
+            }
+        }
+
+        private void NoteSwordPeak()
+        {
+            var total = 0;
+            for (var i = 0; i < _towers.Count; i++)
+            {
+                total += _towers[i].InFlight;
+            }
+
+            if (total > _maxSwordInFlight)
+            {
+                _maxSwordInFlight = total;
+            }
+        }
+
+        private void NoteSurvivorApproach()
+        {
+            for (var i = 0; i < _enemies.Count; i++)
+            {
+                var enemy = _enemies[i];
+                if (!enemy.Alive)
+                {
+                    continue;
+                }
+
+                var remaining = Path.Length - enemy.Distance;
+                if (_sawSurvivor && remaining >= ClosestSurvivorRemaining - 1e-12)
+                {
+                    continue;
+                }
+
+                _sawSurvivor = true;
+                ClosestSurvivorRemaining = remaining;
+                ClosestSurvivorHp = enemy.Hp;
+                ClosestSurvivorTick = TickCount;
+            }
+        }
+
+        private void AbandonDoomedSwords()
+        {
+            var chasing = 0;
+            for (var i = 0; i < _swords.Count; i++)
+            {
+                var sword = _swords[i];
+                if (!sword.Active)
+                {
+                    continue;
+                }
+
+                var enemy = FindEnemy(sword.TargetId);
+                if (!sword.TargetLost && enemy != null && enemy.Alive)
+                {
+                    chasing++;
+                    continue;
+                }
+
+                UnresolvedDoomedSwords++;
+                Deactivate(sword);
+            }
+
+            SwordsStillChasing = chasing;
+            _swords.RemoveAll(sword => !sword.Active);
         }
 
         private void Attack()
@@ -586,15 +954,19 @@ namespace ShanhaiDingGuard.Gameplay.CombatSimulation
 
         private void EvaluateOutcome()
         {
+            var before = Phase;
             if (LeakCount >= _content.Level.LoseLeakCount)
             {
                 Phase = BattlePhase.Lost;
-                return;
             }
-
-            if (_waves.Finished && _enemies.Count == 0)
+            else if (_waves.Finished && _enemies.Count == 0)
             {
                 Phase = BattlePhase.Won;
+            }
+
+            if (_swordsEnabled && Phase != before)
+            {
+                AbandonDoomedSwords();
             }
         }
 
@@ -701,6 +1073,21 @@ namespace ShanhaiDingGuard.Gameplay.CombatSimulation
             public double Y;
             public double Range;
             public int Cooldown;
+            public int InFlight;
+            public int MaxInFlight;
+        }
+
+        private sealed class SwordShot
+        {
+            public int TowerIndex;
+            public int TargetId;
+            public bool TargetLost;
+            public bool Active;
+            public double X;
+            public double Y;
+            public double AimX;
+            public double AimY;
+            public int Damage;
         }
     }
 }
