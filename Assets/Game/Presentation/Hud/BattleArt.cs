@@ -99,13 +99,56 @@ namespace ShanhaiDingGuard.Presentation
                 }
             }
 
-            list.Sort((a, b) => string.CompareOrdinal(a.name, b.name));
+            list.Sort(CompareFrameNames);
             if (list.Count != count)
             {
                 return null;
             }
 
             return list.ToArray();
+        }
+
+        /// <summary>
+        /// 帧名末尾按数字排。字典序会把 fx_10 排到 fx_2 前面。
+        /// </summary>
+        private static int CompareFrameNames(Sprite a, Sprite b)
+        {
+            var ai = TrailingNumber(a != null ? a.name : null);
+            var bi = TrailingNumber(b != null ? b.name : null);
+            if (ai != bi)
+            {
+                return ai.CompareTo(bi);
+            }
+
+            return string.CompareOrdinal(a != null ? a.name : null, b != null ? b.name : null);
+        }
+
+        private static int TrailingNumber(string name)
+        {
+            if (string.IsNullOrEmpty(name))
+            {
+                return int.MaxValue;
+            }
+
+            var end = name.Length;
+            var start = end;
+            while (start > 0 && name[start - 1] >= '0' && name[start - 1] <= '9')
+            {
+                start--;
+            }
+
+            if (start == end)
+            {
+                return int.MaxValue;
+            }
+
+            var value = 0;
+            for (var i = start; i < end; i++)
+            {
+                value = (value * 10) + (name[i] - '0');
+            }
+
+            return value;
         }
     }
 }

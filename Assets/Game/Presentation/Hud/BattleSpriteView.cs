@@ -16,6 +16,12 @@ namespace ShanhaiDingGuard.Presentation
         public const int SortPath = 10;
         public const int SortExit = 12;
         public const int SortSlot = 30;
+
+        /// <summary>
+        /// 接地阴影固定在建造格之上、全部单位之下，不参与 y 排序。
+        /// </summary>
+        public const int SortShadow = 40;
+
         public const int SortUnit = 1000;
         public const int SortFx = 3000;
 
@@ -59,8 +65,7 @@ namespace ShanhaiDingGuard.Presentation
 
         private sealed class DeathVisual
         {
-            public Transform Transform;
-            public SpriteRenderer Renderer;
+            public EnemyVisual Enemy;
             public float Start;
         }
 
@@ -76,8 +81,16 @@ namespace ShanhaiDingGuard.Presentation
         private readonly Dictionary<int, EnemyVisual> _enemies = new Dictionary<int, EnemyVisual>();
         private readonly List<DeathVisual> _deaths = new List<DeathVisual>();
         private readonly List<FxVisual> _fx = new List<FxVisual>();
+        private readonly Stack<EnemyVisual> _enemyPool = new Stack<EnemyVisual>();
+        private readonly List<EnemyVisual> _goneBuffer = new List<EnemyVisual>();
+        private readonly List<EnemyVisual> _deathBuffer = new List<EnemyVisual>();
+        private readonly HashSet<string> _shownIds = new HashSet<string>();
+        private readonly HashSet<int> _aliveIds = new HashSet<int>();
+        private readonly HashSet<int> _seenIds = new HashSet<int>();
+        private readonly List<int> _staleIds = new List<int>();
         private BattleArt _art = new BattleArt();
         private Sprite _shadowSprite;
+        private Texture2D _shadowTexture;
         private SliceBattleContent _content;
         private Transform _root;
         private Sprite _pixel;
@@ -89,6 +102,24 @@ namespace ShanhaiDingGuard.Presentation
         public BattleArt Art
         {
             get { return _art; }
+        }
+
+        /// <summary>
+        /// 场景卸载或宿主对象销毁时调用。运行时生成的阴影纹理和 Sprite 不会跟着场景物体一起释放。
+        /// </summary>
+        public void DestroyRuntimeArt()
+        {
+            if (_shadowSprite != null)
+            {
+                UnityEngine.Object.Destroy(_shadowSprite);
+                _shadowSprite = null;
+            }
+
+            if (_shadowTexture != null)
+            {
+                UnityEngine.Object.Destroy(_shadowTexture);
+                _shadowTexture = null;
+            }
         }
 
         public void Build(Transform root, SliceBattleContent content, Func<double, double, Vector3> toWorld, Sprite pixel)
@@ -127,7 +158,7 @@ namespace ShanhaiDingGuard.Presentation
                 if (_art.Ready)
                 {
                     var shadowSprite = ShadowSprite();
-                    var shadowGo = Create("TowerShadow-" + cell.Id, shadowSprite, SortSlot + 1);
+                    var shadowGo = Create("TowerShadow-" + cell.Id, shadowSprite, SortShadow);
                     shadowGo.transform.SetParent(towerGo.transform, false);
                     shadowGo.transform.localPosition = Vector3.zero;
                     var fittedHeight = shadowSprite.rect.height / shadowSprite.pixelsPerUnit;
@@ -200,8 +231,11 @@ namespace ShanhaiDingGuard.Presentation
 
         private void SyncArt(CombatSimulation sim, BattleSnapshot snapshot, float alpha, float anim, int tickDelta, int cursorCell)
         {
-            var gone = CollectGone(snapshot);
-            var deaths = new List<EnemyVisual>();
+            _goneBuffer.Clear();
+            CollectGone(snapshot, _goneBuffer);
+            var gone = _goneBuffer;
+            _deathBuffer.Clear();
+            var deaths = _deathBuffer;
             var leaks = snapshot.LeakCount - _lastLeak;
             if (leaks < 0)
             {
@@ -220,8 +254,8 @@ namespace ShanhaiDingGuard.Presentation
             {
                 if (i >= leakFrom)
                 {
-                    UnityEngine.Object.Destroy(gone[i].Transform.gameObject);
                     _enemies.Remove(gone[i].InstanceId);
+                    ReleaseEnemy(gone[i]);
                 }
                 else
                 {
@@ -231,7 +265,8 @@ namespace ShanhaiDingGuard.Presentation
             }
 
             _lastLeak = snapshot.LeakCount;
-            var shownTowers = new HashSet<string>();
+            _shownIds.Clear();
+            var shownTowers = _shownIds;
             for (var i = 0; i < snapshot.Towers.Count; i++)
             {
                 var tower = snapshot.Towers[i];
@@ -304,14 +339,9 @@ namespace ShanhaiDingGuard.Presentation
                 EnemyVisual visual;
                 if (!_enemies.TryGetValue(enemy.InstanceId, out visual))
                 {
-                    var go = Create("Dangkang-" + enemy.InstanceId, _art.Walk[0], SortUnit);
-                    visual = new EnemyVisual
-                    {
-                        InstanceId = enemy.InstanceId,
-                        Transform = go.transform,
-                        Renderer = go.GetComponent<SpriteRenderer>(),
-                        LastHp = enemy.Hp,
-                    };
+                    visual = RentEnemy("Dangkang-" + enemy.InstanceId, _art.Walk[0], Vector3.one);
+                    visual.InstanceId = enemy.InstanceId;
+                    visual.LastHp = enemy.Hp;
                     _enemies.Add(enemy.InstanceId, visual);
                 }
 
@@ -337,7 +367,8 @@ namespace ShanhaiDingGuard.Presentation
 
         private void SyncFallback(CombatSimulation sim, BattleSnapshot snapshot, float alpha)
         {
-            var shown = new HashSet<string>();
+            _shownIds.Clear();
+            var shown = _shownIds;
             for (var i = 0; i < snapshot.Towers.Count; i++)
             {
                 var tower = snapshot.Towers[i];
@@ -357,6 +388,13 @@ namespace ShanhaiDingGuard.Presentation
             for (var i = 0; i < snapshot.Cells.Count; i++)
             {
                 var cell = snapshot.Cells[i];
+                var slot = FindSlot(cell.Id);
+                if (slot != null)
+                {
+                    // 图未齐时也在建成后关掉建造格，只藏贴图，不改格子坐标或模拟占用。
+                    slot.Renderer.enabled = !cell.Occupied;
+                }
+
                 if (!cell.Queued || shown.Contains(cell.Id))
                 {
                     continue;
@@ -383,7 +421,8 @@ namespace ShanhaiDingGuard.Presentation
                 }
             }
 
-            var seen = new HashSet<int>();
+            _seenIds.Clear();
+            var seen = _seenIds;
             for (var i = 0; i < snapshot.Enemies.Count; i++)
             {
                 var enemy = snapshot.Enemies[i];
@@ -391,14 +430,8 @@ namespace ShanhaiDingGuard.Presentation
                 EnemyVisual visual;
                 if (!_enemies.TryGetValue(enemy.InstanceId, out visual))
                 {
-                    var go = Create("Dangkang-" + enemy.InstanceId, _pixel, SortUnit);
-                    go.transform.localScale = new Vector3(0.34f, 0.34f, 1f);
-                    visual = new EnemyVisual
-                    {
-                        InstanceId = enemy.InstanceId,
-                        Transform = go.transform,
-                        Renderer = go.GetComponent<SpriteRenderer>(),
-                    };
+                    visual = RentEnemy("Dangkang-" + enemy.InstanceId, _pixel, new Vector3(0.34f, 0.34f, 1f));
+                    visual.InstanceId = enemy.InstanceId;
                     _enemies.Add(enemy.InstanceId, visual);
                 }
 
@@ -416,40 +449,38 @@ namespace ShanhaiDingGuard.Presentation
                 visual.Renderer.color = Color.Lerp(new Color(0.75f, 0.2f, 0.16f, 1f), new Color(0.93f, 0.55f, 0.22f, 1f), hp);
             }
 
-            var stale = new List<int>();
+            _staleIds.Clear();
             foreach (var pair in _enemies)
             {
                 if (!seen.Contains(pair.Key))
                 {
-                    stale.Add(pair.Key);
+                    _staleIds.Add(pair.Key);
                 }
             }
 
-            for (var i = 0; i < stale.Count; i++)
+            for (var i = 0; i < _staleIds.Count; i++)
             {
-                UnityEngine.Object.Destroy(_enemies[stale[i]].Transform.gameObject);
-                _enemies.Remove(stale[i]);
+                var id = _staleIds[i];
+                ReleaseEnemy(_enemies[id]);
+                _enemies.Remove(id);
             }
         }
 
-        private List<EnemyVisual> CollectGone(BattleSnapshot snapshot)
+        private void CollectGone(BattleSnapshot snapshot, List<EnemyVisual> gone)
         {
-            var alive = new HashSet<int>();
+            _aliveIds.Clear();
             for (var i = 0; i < snapshot.Enemies.Count; i++)
             {
-                alive.Add(snapshot.Enemies[i].InstanceId);
+                _aliveIds.Add(snapshot.Enemies[i].InstanceId);
             }
 
-            var gone = new List<EnemyVisual>();
             foreach (var pair in _enemies)
             {
-                if (!alive.Contains(pair.Key))
+                if (!_aliveIds.Contains(pair.Key))
                 {
                     gone.Add(pair.Value);
                 }
             }
-
-            return gone;
         }
 
         private void BeginDeath(EnemyVisual visual, float anim)
@@ -457,7 +488,7 @@ namespace ShanhaiDingGuard.Presentation
             _enemies.Remove(visual.InstanceId);
             if (_art.Death == null)
             {
-                UnityEngine.Object.Destroy(visual.Transform.gameObject);
+                ReleaseEnemy(visual);
                 return;
             }
 
@@ -466,8 +497,7 @@ namespace ShanhaiDingGuard.Presentation
             visual.Renderer.flipX = visual.FacingLeft;
             _deaths.Add(new DeathVisual
             {
-                Transform = visual.Transform,
-                Renderer = visual.Renderer,
+                Enemy = visual,
                 Start = anim,
             });
         }
@@ -486,12 +516,12 @@ namespace ShanhaiDingGuard.Presentation
 
                 if (age >= DeathHoldSeconds + DeathFadeSeconds || alpha <= 0f)
                 {
-                    UnityEngine.Object.Destroy(death.Transform.gameObject);
+                    ReleaseEnemy(death.Enemy);
                     _deaths.RemoveAt(i);
                     continue;
                 }
 
-                death.Renderer.color = new Color(1f, 1f, 1f, alpha);
+                death.Enemy.Renderer.color = new Color(1f, 1f, 1f, alpha);
             }
         }
 
@@ -512,6 +542,8 @@ namespace ShanhaiDingGuard.Presentation
                     continue;
                 }
 
+                // 一帧补多个 tick 时冷却仍按 tick 走，但同一座塔只播一个 additive，避免叠成一块。
+                var played = false;
                 for (var n = 0; n < tickDelta; n++)
                 {
                     if (marker.Cooldown > 0)
@@ -521,7 +553,12 @@ namespace ShanhaiDingGuard.Presentation
 
                     if (marker.Cooldown == 0 && WouldFire(tower, snapshot, deaths))
                     {
-                        SpawnFx(marker, anim);
+                        if (!played)
+                        {
+                            SpawnFx(marker, anim);
+                            played = true;
+                        }
+
                         marker.Cooldown = interval;
                     }
                 }
@@ -738,7 +775,7 @@ namespace ShanhaiDingGuard.Presentation
             }
 
             marker.Shadow.color = new Color(1f, 1f, 1f, alpha);
-            marker.Shadow.sortingOrder = marker.Renderer.sortingOrder - 1;
+            marker.Shadow.sortingOrder = SortShadow;
         }
 
         private Sprite ShadowSprite()
@@ -777,15 +814,75 @@ namespace ShanhaiDingGuard.Presentation
             }
 
             texture.SetPixels32(pixels);
-            texture.Apply();
+            texture.name = "TowerGroundShadow";
             var ppu = width / ShadowWorldWidth;
+            _shadowTexture = texture;
+            // Tight 网格要先读 CPU 像素。生成 Sprite 后再 Apply(false, true)，上传并丢掉 CPU 副本。
             _shadowSprite = Sprite.Create(texture, new Rect(0f, 0f, width, height), new Vector2(0.5f, 0.5f), ppu);
+            _shadowSprite.name = "TowerGroundShadow";
+            texture.Apply(false, true);
             return _shadowSprite;
         }
 
         private static int UnitOrder(float worldY)
         {
-            return SortUnit - Mathf.RoundToInt(worldY * 100f);
+            var order = SortUnit - Mathf.RoundToInt(worldY * 100f);
+            var floor = SortShadow + 1;
+            if (order < floor)
+            {
+                return floor;
+            }
+
+            return order;
+        }
+
+        private EnemyVisual RentEnemy(string name, Sprite sprite, Vector3 scale)
+        {
+            EnemyVisual visual;
+            if (_enemyPool.Count > 0)
+            {
+                visual = _enemyPool.Pop();
+                var pooled = visual.Transform.gameObject;
+                pooled.name = name;
+                pooled.SetActive(true);
+                visual.Transform.localScale = scale;
+                visual.Renderer.sprite = sprite != null ? sprite : _pixel;
+                visual.Renderer.color = Color.white;
+                visual.Renderer.flipX = false;
+                visual.Renderer.enabled = true;
+            }
+            else
+            {
+                var go = Create(name, sprite, SortUnit);
+                go.transform.localScale = scale;
+                visual = new EnemyVisual
+                {
+                    Transform = go.transform,
+                    Renderer = go.GetComponent<SpriteRenderer>(),
+                };
+            }
+
+            visual.InstanceId = 0;
+            visual.LastHp = 0;
+            visual.HitStart = -1f;
+            visual.FacingLeft = false;
+            visual.FacingKnown = false;
+            visual.LastX = 0d;
+            visual.LastY = 0d;
+            visual.LastDistance = 0d;
+            visual.LastSpeed = 0d;
+            return visual;
+        }
+
+        private void ReleaseEnemy(EnemyVisual visual)
+        {
+            if (visual == null || visual.Transform == null)
+            {
+                return;
+            }
+
+            visual.Transform.gameObject.SetActive(false);
+            _enemyPool.Push(visual);
         }
 
         private SlotVisual FindSlot(string id)

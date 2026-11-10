@@ -2,7 +2,7 @@
 """离线合成冀州 01 战斗预览。不是 Unity Game 视图。
 
 按 ARCHITECTURE.md 里的最终 PPU，把出血图、正图、建造格、当康、剑阵、铜鼎和 HUD
-摆进 19.5×12 world，再裁成 16:9、19.5:9，以及正交 size 6 的 4:3。
+摆进 21×12 world，再裁成 16:9、21:9，以及正交 size 6 的 4:3。
 另外输出三格建塔前/修改前/修改后特写，以及带 HUD 分层的 16:9。
 
     python3 tools/compose_jizhou01_preview.py [输出目录]
@@ -17,8 +17,12 @@ from pathlib import Path
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
-OUT_W = 2340
+OUT_W = 2520
 OUT_H = 1440
+SAFE_W = 1920
+SAFE_H = 1080
+MARGIN_X = (OUT_W - SAFE_W) // 2
+MARGIN_Y = (OUT_H - SAFE_H) // 2
 PPW = 120.0
 TOWER_PPU = 160.0
 DANGKANG_PPU = 160.0
@@ -219,7 +223,7 @@ def old_tower_world(cell_world: tuple[float, float]) -> tuple[float, float]:
 
 def cell_compare(main_img: Image.Image, unit_dir: Path, cells: list, slot_frames: list, body: Image.Image) -> Image.Image:
     board = Image.new("RGBA", (OUT_W, OUT_H), (0, 0, 0, 0))
-    board.paste(main_img.convert("RGBA"), (210, 180))
+    board.paste(main_img.convert("RGBA"), (MARGIN_X, MARGIN_Y))
     font = ImageFont.truetype(FONT, 28)
     small = ImageFont.truetype(FONT, 22)
     crop_w, crop_h = 300, 340
@@ -276,14 +280,14 @@ def cell_compare(main_img: Image.Image, unit_dir: Path, cells: list, slot_frames
 
 def hud_layout(main_img: Image.Image, unit_dir: Path, level: dict, body: Image.Image, ding_img: Image.Image) -> Image.Image:
     board = Image.new("RGBA", (OUT_W, OUT_H), (0, 0, 0, 0))
-    board.paste(main_img.convert("RGBA"), (210, 180))
+    board.paste(main_img.convert("RGBA"), (MARGIN_X, MARGIN_Y))
     for cell in level["buildCells"]:
         world = to_world(cell["x"], cell["y"])
         blit_shadow(board, world)
         blit(board, body, TOWER_PIVOT, world, TOWER_PPU)
     exit_pt = level["waypoints"][-1]
     blit(board, ding_img, DING_PIVOT, to_world(exit_pt["x"], exit_pt["y"]), DING_PPU)
-    view = board.crop((210, 180, 2130, 1260)).convert("RGBA")
+    view = board.crop((MARGIN_X, MARGIN_Y, MARGIN_X + SAFE_W, MARGIN_Y + SAFE_H)).convert("RGBA")
     if view.size != (1920, 1080):
         raise SystemExit("16:9 裁切不是 1920×1080")
     return draw_hud(view, unit_dir)
@@ -374,7 +378,7 @@ def stamp_label(image: Image.Image, corner: str = "top-right") -> Image.Image:
 
 def main() -> None:
     root = repo_root()
-    out_dir = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("/opt/cursor/artifacts")
+    out_dir = Path(sys.argv[1]) if len(sys.argv) > 1 else (repo_root() / "artifacts")
     out_dir.mkdir(parents=True, exist_ok=True)
     art_dir = root / "Assets" / "Game" / "Art" / "Backgrounds"
     unit_dir = root / "Assets" / "Game" / "Resources" / "BattleArt"
@@ -382,7 +386,7 @@ def main() -> None:
     bleed = Image.open(art_dir / "bg_jizhou01_battle_bleed.png").convert("RGB")
     if bleed.size != (OUT_W, OUT_H) or main_img.size != (1920, 1080):
         raise SystemExit("背景尺寸不对")
-    center = bleed.crop((210, 180, 2130, 1260))
+    center = bleed.crop((MARGIN_X, MARGIN_Y, MARGIN_X + SAFE_W, MARGIN_Y + SAFE_H))
     if np.any(np.asarray(center) != np.asarray(main_img)):
         raise SystemExit("出血图中间和正图不一致")
 
@@ -449,12 +453,12 @@ def main() -> None:
     fx_world = (tower_world[0], tower_world[1] + (0.5 - TOWER_PIVOT[1]) * body_height)
     blit_additive(canvas, fx, FX_PIVOT, fx_world, TOWER_PPU)
 
-    view_16 = canvas.crop((210, 180, 2130, 1260))
-    view_wide = canvas.crop((0, 180, 2340, 1260))
-    view_4x3 = canvas.crop((210, 0, 2130, 1440)).resize((1440, 1080), Image.Resampling.LANCZOS)
+    view_16 = canvas.crop((MARGIN_X, MARGIN_Y, MARGIN_X + SAFE_W, MARGIN_Y + SAFE_H))
+    view_wide = canvas.crop((0, MARGIN_Y, OUT_W, MARGIN_Y + SAFE_H))
+    view_4x3 = canvas.crop((MARGIN_X, 0, MARGIN_X + SAFE_W, OUT_H)).resize((1440, 1080), Image.Resampling.LANCZOS)
     outputs = {
         "jizhou01_preview_16x9.png": decorate(view_16, unit_dir),
-        "jizhou01_preview_19_5x9.png": decorate(view_wide, unit_dir),
+        "jizhou01_preview_21x9.png": decorate(view_wide, unit_dir),
         "jizhou01_preview_4x3.png": decorate(view_4x3, unit_dir),
     }
     for name, image in outputs.items():
