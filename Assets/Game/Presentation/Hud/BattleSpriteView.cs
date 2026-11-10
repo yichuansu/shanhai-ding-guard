@@ -19,7 +19,8 @@ namespace ShanhaiDingGuard.Presentation
         public const int SortUnit = 1000;
         public const int SortFx = 3000;
 
-        private const float TowerFootDrop = 0.03f;
+        private const float ShadowWorldWidth = 0.92f;
+        private const float ShadowWorldHeight = 0.62f;
         private const float WalkFps = 10f;
         private const float FxFps = 12f;
         private const float HitFlashSeconds = 0.1f;
@@ -37,6 +38,7 @@ namespace ShanhaiDingGuard.Presentation
             public string CellId;
             public Transform Transform;
             public SpriteRenderer Renderer;
+            public SpriteRenderer Shadow;
             public int Cooldown;
         }
 
@@ -75,6 +77,7 @@ namespace ShanhaiDingGuard.Presentation
         private readonly List<DeathVisual> _deaths = new List<DeathVisual>();
         private readonly List<FxVisual> _fx = new List<FxVisual>();
         private BattleArt _art = new BattleArt();
+        private Sprite _shadowSprite;
         private SliceBattleContent _content;
         private Transform _root;
         private Sprite _pixel;
@@ -120,11 +123,28 @@ namespace ShanhaiDingGuard.Presentation
                     towerGo.transform.localScale = new Vector3(0.42f, 0.42f, 1f);
                 }
 
+                SpriteRenderer shadow = null;
+                if (_art.Ready)
+                {
+                    var shadowSprite = ShadowSprite();
+                    var shadowGo = Create("TowerShadow-" + cell.Id, shadowSprite, SortSlot + 1);
+                    shadowGo.transform.SetParent(towerGo.transform, false);
+                    shadowGo.transform.localPosition = Vector3.zero;
+                    var fittedHeight = shadowSprite.rect.height / shadowSprite.pixelsPerUnit;
+                    if (fittedHeight > 0f)
+                    {
+                        shadowGo.transform.localScale = new Vector3(1f, ShadowWorldHeight / fittedHeight, 1f);
+                    }
+
+                    shadow = shadowGo.GetComponent<SpriteRenderer>();
+                }
+
                 _towers.Add(new TowerVisual
                 {
                     CellId = cell.Id,
                     Transform = towerGo.transform,
                     Renderer = towerGo.GetComponent<SpriteRenderer>(),
+                    Shadow = shadow,
                 });
             }
 
@@ -223,9 +243,10 @@ namespace ShanhaiDingGuard.Presentation
 
                 var cell = _toWorld(tower.X, tower.Y);
                 marker.Transform.gameObject.SetActive(true);
-                marker.Transform.position = FootPosition(cell, _art.TowerBody);
+                marker.Transform.position = SeatPosition(cell);
                 marker.Renderer.color = Color.white;
                 marker.Renderer.sortingOrder = UnitOrder(marker.Transform.position.y);
+                ApplyShadow(marker, 1f);
                 shownTowers.Add(tower.CellId);
             }
 
@@ -241,6 +262,7 @@ namespace ShanhaiDingGuard.Presentation
 
                 if (cell.Occupied)
                 {
+                    // 建成后只藏建造格贴图，不改格子坐标或模拟占用。
                     slot.Renderer.enabled = false;
                     continue;
                 }
@@ -251,9 +273,10 @@ namespace ShanhaiDingGuard.Presentation
                 {
                     var at = _toWorld(cell.X, cell.Y);
                     marker.Transform.gameObject.SetActive(true);
-                    marker.Transform.position = FootPosition(at, _art.TowerBody);
+                    marker.Transform.position = SeatPosition(at);
                     marker.Renderer.color = new Color(1f, 1f, 1f, 0.55f);
                     marker.Renderer.sortingOrder = UnitOrder(marker.Transform.position.y);
+                    ApplyShadow(marker, 0.55f);
                     shownTowers.Add(cell.Id);
                 }
             }
@@ -698,15 +721,66 @@ namespace ShanhaiDingGuard.Presentation
             return -1;
         }
 
-        private static Vector3 FootPosition(Vector3 cell, Sprite body)
+        /// <summary>
+        /// 塔身 pivot 是底座椭圆中心，落在建造格上就和背景石台同心。
+        /// 以前 pivot 在底边，再把画布底边下移 0.03，椭圆中心会浮在格心上方。
+        /// </summary>
+        private static Vector3 SeatPosition(Vector3 cell)
         {
-            if (body == null || body.pixelsPerUnit <= 0f)
+            return cell;
+        }
+
+        private static void ApplyShadow(TowerVisual marker, float alpha)
+        {
+            if (marker.Shadow == null)
             {
-                return cell;
+                return;
             }
 
-            var pivot = body.pivot.y / body.pixelsPerUnit;
-            return new Vector3(cell.x, cell.y - TowerFootDrop + pivot, cell.z);
+            marker.Shadow.color = new Color(1f, 1f, 1f, alpha);
+            marker.Shadow.sortingOrder = marker.Renderer.sortingOrder - 1;
+        }
+
+        private Sprite ShadowSprite()
+        {
+            if (_shadowSprite != null)
+            {
+                return _shadowSprite;
+            }
+
+            const int width = 128;
+            const int height = 86;
+            var texture = new Texture2D(width, height, TextureFormat.RGBA32, false);
+            texture.wrapMode = TextureWrapMode.Clamp;
+            texture.filterMode = FilterMode.Bilinear;
+            var pixels = new Color32[width * height];
+            var cx = (width - 1) * 0.5f;
+            var cy = (height - 1) * 0.5f;
+            var rx = width * 0.5f;
+            var ry = height * 0.5f;
+            for (var y = 0; y < height; y++)
+            {
+                for (var x = 0; x < width; x++)
+                {
+                    var nx = (x - cx) / rx;
+                    var ny = (y - cy) / ry;
+                    var d = (nx * nx) + (ny * ny);
+                    byte a = 0;
+                    if (d < 1f)
+                    {
+                        var t = 1f - d;
+                        a = (byte)Mathf.Clamp(Mathf.RoundToInt(t * t * 0.42f * 255f), 0, 255);
+                    }
+
+                    pixels[(y * width) + x] = new Color32(0, 0, 0, a);
+                }
+            }
+
+            texture.SetPixels32(pixels);
+            texture.Apply();
+            var ppu = width / ShadowWorldWidth;
+            _shadowSprite = Sprite.Create(texture, new Rect(0f, 0f, width, height), new Vector2(0.5f, 0.5f), ppu);
+            return _shadowSprite;
         }
 
         private static int UnitOrder(float worldY)

@@ -451,9 +451,9 @@ namespace ShanhaiDingGuard.Presentation
         private void DrawResourceRow(BattleSnapshot snapshot)
         {
             var art = _sprites.Art;
-            var size = Sy(42f);
-            var x = Sx(880f);
-            var y = Sy(56f);
+            var size = ResourceIconSize();
+            var x = ResourceOriginX();
+            var y = ResourceOriginY();
             var gap = Sx(8f);
             var style = Style(18, TextAnchor.MiddleLeft);
             DrawIcon(art.Lingshi, new Rect(x, y, size, size));
@@ -576,42 +576,97 @@ namespace ShanhaiDingGuard.Presentation
         }
 
         /// <summary>
-        /// 按钮和说明落在 1920×1080 参考下的 HUD 安全区：顶 120px、底 100px、左右各 120px。
-        /// 路径和建造格在这块之外。非 16:9 时按宽高分别缩放，左右裁切不在这里补黑边。
+        /// 按钮和说明按 1920×1080 参考缩放。资源行在按钮右侧，状态文字排在资源行下面，避免和灵石/波次/心叠在一起。
+        /// 有刘海或圆角时整块 HUD 跟着 Screen.safeArea 内缩，16:9 与 19.5:9 的相对间距不变。
         /// </summary>
         private static Rect StartRect()
         {
-            return new Rect(Sx(24f), Sy(28f), Sx(200f), Sy(64f));
+            return new Rect(SafeLeft() + Sx(24f), SafeTop() + Sy(28f), Sx(200f), Sy(64f));
         }
 
         private static Rect PlaceRect()
         {
-            return new Rect(Sx(240f), Sy(28f), Sx(250f), Sy(64f));
+            return new Rect(SafeLeft() + Sx(240f), SafeTop() + Sy(28f), Sx(250f), Sy(64f));
         }
 
         private static Rect SpeedRect()
         {
-            return new Rect(Sx(506f), Sy(28f), Sx(170f), Sy(64f));
+            return new Rect(SafeLeft() + Sx(506f), SafeTop() + Sy(28f), Sx(170f), Sy(64f));
         }
 
         private static Rect BackRect()
         {
-            return new Rect(Sx(692f), Sy(28f), Sx(170f), Sy(64f));
+            return new Rect(SafeLeft() + Sx(692f), SafeTop() + Sy(28f), Sx(170f), Sy(64f));
+        }
+
+        private static float ResourceOriginX()
+        {
+            return SafeLeft() + Sx(880f);
+        }
+
+        private static float ResourceOriginY()
+        {
+            return SafeTop() + Sy(56f);
+        }
+
+        private static float ResourceIconSize()
+        {
+            return Sy(42f);
         }
 
         private static Rect StatusRect()
         {
-            return new Rect(Sx(880f), Sy(12f), Mathf.Max(120f, Screen.width - Sx(904f)), Sy(100f));
+            var x = ResourceOriginX();
+            var y = ResourceOriginY() + ResourceIconSize() + Sy(16f);
+            var right = Screen.width - SafeRight() - Sx(24f);
+            return new Rect(x, y, Mathf.Max(120f, right - x), Sy(72f));
         }
 
         private static Rect NoteRect()
         {
-            return new Rect(Sx(24f), Screen.height - Sy(100f), Mathf.Max(120f, Screen.width - Sx(48f)), Sy(30f));
+            var x = SafeLeft() + Sx(24f);
+            var width = Mathf.Max(120f, Screen.width - SafeLeft() - SafeRight() - Sx(48f));
+            return new Rect(x, Screen.height - SafeBottom() - Sy(100f), width, Sy(30f));
         }
 
         private static Rect HelpRect()
         {
-            return new Rect(Sx(24f), Screen.height - Sy(68f), Mathf.Max(120f, Screen.width - Sx(48f)), Sy(60f));
+            var x = SafeLeft() + Sx(24f);
+            var width = Mathf.Max(120f, Screen.width - SafeLeft() - SafeRight() - Sx(48f));
+            return new Rect(x, Screen.height - SafeBottom() - Sy(68f), width, Sy(60f));
+        }
+
+        private static Rect SafeArea()
+        {
+            var safe = Screen.safeArea;
+            if (safe.width < 1f || safe.height < 1f)
+            {
+                return new Rect(0f, 0f, Mathf.Max(1f, Screen.width), Mathf.Max(1f, Screen.height));
+            }
+
+            return safe;
+        }
+
+        private static float SafeTop()
+        {
+            var safe = SafeArea();
+            return Mathf.Max(0f, Screen.height - (safe.y + safe.height));
+        }
+
+        private static float SafeBottom()
+        {
+            return Mathf.Max(0f, SafeArea().y);
+        }
+
+        private static float SafeLeft()
+        {
+            return Mathf.Max(0f, SafeArea().x);
+        }
+
+        private static float SafeRight()
+        {
+            var safe = SafeArea();
+            return Mathf.Max(0f, Screen.width - (safe.x + safe.width));
         }
 
         private static Rect BannerRect()
