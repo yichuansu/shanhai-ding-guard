@@ -174,7 +174,7 @@ Auth 对外只暴露登录、登出和当前账号 id。令牌留在服务内部
 | --- | --- |
 | `id` | 如 `enemy_dangkang` |
 | `element` | 五行 id，或 `null` 表示尚未指定。M1 不结算相克，M2 前必须填上 |
-| `combat.maxHp` | 生命，待表 |
+| `combat.maxHp` | 生命。冀州 01 当康为 60；该关第 8 波乘 1.1 后为 66 |
 | `combat.speed` | 沿折线速度，单位与关卡 `space` 相同，每 tick 的路径距离。冀州 01 当康为 0.006 高度单位/tick |
 | `combat.leakDamage` | 漏到底时对失败规则的计量，规则本身待定 |
 | `reward` | `currencyId` + `amount`，货币 id 待定 |
@@ -198,6 +198,8 @@ Auth 对外只暴露登录、登出和当前账号 id。令牌留在服务内部
 切片关卡 `content/levels/level_jizhou_01.json` 的失败规则是 `leak_count`：漏出终点的敌人数达到 `outcome.loseLeakCount` 即负。`leakDamage` 按每次漏出累加，交给这条规则记账，但不折成基地生命。`loseLeakCount` 在这张表里是 3。形状样例的 `leak_rule_tbd` 不能开打。可建造格 `buildCells` 也只写在这张切片表上。
 
 清场口径：某一波已经全部刷出，并且该波每一只敌人都已结算（被击杀，或漏入终点），即视为这一波清场，发放 `waveClearBase + waveClearPerWaveIndex × (w−1)`（w 从 1 起）。漏入的敌人不发击杀奖励，但计入清场。胜负另算：全部波次都清场且场上没有敌人则胜；漏出次数达到 `loseLeakCount` 则负，不必等这一波清场。
+
+`tools/m1-slice-check` 用 C# 实测锁定冀州 01 的 tick，容差 ±5%。漏怪数和终局灵石不作容差。当康 `maxHp` 为 60 时：无塔在第 3 次漏出判负（946 tick，余额 120）；单塔分别放在 `cell_jin_01`、`cell_jin_02`、`cell_jin_03` 也都在第 3 次漏出判负（1806 / 2135 / 1775 tick，余额 321 / 449 / 313）；两座按 01→02、三座按 01→02→03 在余额够造价时建造，均为 0 漏通关（1977 tick，余额 540 / 440）。放置意图在下一个 tick 才生效。
 
 ### 英雄 `shdg.hero`（M3，本 PR 不附样例文件）
 
