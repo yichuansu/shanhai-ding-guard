@@ -40,14 +40,13 @@ namespace ShanhaiDingGuard.Presentation
         private const float RefHeight = 1080f;
 
         private readonly SimClock _clock = new SimClock();
-        private readonly Dictionary<int, Transform> _enemies = new Dictionary<int, Transform>();
         private SliceBattleContent _content;
         private CombatSimulation _sim;
         private string _error = "读取切片表…";
         private bool _started;
         private bool _reported;
         private Transform _viewRoot;
-        private readonly Dictionary<string, Transform> _towerMarks = new Dictionary<string, Transform>();
+        private BattleSpriteView _sprites;
         private readonly List<SpriteRenderer> _pathDebug = new List<SpriteRenderer>();
         private bool _showPathDebug;
         private int _cellCursor;
@@ -167,32 +166,32 @@ namespace ShanhaiDingGuard.Presentation
             var style = Style(18, TextAnchor.UpperLeft);
             var status = _error;
             string note = null;
+            BattleSnapshot snapshot = null;
             if (_sim != null && _content != null)
             {
-                var snapshot = _sim.Snapshot;
+                snapshot = _sim.Snapshot;
                 note = snapshot.Note;
+                var icons = _sprites != null && _sprites.Art.Ready;
                 status = _content.Level.DisplayName
                     + "\n"
                     + PhaseLabel(snapshot.Phase)
                     + "  tick "
                     + snapshot.Tick
-                    + "  波次 "
-                    + snapshot.WaveNumber
-                    + "/"
-                    + snapshot.WaveCount
+                    + (icons ? string.Empty : "  波次 " + snapshot.WaveNumber + "/" + snapshot.WaveCount)
                     + "  场上 "
                     + snapshot.Enemies.Count
-                    + "\n灵石 "
-                    + snapshot.Balance
-                    + "\n"
-                    + DingHearts(snapshot.LeakCount, snapshot.LoseLeakCount)
-                    + "  漏怪 "
-                    + snapshot.LeakCount
-                    + "/"
-                    + snapshot.LoseLeakCount;
+                    + (icons
+                        ? string.Empty
+                        : "\n灵石 " + snapshot.Balance + "\n" + DingHearts(snapshot.LeakCount, snapshot.LoseLeakCount)
+                            + "  漏怪 " + snapshot.LeakCount + "/" + snapshot.LoseLeakCount);
             }
 
             GUI.Label(StatusRect(), status ?? string.Empty, style);
+            if (snapshot != null && _sprites != null && _sprites.Art.Ready)
+            {
+                DrawResourceRow(snapshot);
+            }
+
             if (!string.IsNullOrEmpty(note))
             {
                 var hint = Style(16, TextAnchor.MiddleLeft);
@@ -413,7 +412,7 @@ namespace ShanhaiDingGuard.Presentation
             {
                 var from = ToWorld(waypoints[i - 1].X, waypoints[i - 1].Y);
                 var to = ToWorld(waypoints[i].X, waypoints[i].Y);
-                var segment = CreateSprite("Path", new Color(0.93f, 0.84f, 0.55f, 0.45f), 1);
+                var segment = CreateSprite("Path", new Color(0.93f, 0.84f, 0.55f, 0.45f), BattleSpriteView.SortPath);
                 var delta = to - from;
                 var length = delta.magnitude;
                 segment.position = (from + to) * 0.5f;
@@ -427,25 +426,13 @@ namespace ShanhaiDingGuard.Presentation
             }
 
             var exit = waypoints[waypoints.Count - 1];
-            var exitMark = CreateSprite("Exit", new Color(0.85f, 0.25f, 0.22f, 0.45f), 2);
+            var exitMark = CreateSprite("Exit", new Color(0.85f, 0.25f, 0.22f, 0.45f), BattleSpriteView.SortExit);
             exitMark.position = ToWorld(exit.X, exit.Y);
             exitMark.localScale = new Vector3(0.28f, 0.28f, 1f);
             _pathDebug.Add(exitMark.GetComponent<SpriteRenderer>());
             ApplyPathDebug();
-
-            var cells = _content.Level.BuildCells;
-            for (var i = 0; i < cells.Count; i++)
-            {
-                var cell = cells[i];
-                var cellMark = CreateSprite("BuildCell-" + cell.Id, new Color(0.95f, 0.78f, 0.28f, 0.16f), 2);
-                cellMark.position = ToWorld(cell.X, cell.Y);
-                cellMark.localScale = new Vector3(0.55f, 0.55f, 1f);
-
-                var tower = CreateSprite("TowerJin-" + cell.Id, new Color(0.96f, 0.82f, 0.28f, 1f), 4);
-                tower.gameObject.SetActive(false);
-                tower.localScale = new Vector3(0.42f, 0.42f, 1f);
-                _towerMarks.Add(cell.Id, tower);
-            }
+            _sprites = new BattleSpriteView();
+            _sprites.Build(_viewRoot, _content, ToWorld, _pixel);
         }
 
         private void SyncView()
@@ -455,91 +442,64 @@ namespace ShanhaiDingGuard.Presentation
                 return;
             }
 
-            var snapshot = _sim.Snapshot;
-            var shown = new HashSet<string>();
-            for (var i = 0; i < snapshot.Towers.Count; i++)
+            if (_sprites != null)
             {
-                var tower = snapshot.Towers[i];
-                Transform marker;
-                if (!_towerMarks.TryGetValue(tower.CellId, out marker))
-                {
-                    continue;
-                }
+                _sprites.Sync(_sim, _clock, _started, _cellCursor);
+            }
+        }
 
-                marker.gameObject.SetActive(true);
-                marker.position = ToWorld(tower.X, tower.Y);
-                marker.GetComponent<SpriteRenderer>().color = new Color(0.96f, 0.82f, 0.28f, 1f);
-                shown.Add(tower.CellId);
+        private void DrawResourceRow(BattleSnapshot snapshot)
+        {
+            var art = _sprites.Art;
+            var size = Sy(42f);
+            var x = Sx(880f);
+            var y = Sy(56f);
+            var gap = Sx(8f);
+            var style = Style(18, TextAnchor.MiddleLeft);
+            DrawIcon(art.Lingshi, new Rect(x, y, size, size));
+            var text = new Rect(x + size + gap, y, Sx(150f), size);
+            GUI.Label(text, "灵石 " + snapshot.Balance, style);
+            x = text.xMax + Sx(16f);
+            DrawIcon(art.Wave, new Rect(x, y, size, size));
+            text = new Rect(x + size + gap, y, Sx(170f), size);
+            GUI.Label(text, "波次 " + snapshot.WaveNumber + "/" + snapshot.WaveCount, style);
+            x = text.xMax + Sx(16f);
+            var hearts = snapshot.LoseLeakCount;
+            if (hearts < 0)
+            {
+                hearts = 0;
             }
 
-            for (var i = 0; i < snapshot.Cells.Count; i++)
+            var left = hearts - snapshot.LeakCount;
+            if (left < 0)
             {
-                var cell = snapshot.Cells[i];
-                if (!cell.Queued || shown.Contains(cell.Id))
-                {
-                    continue;
-                }
-
-                Transform marker;
-                if (!_towerMarks.TryGetValue(cell.Id, out marker))
-                {
-                    continue;
-                }
-
-                marker.gameObject.SetActive(true);
-                marker.position = ToWorld(cell.X, cell.Y);
-                marker.GetComponent<SpriteRenderer>().color = new Color(0.96f, 0.82f, 0.28f, 0.55f);
-                shown.Add(cell.Id);
+                left = 0;
             }
 
-            foreach (var pair in _towerMarks)
+            for (var i = 0; i < hearts; i++)
             {
-                if (!shown.Contains(pair.Key))
+                var previous = GUI.color;
+                if (i >= left)
                 {
-                    pair.Value.gameObject.SetActive(false);
-                }
-            }
-
-            var seen = new HashSet<int>();
-            var alpha = _started ? _clock.InterpolationAlpha : 0;
-            for (var i = 0; i < snapshot.Enemies.Count; i++)
-            {
-                var enemy = snapshot.Enemies[i];
-                seen.Add(enemy.InstanceId);
-                Transform marker;
-                if (!_enemies.TryGetValue(enemy.InstanceId, out marker))
-                {
-                    marker = CreateSprite("Dangkang-" + enemy.InstanceId, Color.white, 3);
-                    marker.localScale = new Vector3(0.34f, 0.34f, 1f);
-                    _enemies.Add(enemy.InstanceId, marker);
+                    GUI.color = new Color(0.65f, 0.65f, 0.7f, 0.4f);
                 }
 
-                var distance = enemy.Distance + (enemy.Speed * alpha);
-                if (distance > _sim.Path.Length)
-                {
-                    distance = _sim.Path.Length;
-                }
-
-                var point = _sim.Path.Sample(distance);
-                marker.position = ToWorld(point.X, point.Y);
-                var hp = enemy.MaxHp <= 0 ? 0f : Mathf.Clamp01(enemy.Hp / (float)enemy.MaxHp);
-                marker.GetComponent<SpriteRenderer>().color = Color.Lerp(new Color(0.75f, 0.2f, 0.16f, 1f), new Color(0.93f, 0.55f, 0.22f, 1f), hp);
+                DrawIcon(art.Heart, new Rect(x, y, size, size));
+                GUI.color = previous;
+                x += size + Sx(4f);
             }
 
-            var stale = new List<int>();
-            foreach (var pair in _enemies)
+            GUI.Label(new Rect(x + gap, y, Sx(140f), size), snapshot.LeakCount + "/" + snapshot.LoseLeakCount, style);
+        }
+
+        private static void DrawIcon(Sprite sprite, Rect rect)
+        {
+            if (sprite == null || sprite.texture == null)
             {
-                if (!seen.Contains(pair.Key))
-                {
-                    stale.Add(pair.Key);
-                }
+                return;
             }
 
-            for (var i = 0; i < stale.Count; i++)
-            {
-                Destroy(_enemies[stale[i]].gameObject);
-                _enemies.Remove(stale[i]);
-            }
+            GUI.DrawTexture(rect, sprite.texture, ScaleMode.ScaleToFit, true);
         }
 
         private Transform CreateSprite(string name, Color color, int order)

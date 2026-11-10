@@ -55,9 +55,31 @@ flowchart TB
 
 Pivot 在中心，正图 Transform Position (0, 0)、Scale 1。不要用 Scale 0.8333，也不要改逻辑坐标。
 
-以后正式背景按 **2340×1440** 画布交付，中间 1920×1080 是安全区。当前冀州 01 定稿仍是 1920×1080。PPU 120 下它正好盖住 16×9：19.5:9 左右各缺约 1.75 world。场景在正图下面放一层用背景边缘像素拉伸的出血 sprite（约 24×13.5 world，Default 层 Order -110），相机清屏色用草场 `#9DB22A`，这块缺口不露黑边。4:3 若做宽度适配（正交 size 最大约 6），上下各缺约 1.5 world，同一层出血盖住。
+以后正式背景可以按 **2340×1440** 整张交付，中间 1920×1080 是安全区。当前冀州 01 正图仍是 1920×1080，像素不改。PPU 120 下正图正好盖住 16×9。19.5:9、正交 size 4.5 时左右各多出 1.75 world；4:3 若把正交 size 放到 6，上下各多出 1.5 world。这两块由正图下面的出血 sprite 盖住：`bg_jizhou01_battle_bleed`，2340×1440，PPU 120，Scale 1，中心 (0, 0)，覆盖 **19.5×12** world，Default 层 Order -110。正图 Order -100。
 
-导入：Sprite (2D and UI)、Single、Filter Bilinear、关 Mipmap、Max Size 2048、Wrap Clamp、Alpha Is Transparency 关。iOS（`iPhone`）与 Android 的平台覆盖是 ASTC 6×6（`textureFormat: 50`），写在纹理 `.meta` 里。没有单独的 Background 排序层，正图用 Default 层 Order -100，在路径和敌人下面。
+出血图不是把缩略图放大。`tools/generate_jizhou01_bleed.py` 把正图原样贴在中间 1920×1080，外圈用很窄的边缘条做镜像拉伸，再按离开安全区的距离由内向外加重模糊，并稍微压暗、降饱和。接缝外侧的第一圈像素等于正图边缘。相机清屏色仍是草场 `#9DB22A`，只在出血图之外露出来。
+
+正图导入：Sprite (2D and UI)、Single、Filter Bilinear、关 Mipmap、Max Size 2048、Wrap Clamp、Alpha Is Transparency 关。出血图相同，但 Max Size 是 **4096**，避免 2340 被缩到 2048。iOS（`iPhone`）与 Android 的平台覆盖都是 ASTC 6×6（`textureFormat: 50`），写在纹理 `.meta` 里。没有单独的 Background 排序层。
+
+### 冀州 01 单位图
+
+首批单位用 `v2/master_2x` 母版，放在 `Assets/Game/Resources/BattleArt/`。美术 spec 按 1280×720、PPU 100 制作，2× 母版名义 PPU 200。本工程战场高是 9 world（1080 px @ PPU 120）。要保持占屏幕高度的比例，2× 母版应对 **PPU 160**（1× 则是 PPU 80）：720/100 = 7.2，9/7.2 = 1.25，200/1.25 = 160。和背景里已经画死的石台、鼎台、路宽对不齐的，改用下表的 PPU。
+
+| 资产 | 像素 | PPU | 画布 world | 对位 |
+| --- | --- | --- | --- | --- |
+| 剑阵塔身 `tower_jin_body` | 192×192 | 160 | 1.20×1.20 | 最宽处距中心 76 px → 半宽 0.475 world，小于最近格心到路缘约 0.55。脚底在格心下方 0.03 world。Pivot (0.5, 0.021) |
+| 剑阵特效 `tower_jin_fx` | 4×192×192 | 160 | 每帧 1.20×1.20 | 12 fps 单次，约 0.33 s。Pivot 中心。材质 `SpriteAdditive`（SrcAlpha One） |
+| 当康行走 | 8×128×128 | 160 | 0.80×0.80 | 10 fps 循环。躯干宽约 85–100 px → 0.53–0.63 world（约 64–75 px@1080）。路宽均值约 73 px@1080 ≈ 0.61 world。朝右，向左走时 flipX。Pivot (0.5, 0.031) |
+| 当康受击白/红、死亡 | 各 128×128 | 160 | 0.80×0.80 | 受击先闪白 0.05 s 再闪红 0.05 s。死亡停留 0.4 s 后用约 0.4 s 淡出。漏到终点不播死亡 |
+| 铜鼎 `ding_bronze` | 256×256 | 170 | 1.51×1.51 | 石座宽 210 px → 1.235 world ≈ 148 px@1080，对齐背景鼎台外径。底部锚点在 ding (1.53, 0.23)。Pivot (0.5, 0.016) |
+| 建造格三态 | 3×128×128 | 200 | 每帧 0.64×0.64 | 不透明石台宽 116 px → 0.58 world ≈ 70 px@1080，略大于背景石台 64 px（0.533 world）。中心压在格坐标上。Pivot 中心 |
+| HUD 灵石 / 心 / 波次 | 各 128×128 | 160 | 不进世界 | IMGUI 参考边长 42 px@1080。PPU 只写在导入设置里 |
+
+建造格：空着且买得起时是普通；光标所在或已排队时是选中；买不起是禁用；已经建成则藏掉格子，由塔身石座盖住。
+
+排序都在 Default 层：出血 -110，正图 -100，路径调试线 10，建造格 30，塔 / 当康 / 铜鼎按脚底 world y 从 1000 起减（y 越大越靠后），攻击特效 3000。
+
+换帧按模拟时间 ` (tick + 插值) × 0.1 `。行走帧号是沿路径距离 / speed，再乘 `10 fps × 0.1 s`。攻击特效在表现层按 `attackIntervalTicks` 自己计时，只读快照里的位置和血量。这些都不写回 `CombatSimulation`，也不改 `SimClock`。
 
 冀州 01 的图是 `bg_jizhou01_battle`，与 `path_jizhou_01` 绑定，改航点必须同步改图。入口外的土路只是画面，敌人从航点 0 开始走，不另加航点。
 
