@@ -3,6 +3,8 @@
 # 下列路径必须入库，不要追加忽略：docs/、content/、tools/、README.md、LICENSE。
 
 # --- 本仓库补充：系统杂项 ---
+# 本地生成物（检查输出、临时导出）。不要提交。
+/artifacts/
 tools/**/bin/
 tools/**/obj/
 .DS_Store
