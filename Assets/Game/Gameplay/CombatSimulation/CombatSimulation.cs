@@ -797,10 +797,21 @@ namespace ShanhaiDingGuard.Gameplay.CombatSimulation
                     continue;
                 }
 
-                sword.Active = false;
+                // 终局不再把这段飞完，但要记成消散。快照里还能看到这一拍，表现层才会淡出。
+                // 不扣血、不发击杀奖。
+                Retire(sword, false, true);
             }
 
             _swords.RemoveAll(sword => !sword.Active);
+        }
+
+        /// <summary>
+        /// 命中条只在命中拍、且这把剑还没开始收尾时生成一次。
+        /// 同一拍会跨多帧渲染，第二次再进就要跳过。
+        /// </summary>
+        public static bool ShouldBeginSwordHit(bool hitThisTick, bool alreadyEnding)
+        {
+            return hitThisTick && !alreadyEnding;
         }
 
         private void GrantKill()

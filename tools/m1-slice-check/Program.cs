@@ -42,6 +42,8 @@ internal static class Program
             CheckSwordDissipatesWithoutRetarget(failures);
             CheckProjectileSpeedRejected(root, failures);
             CheckReservedDamageSkipsDoomedTarget(failures);
+            CheckSwordHitCueFiresOnce(failures);
+            CheckDoomedSwordDissipatesWhenBattleEnds(failures);
         }
 
         CheckLevelProgressRoundTrip(failures);
@@ -1812,6 +1814,57 @@ internal static class Program
         }
 
         Notes.Add("sword: in-flight reserve skipped a second shot on a 10 hp target");
+    }
+
+    private static void CheckSwordHitCueFiresOnce(List<string> failures)
+    {
+        if (!CombatSimulation.ShouldBeginSwordHit(true, false)
+            || CombatSimulation.ShouldBeginSwordHit(true, true)
+            || CombatSimulation.ShouldBeginSwordHit(false, false)
+            || CombatSimulation.ShouldBeginSwordHit(false, true))
+        {
+            failures.Add("hit cue should start once, only on the hit tick before the sword is already ending");
+            return;
+        }
+
+        Notes.Add("sword: hit cue fires once per sword");
+    }
+
+    private static void CheckDoomedSwordDissipatesWhenBattleEnds(List<string> failures)
+    {
+        var content = MiniBattle(10, 0.1, 0.0467, 30, 1, 3);
+        content.Level.Waypoints[1].X = 0.4;
+        content.Level.Waypoints[1].Y = 0.5;
+        var sim = StartPlacedOn(content, "cell_a");
+        var guard = 0;
+        while (sim.Phase == BattlePhase.Running && guard++ < 20)
+        {
+            sim.Tick();
+        }
+
+        if (sim.Phase != BattlePhase.Won || sim.LeakCount != 1 || sim.KilledEnemies != 0 || sim.Balance != 35 || sim.LastHitDamage != 0)
+        {
+            failures.Add("ending a battle with a sword in flight changed the outcome, phase=" + sim.Phase + " leaks=" + sim.LeakCount + " kills=" + sim.KilledEnemies + " balance=" + sim.Balance + " lastHit=" + sim.LastHitDamage);
+            return;
+        }
+
+        var dissipated = false;
+        var swords = sim.Snapshot.Swords;
+        for (var i = 0; i < swords.Count; i++)
+        {
+            if (swords[i].DissipatedThisTick && !swords[i].HitThisTick)
+            {
+                dissipated = true;
+            }
+        }
+
+        if (!dissipated || sim.DissipatedSwords < 1)
+        {
+            failures.Add("doomed in-flight sword was dropped instead of dissipating, swords=" + swords.Count + " dissipated=" + sim.DissipatedSwords);
+            return;
+        }
+
+        Notes.Add("sword: battle end dissipates the in-flight sword without damage, balance=" + sim.Balance + " (120 - 100 + wave clear 15)");
     }
 
     private static int FirstHp(CombatSimulation sim)

@@ -133,7 +133,7 @@ namespace ShanhaiDingGuard.Presentation
                     double aimY;
                     var world = DisplayWorld(sword, snapshot, sim.Path, projectileSpeed, alpha, out progress);
                     Place(visual, world, sword, art, anim, trailTime);
-                    if (sword.HitThisTick)
+                    if (CombatSimulation.ShouldBeginSwordHit(sword.HitThisTick, visual.Ending))
                     {
                         BeginHit(visual, world, anim, art);
                     }
