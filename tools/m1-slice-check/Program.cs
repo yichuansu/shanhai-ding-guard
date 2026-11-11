@@ -1026,13 +1026,13 @@ internal static class Program
             || header[16] != 0
             || header[17] != 0
             || header[18] != 9
-            || header[19] != 0x24
+            || header[19] != 0xD8
             || header[20] != 0
             || header[21] != 0
             || header[22] != 5
             || header[23] != 0xA0)
         {
-            failures.Add("battle bleed is not a 2340x1440 PNG");
+            failures.Add("battle bleed is not a 2520x1440 PNG");
         }
 
         var bleedMeta = File.ReadAllText(bleedMetaPath);
@@ -1041,10 +1041,10 @@ internal static class Program
             || bleedMeta.IndexOf("filterMode: 1", StringComparison.Ordinal) < 0
             || bleedMeta.IndexOf("maxTextureSize: 4096", StringComparison.Ordinal) < 0
             || bleedMeta.IndexOf("alphaIsTransparency: 0", StringComparison.Ordinal) < 0
-            || bleedMeta.IndexOf("width: 2340", StringComparison.Ordinal) < 0
+            || bleedMeta.IndexOf("width: 2520", StringComparison.Ordinal) < 0
             || bleedMeta.IndexOf("height: 1440", StringComparison.Ordinal) < 0)
         {
-            failures.Add("battle bleed import settings drifted from PPU 120 / 2340x1440 / max 4096");
+            failures.Add("battle bleed import settings drifted from PPU 120 / 2520x1440 / max 4096");
         }
 
         if (bleedMeta.IndexOf("textureFormat: 50", StringComparison.Ordinal) < 0)
@@ -1052,16 +1052,18 @@ internal static class Program
             failures.Add("battle bleed is missing ASTC 6x6 override");
         }
 
-        var scene = File.ReadAllText(Path.Combine(root, "Assets", "Game", "Scenes", "Battle.unity"));
-        if (scene.IndexOf("m_Name: BattleBackgroundBleed", StringComparison.Ordinal) < 0
-            || scene.IndexOf("m_SortingOrder: -110", StringComparison.Ordinal) < 0
-            || scene.IndexOf("m_Size: {x: 19.5, y: 12}", StringComparison.Ordinal) < 0
-            || scene.IndexOf("m_LocalScale: {x: 15, y: 15, z: 1}", StringComparison.Ordinal) >= 0)
-        {
-            failures.Add("battle scene bleed is not a 19.5x12 sprite under the main background");
-        }
+        CheckBattleSceneSprites(root, failures);
 
-        ExpectArtMeta(root, "tower_jin_body.png", new[] { "spritePixelsToUnits: 160", "alphaIsTransparency: 1", "spriteMode: 1", "textureFormat: 50" }, failures);
+        ExpectArtMeta(root, "tower_jin_body.png", new[]
+        {
+            "spritePixelsToUnits: 160",
+            "alphaIsTransparency: 1",
+            "spriteMode: 1",
+            "textureFormat: 50",
+            "alignment: 9",
+            "spritePivot: {x: 0.5, y: 0.227}",
+            "pivot: {x: 0.5, y: 0.227}",
+        }, failures);
         ExpectArtMeta(root, "tower_jin_fx.png", new[] { "spritePixelsToUnits: 160", "spriteMode: 2", "name: fx_0", "name: fx_3", "textureFormat: 50" }, failures);
         ExpectArtMeta(root, "enemy_dangkang_walk.png", new[] { "spritePixelsToUnits: 160", "spriteMode: 2", "name: walk_0", "name: walk_7", "alphaIsTransparency: 1" }, failures);
         ExpectArtMeta(root, "ding_bronze.png", new[] { "spritePixelsToUnits: 170", "alphaIsTransparency: 1" }, failures);
@@ -1091,6 +1093,261 @@ internal static class Program
                 failures.Add(fileName + " meta missing " + needles[i]);
             }
         }
+    }
+
+    /// <summary>
+    /// 按对象块断言 BattleBackground / BattleBackgroundBleed，而不是在整份场景里搜 sortingOrder。
+    /// </summary>
+    private static void CheckBattleSceneSprites(string root, List<string> failures)
+    {
+        var scenePath = Path.Combine(root, "Assets", "Game", "Scenes", "Battle.unity");
+        if (!File.Exists(scenePath))
+        {
+            failures.Add("battle scene is missing");
+            return;
+        }
+
+        var scene = File.ReadAllText(scenePath);
+        var backgroundGuid = ReadMetaGuid(Path.Combine(root, "Assets", "Game", "Art", "Backgrounds", "bg_jizhou01_battle.png.meta"));
+        var bleedGuid = ReadMetaGuid(Path.Combine(root, "Assets", "Game", "Art", "Backgrounds", "bg_jizhou01_battle_bleed.png.meta"));
+        ExpectSceneSprite(scene, "BattleBackground", backgroundGuid, -100, "m_Size: {x: 16, y: 9}", failures);
+        ExpectSceneSprite(scene, "BattleBackgroundBleed", bleedGuid, -110, "m_Size: {x: 21, y: 12}", failures);
+    }
+
+    private static void ExpectSceneSprite(string scene, string objectName, string spriteGuid, int sortingOrder, string sizeLine, List<string> failures)
+    {
+        string gameObjectDoc;
+        if (!TrySliceNamedObject(scene, objectName, out gameObjectDoc))
+        {
+            failures.Add("battle scene is missing " + objectName);
+            return;
+        }
+
+        string fileId;
+        if (!TryHeaderFileId(gameObjectDoc, out fileId))
+        {
+            failures.Add(objectName + " has no fileID");
+            return;
+        }
+
+        var componentIds = ReadComponentFileIds(gameObjectDoc);
+        string transformDoc = null;
+        string rendererDoc = null;
+        for (var i = 0; i < componentIds.Count; i++)
+        {
+            string doc;
+            if (!TrySliceDocument(scene, "&" + componentIds[i], out doc))
+            {
+                continue;
+            }
+
+            if (transformDoc == null && doc.IndexOf("m_LocalScale:", StringComparison.Ordinal) >= 0)
+            {
+                transformDoc = doc;
+            }
+
+            if (rendererDoc == null && doc.IndexOf("m_Sprite:", StringComparison.Ordinal) >= 0)
+            {
+                rendererDoc = doc;
+            }
+        }
+
+        if (transformDoc == null || rendererDoc == null)
+        {
+            failures.Add(objectName + " is missing Transform or SpriteRenderer");
+            return;
+        }
+
+        var scale = LineContaining(transformDoc, "m_LocalScale:");
+        if (scale != "m_LocalScale: {x: 1, y: 1, z: 1}")
+        {
+            failures.Add(objectName + " local scale is not 1");
+        }
+
+        var order = LineContaining(rendererDoc, "m_SortingOrder:");
+        if (order != "m_SortingOrder: " + sortingOrder)
+        {
+            failures.Add(objectName + " sorting order is not " + sortingOrder);
+        }
+
+        var sprite = LineContaining(rendererDoc, "m_Sprite:");
+        if (string.IsNullOrEmpty(spriteGuid) || sprite == null || sprite.IndexOf("guid: " + spriteGuid, StringComparison.Ordinal) < 0)
+        {
+            failures.Add(objectName + " sprite guid is not " + (spriteGuid ?? "(missing meta guid)"));
+        }
+
+        var size = LineContaining(rendererDoc, "m_Size:");
+        if (size != sizeLine)
+        {
+            failures.Add(objectName + " sprite size is not " + sizeLine);
+        }
+    }
+
+    private static string ReadMetaGuid(string metaPath)
+    {
+        if (!File.Exists(metaPath))
+        {
+            return null;
+        }
+
+        var lines = File.ReadAllLines(metaPath);
+        for (var i = 0; i < lines.Length; i++)
+        {
+            var line = lines[i].Trim();
+            if (line.StartsWith("guid:", StringComparison.Ordinal))
+            {
+                return line.Substring("guid:".Length).Trim();
+            }
+        }
+
+        return null;
+    }
+
+    private static bool TrySliceNamedObject(string scene, string objectName, out string document)
+    {
+        var needle = "m_Name: " + objectName;
+        var index = 0;
+        while (index < scene.Length)
+        {
+            index = scene.IndexOf(needle, index, StringComparison.Ordinal);
+            if (index < 0)
+            {
+                document = null;
+                return false;
+            }
+
+            var after = index + needle.Length;
+            if (after >= scene.Length || scene[after] == '\n' || scene[after] == '\r')
+            {
+                return TrySliceAround(scene, index, out document);
+            }
+
+            index = after;
+        }
+
+        document = null;
+        return false;
+    }
+
+    private static bool TrySliceDocument(string scene, string headerToken, out string document)
+    {
+        var needle = headerToken + "\n";
+        var index = scene.IndexOf(needle, StringComparison.Ordinal);
+        if (index < 0)
+        {
+            needle = headerToken + "\r";
+            index = scene.IndexOf(needle, StringComparison.Ordinal);
+        }
+
+        if (index < 0)
+        {
+            document = null;
+            return false;
+        }
+
+        return TrySliceAround(scene, index, out document);
+    }
+
+    private static bool TrySliceAround(string scene, int index, out string document)
+    {
+        var start = scene.LastIndexOf("\n--- ", index, StringComparison.Ordinal);
+        if (start < 0)
+        {
+            start = 0;
+        }
+        else
+        {
+            start += 1;
+        }
+
+        var end = scene.IndexOf("\n--- ", index, StringComparison.Ordinal);
+        if (end < 0)
+        {
+            end = scene.Length;
+        }
+
+        document = scene.Substring(start, end - start);
+        return true;
+    }
+
+    private static bool TryHeaderFileId(string document, out string fileId)
+    {
+        fileId = null;
+        var marker = document.IndexOf("&", StringComparison.Ordinal);
+        if (marker < 0)
+        {
+            return false;
+        }
+
+        var start = marker + 1;
+        var end = start;
+        while (end < document.Length && document[end] >= '0' && document[end] <= '9')
+        {
+            end++;
+        }
+
+        if (end == start)
+        {
+            return false;
+        }
+
+        fileId = document.Substring(start, end - start);
+        return true;
+    }
+
+    private static List<string> ReadComponentFileIds(string document)
+    {
+        var ids = new List<string>();
+        var marker = "component: {fileID: ";
+        var index = 0;
+        while (index < document.Length)
+        {
+            index = document.IndexOf(marker, index, StringComparison.Ordinal);
+            if (index < 0)
+            {
+                break;
+            }
+
+            var start = index + marker.Length;
+            var end = start;
+            while (end < document.Length && document[end] >= '0' && document[end] <= '9')
+            {
+                end++;
+            }
+
+            if (end > start)
+            {
+                ids.Add(document.Substring(start, end - start));
+            }
+
+            index = end;
+        }
+
+        return ids;
+    }
+
+    private static string LineContaining(string document, string token)
+    {
+        var index = document.IndexOf(token, StringComparison.Ordinal);
+        if (index < 0)
+        {
+            return null;
+        }
+
+        var start = document.LastIndexOf('\n', index);
+        start = start < 0 ? 0 : start + 1;
+        var end = document.IndexOf('\n', index);
+        if (end < 0)
+        {
+            end = document.Length;
+        }
+
+        if (end > start && document[end - 1] == '\r')
+        {
+            end--;
+        }
+
+        return document.Substring(start, end - start).Trim();
     }
 
     private static void CheckSpace(string root, List<string> failures)

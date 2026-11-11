@@ -156,6 +156,15 @@ namespace ShanhaiDingGuard.Presentation
             ReportIfFinished();
         }
 
+        private void OnDestroy()
+        {
+            if (_sprites != null)
+            {
+                _sprites.DestroyRuntimeArt();
+                _sprites = null;
+            }
+        }
+
         private void OnGUI()
         {
             DrawButton(StartRect(), _started ? "进行中" : "开战");
@@ -499,7 +508,20 @@ namespace ShanhaiDingGuard.Presentation
                 return;
             }
 
-            GUI.DrawTexture(rect, sprite.texture, ScaleMode.ScaleToFit, true);
+            var texture = sprite.texture;
+            var texRect = sprite.textureRect;
+            if (texture.width < 1 || texture.height < 1 || texRect.width < 1f || texRect.height < 1f)
+            {
+                return;
+            }
+
+            // 用切片在纹理里的矩形，进图集后不会把整张图都画出来。
+            var coords = new Rect(
+                texRect.x / texture.width,
+                texRect.y / texture.height,
+                texRect.width / texture.width,
+                texRect.height / texture.height);
+            GUI.DrawTextureWithTexCoords(rect, texture, coords, true);
         }
 
         private Transform CreateSprite(string name, Color color, int order)
@@ -545,7 +567,16 @@ namespace ShanhaiDingGuard.Presentation
             }
 
             camera.orthographic = true;
-            camera.orthographicSize = BattleCameraSize;
+            var aspect = camera.aspect;
+            if (aspect < 0.01f)
+            {
+                aspect = PlayfieldWorldWidth / PlayfieldWorldHeight;
+            }
+
+            // 16:9 正好 size 4.5。更宽（含 21:9）保持 4.5，多出来的宽由出血图盖住。
+            // 更窄时抬高 size，让 16 world 宽留在画面里：4:3 时 size 为 6，上下由 12 world 高的出血图盖住。
+            var sizeForWidth = (PlayfieldWorldWidth * 0.5f) / aspect;
+            camera.orthographicSize = Mathf.Max(BattleCameraSize, sizeForWidth);
             camera.backgroundColor = new Color(0.6156863f, 0.6980392f, 0.1647059f, 1f);
             camera.transform.position = new Vector3(0f, 0f, -10f);
         }
@@ -577,7 +608,7 @@ namespace ShanhaiDingGuard.Presentation
 
         /// <summary>
         /// 按钮和说明按 1920×1080 参考缩放。资源行在按钮右侧，状态文字排在资源行下面，避免和灵石/波次/心叠在一起。
-        /// 有刘海或圆角时整块 HUD 跟着 Screen.safeArea 内缩，16:9 与 19.5:9 的相对间距不变。
+        /// 有刘海或圆角时整块 HUD 跟着 Screen.safeArea 内缩。比 16:9 更宽（含 21:9）时正交 size 仍是 4.5；更窄时抬高 size。
         /// </summary>
         private static Rect StartRect()
         {

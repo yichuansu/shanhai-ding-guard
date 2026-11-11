@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""从冀州 01 正图外扩一张 2340×1440 出血图。
+"""从冀州 01 正图外扩一张 2520×1440 出血图。
 
 中间 1920×1080 与正图逐像素相同。外圈先按边缘条做镜像拉伸（近处延续画面，
 远处拉成色带），再按离开安全区的距离由内向外加重高斯模糊，并稍微压暗、降饱和。
-接缝外侧的第一圈像素等于正图边缘，避免 19.5:9 / 4:3 露出整张缩略图的大色块。
+接缝外侧的第一圈像素等于正图边缘。PPU 120 下整张是 21×12 world：正交 size 4.5
+的 21:9 可视宽正好 21；4:3 把 size 放到 6 时可视高正好 12。
 
 用法（仓库根目录）：
     python3 tools/generate_jizhou01_bleed.py
@@ -19,7 +20,7 @@ from PIL import Image, ImageFilter
 
 SRC_NAME = "bg_jizhou01_battle.png"
 DST_NAME = "bg_jizhou01_battle_bleed.png"
-OUT_W = 2340
+OUT_W = 2520
 OUT_H = 1440
 SAFE_W = 1920
 SAFE_H = 1080
