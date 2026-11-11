@@ -693,6 +693,14 @@ namespace ShanhaiDingGuard.Content
                 return false;
             }
 
+            double projectileSpeed;
+            if (!ReadDouble(combat.Object, "projectileSpeed", out projectileSpeed, out error)
+                || !(projectileSpeed >= SliceRules.MinProjectileSpeedPerTick))
+            {
+                error = "projectileSpeed 必须 ≥ 0.04 高度单位/tick，已保留原文件";
+                return false;
+            }
+
             bool mergeEnabled;
             if (!ReadBool(merge.Object, "enabled", out mergeEnabled, out error))
             {
@@ -714,6 +722,7 @@ namespace ShanhaiDingGuard.Content
                 Damage = damage,
                 Range = range,
                 AttackIntervalTicks = interval,
+                ProjectileSpeed = projectileSpeed,
                 TargetPriority = priority,
                 MergeEnabled = false,
             };

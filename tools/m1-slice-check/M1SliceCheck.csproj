@@ -19,6 +19,7 @@
     <Compile Include="..\..\Assets\Game\Gameplay\Capture\ICaptureRules.cs" />
     <Compile Include="..\..\Assets\Game\Gameplay\CombatSimulation\SimClock.cs" />
     <Compile Include="..\..\Assets\Game\Gameplay\CombatSimulation\CombatSimulation.cs" />
+    <Compile Include="..\..\Assets\Game\Gameplay\CombatSimulation\SwordCueTrack.cs" />
     <Compile Include="..\..\Assets\Game\Meta\Progress\LevelResultRecorder.cs" />
     <Compile Include="..\..\Assets\Game\Services\Auth\IAuthService.cs" />
     <Compile Include="..\..\Assets\Game\Services\CloudSave\ICloudSaveService.cs" />

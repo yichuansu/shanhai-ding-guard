@@ -38,6 +38,13 @@ internal static class Program
             CheckTwoTowers(content, failures);
             CheckThreeTowers(content, failures);
             CheckWaveClearPaysWhenLeaked(content, failures);
+            CheckSwordHitSettlesOnImpactTick(failures);
+            CheckSwordDissipatesWithoutRetarget(failures);
+            CheckProjectileSpeedRejected(root, failures);
+            CheckReservedDamageSkipsDoomedTarget(failures);
+            CheckSwordHitCueFiresOnce(failures);
+            CheckFrozenSnapshotRetiresOnce(failures);
+            CheckDoomedSwordDissipatesWhenBattleEnds(failures);
         }
 
         CheckLevelProgressRoundTrip(failures);
@@ -66,7 +73,7 @@ internal static class Program
     /// <summary>
     /// tick 基线取 m1-slice-check 的 C# 实测，断言为该值的 ±5%。灵石和漏怪数是精确值。
     /// 当康 maxHp=60。Nora 模拟：无塔判负 943；1 塔 01/02/03 判负 1751/2099/1717；2 塔与 3 塔通关 1932。
-    /// C# 实测：无塔 946；1 塔 01/02/03 判负 1806/2135/1775，余额 321/449/313；2 塔与 3 塔通关 1977，余额 540/440。
+    /// C# 实测（飞剑 0.0467）：无塔 946；1 塔 01/02/03 判负 1806/2135/1775，余额 321/449/313；2 塔与 3 塔通关 1981，余额 540/440。第 2 座 tick 481，第 3 座 tick 820。
     /// </summary>
     private const int OneTowerLoseTicksBaseline = 1806;
 
@@ -76,9 +83,13 @@ internal static class Program
 
     private const int NoTowerLoseTicksBaseline = 946;
 
-    private const int TwoTowerClearTicksBaseline = 1977;
+    private const int TwoTowerClearTicksBaseline = 1981;
 
-    private const int ThreeTowerClearTicksBaseline = 1977;
+    private const int ThreeTowerClearTicksBaseline = 1981;
+
+    private const int SecondTowerPlaceTick = 481;
+
+    private const int ThirdTowerPlaceTick = 820;
 
     /// <summary>
     /// 三塔按这个格子顺序建造。选择不跟建造格表或快照的遍历顺序走。
@@ -247,6 +258,12 @@ internal static class Program
         if (Math.Abs(content.Tower.Range - 0.28) > 1e-9)
         {
             failures.Add("tower range drifted from 0.28 height units");
+        }
+
+        if (!(content.Tower.ProjectileSpeed >= SliceRules.MinProjectileSpeedPerTick)
+            || Math.Abs(content.Tower.ProjectileSpeed - 0.0467) > 1e-12)
+        {
+            failures.Add("projectileSpeed drifted from 0.0467, got " + content.Tower.ProjectileSpeed);
         }
 
         if (Math.Abs(content.Enemy.Speed - 0.006) > 1e-12)
@@ -610,7 +627,7 @@ internal static class Program
         return sim;
     }
 
-    private static CombatSimulation RunAffordableTowers(SliceBattleContent content, int towerLimit, List<int> leakTicks)
+    private static CombatSimulation RunAffordableTowers(SliceBattleContent content, int towerLimit, List<int> leakTicks, List<int> placeTicks)
     {
         var sim = StartPlaced(content);
         var previousLeaks = 0;
@@ -618,6 +635,13 @@ internal static class Program
         while (sim.Phase == BattlePhase.Running && guard++ < 20000)
         {
             sim.Tick();
+            if (placeTicks != null)
+            {
+                while (placeTicks.Count < sim.Snapshot.Towers.Count)
+                {
+                    placeTicks.Add(sim.TickCount);
+                }
+            }
             if (sim.LeakCount > previousLeaks)
             {
                 leakTicks.Add(sim.TickCount);
@@ -717,7 +741,7 @@ internal static class Program
         }
 
         var leakTicks = new List<int>();
-        var sim = RunAffordableTowers(content, 2, leakTicks);
+        var sim = RunAffordableTowers(content, 2, leakTicks, null);
 
         if (sim.Phase != BattlePhase.Won || sim.LeakCount != 0)
         {
@@ -765,7 +789,8 @@ internal static class Program
     private static void CheckTwoTowers(SliceBattleContent content, List<string> failures)
     {
         var leakTicks = new List<int>();
-        var sim = RunAffordableTowers(content, 2, leakTicks);
+        var placeTicks = new List<int>();
+        var sim = RunAffordableTowers(content, 2, leakTicks, placeTicks);
         if (sim.Phase != BattlePhase.Won || sim.LeakCount != 0)
         {
             failures.Add("2 towers should win with 0 leaks, phase=" + sim.Phase + " leaks=" + sim.LeakCount + " towers=" + sim.Snapshot.Towers.Count + " leakTicks=" + Join(leakTicks) + " balance=" + sim.Balance);
@@ -792,7 +817,13 @@ internal static class Program
             return;
         }
 
-        Notes.Add("two towers: 01 then 02, spend 200, leaks=0, ticks=" + sim.TickCount + " (±5% of " + TwoTowerClearTicksBaseline + ", designTicks=1932, delta=" + (sim.TickCount - 1932) + "), final balance=" + sim.Balance);
+        var secondTowerTick = placeTicks.Count > 1 ? placeTicks[1] : -1;
+        if (secondTowerTick != SecondTowerPlaceTick)
+        {
+            failures.Add("2nd tower place tick " + secondTowerTick + " != " + SecondTowerPlaceTick);
+        }
+
+        Notes.Add("two towers: 01 then 02, spend 200, leaks=0, ticks=" + sim.TickCount + " (±5% of " + TwoTowerClearTicksBaseline + ", designTicks=1932, delta=" + (sim.TickCount - 1932) + "), secondTowerTick=" + secondTowerTick + ", final balance=" + sim.Balance);
     }
 
     private static string NextBuildCell(CombatSimulation sim, string[] order)
@@ -825,10 +856,15 @@ internal static class Program
         var triedFourth = false;
         var guard = 0;
         var leakTicks = new List<int>();
+        var placeTicks = new List<int>();
         var previousLeaks = 0;
         while (sim.Phase == BattlePhase.Running && guard++ < 20000)
         {
             sim.Tick();
+            while (placeTicks.Count < sim.Snapshot.Towers.Count)
+            {
+                placeTicks.Add(sim.TickCount);
+            }
             if (sim.LeakCount > previousLeaks)
             {
                 leakTicks.Add(sim.TickCount);
@@ -909,7 +945,13 @@ internal static class Program
             return;
         }
 
-        Notes.Add("three towers: 01 then 02 then 03, spend 300, leaks=0, ticks=" + sim.TickCount + " (±5% of " + ThreeTowerClearTicksBaseline + "), final balance=" + sim.Balance);
+        var thirdTowerTick = placeTicks.Count > 2 ? placeTicks[2] : -1;
+        if (thirdTowerTick != ThirdTowerPlaceTick)
+        {
+            failures.Add("3rd tower place tick " + thirdTowerTick + " != " + ThirdTowerPlaceTick);
+        }
+
+        Notes.Add("three towers: 01 then 02 then 03, spend 300, leaks=0, ticks=" + sim.TickCount + " (±5% of " + ThreeTowerClearTicksBaseline + "), thirdTowerTick=" + thirdTowerTick + ", final balance=" + sim.Balance);
     }
 
     private static void CheckWaveClearPaysWhenLeaked(SliceBattleContent content, List<string> failures)
@@ -1074,6 +1116,42 @@ internal static class Program
         ExpectArtMeta(root, "enemy_dangkang_hit_flash_white.png", new[] { "spritePixelsToUnits: 160" }, failures);
         ExpectArtMeta(root, "enemy_dangkang_hit_flash_red.png", new[] { "spritePixelsToUnits: 160" }, failures);
         ExpectArtMeta(root, "enemy_dangkang_death.png", new[] { "spritePixelsToUnits: 160" }, failures);
+        ExpectArtMeta(root, "proj_jin_sword.png", new[] { "spritePixelsToUnits: 240", "enableMipMap: 0", "filterMode: 1", "textureFormat: 50", "pivot: {x: 0.5, y: 0.5}", "alphaIsTransparency: 1" }, failures);
+        ExpectArtMeta(root, "proj_jin_sword_shimmer_strip.png", new[] { "spritePixelsToUnits: 240", "spriteMode: 2", "enableMipMap: 0", "filterMode: 1", "textureFormat: 50", "name: shimmer_0", "name: shimmer_3" }, failures);
+        ExpectArtMeta(root, "proj_jin_trail_afterimage.png", new[] { "spritePixelsToUnits: 240", "enableMipMap: 0", "filterMode: 1", "textureFormat: 50", "pivot: {x: 0.66, y: 0.5}", "alignment: 9" }, failures);
+        ExpectArtMeta(root, "proj_jin_hit_strip.png", new[] { "spritePixelsToUnits: 240", "spriteMode: 2", "enableMipMap: 0", "filterMode: 1", "textureFormat: 50", "name: hit_0", "name: hit_2", "pivot: {x: 0.5, y: 0.5}" }, failures);
+        ExpectArtMeta(root, "proj_jin_trail.png", new[] { "textureType: 0", "enableMipMap: 0", "filterMode: 1", "wrapU: 1", "wrapV: 1", "textureFormat: 50", "alphaIsTransparency: 1" }, failures);
+        ExpectPngSize(root, "proj_jin_sword.png", 192, 56, failures);
+        ExpectPngSize(root, "proj_jin_sword_shimmer_strip.png", 768, 56, failures);
+        ExpectPngSize(root, "proj_jin_trail_afterimage.png", 282, 56, failures);
+        ExpectPngSize(root, "proj_jin_hit_strip.png", 384, 128, failures);
+        ExpectPngSize(root, "proj_jin_trail.png", 256, 64, failures);
+        ExpectPngSize(root, "tower_jin_body.png", 192, 192, failures);
+        ExpectPngSize(root, "tower_jin_fx.png", 768, 192, failures);
+    }
+
+    private static void ExpectPngSize(string root, string fileName, int width, int height, List<string> failures)
+    {
+        var path = Path.Combine(root, "Assets", "Game", "Resources", "BattleArt", fileName);
+        if (!File.Exists(path))
+        {
+            failures.Add("missing battle art " + fileName);
+            return;
+        }
+
+        var header = File.ReadAllBytes(path);
+        if (header.Length < 24 || header[0] != 0x89)
+        {
+            failures.Add(fileName + " is not a PNG");
+            return;
+        }
+
+        var actualWidth = (header[16] << 24) | (header[17] << 16) | (header[18] << 8) | header[19];
+        var actualHeight = (header[20] << 24) | (header[21] << 16) | (header[22] << 8) | header[23];
+        if (actualWidth != width || actualHeight != height)
+        {
+            failures.Add(fileName + " is " + actualWidth + "x" + actualHeight + ", expected " + width + "x" + height);
+        }
     }
 
     private static void ExpectArtMeta(string root, string fileName, string[] needles, List<string> failures)
@@ -1510,6 +1588,465 @@ internal static class Program
         {
             failures.Add("level progress dropped an entry: " + again);
         }
+    }
+
+    private static void CheckSwordHitSettlesOnImpactTick(List<string> failures)
+    {
+        var content = MiniBattle(10, 0.006, 0.0467, 60, 1, 3);
+        var sim = StartPlacedOn(content, "cell_a");
+        var spawnedTick = -1;
+        var hitTick = -1;
+        var hpAtSpawn = -1;
+        var guard = 0;
+        while (sim.Phase == BattlePhase.Running && guard++ < 200)
+        {
+            var hpBefore = FirstHp(sim);
+            var balanceBefore = sim.Balance;
+            var killsBefore = sim.KilledEnemies;
+            sim.Tick();
+            SwordView spawned = null;
+            SwordView hit = null;
+            var swords = sim.Snapshot.Swords;
+            for (var i = 0; i < swords.Count; i++)
+            {
+                if (swords[i].SpawnedThisTick)
+                {
+                    spawned = swords[i];
+                }
+
+                if (swords[i].HitThisTick)
+                {
+                    hit = swords[i];
+                }
+            }
+
+            if (spawned != null)
+            {
+                spawnedTick = sim.TickCount;
+                hpAtSpawn = FirstHp(sim);
+                var hpChanged = hpBefore > 0 && hpAtSpawn != hpBefore;
+                if (hpChanged || sim.LastHitDamage != 0 || sim.KilledEnemies != killsBefore)
+                {
+                    failures.Add("sword spawn tick " + sim.TickCount + " settled damage hp " + hpBefore + " -> " + hpAtSpawn + " lastHit=" + sim.LastHitDamage);
+                    return;
+                }
+            }
+
+            if (hit != null)
+            {
+                hitTick = sim.TickCount;
+                var hp = FirstHp(sim);
+                if (sim.LastHitDamage != content.Tower.Damage || hp != hpBefore - content.Tower.Damage)
+                {
+                    failures.Add("hit tick " + sim.TickCount + " hp " + hpBefore + " -> " + hp + " lastHit=" + sim.LastHitDamage);
+                    return;
+                }
+
+                if (sim.KilledEnemies != killsBefore || sim.Balance != balanceBefore)
+                {
+                    failures.Add("non-lethal hit paid a kill reward, kills=" + sim.KilledEnemies + " balance=" + sim.Balance);
+                    return;
+                }
+
+                break;
+            }
+        }
+
+        if (spawnedTick < 0 || hitTick <= spawnedTick || hpAtSpawn != 60)
+        {
+            failures.Add("sword did not spawn then hit on a later tick, spawned=" + spawnedTick + " hit=" + hitTick + " hpAtSpawn=" + hpAtSpawn);
+            return;
+        }
+
+        if (!OverkillPaysFullDamage(failures))
+        {
+            return;
+        }
+
+        Notes.Add("sword: damage settles on hit tick " + hitTick + " (spawned " + spawnedTick + "), overkill still reports full damage");
+    }
+
+    private static bool OverkillPaysFullDamage(List<string> failures)
+    {
+        var content = MiniBattle(10, 0.006, 0.0467, 5, 1, 3);
+        var sim = StartPlacedOn(content, "cell_a");
+        var guard = 0;
+        while (sim.Phase == BattlePhase.Running && guard++ < 40)
+        {
+            sim.Tick();
+            var swords = sim.Snapshot.Swords;
+            for (var i = 0; i < swords.Count; i++)
+            {
+                if (!swords[i].HitThisTick)
+                {
+                    continue;
+                }
+
+                if (sim.LastHitDamage != 10 || sim.KilledEnemies != 1)
+                {
+                    failures.Add("overkill hit damage " + sim.LastHitDamage + " kills=" + sim.KilledEnemies);
+                    return false;
+                }
+
+                return true;
+            }
+        }
+
+        failures.Add("overkill sword never hit");
+        return false;
+    }
+
+    private static void CheckSwordDissipatesWithoutRetarget(List<string> failures)
+    {
+        var content = MiniBattle(10, 0.1, 0.0467, 30, 4, 3);
+        content.Level.Waypoints[1].X = 0.4;
+        content.Level.Waypoints[1].Y = 0.5;
+        var sim = StartPlacedOn(content, "cell_a");
+        var targetId = -1;
+        var leakedBeforeDissipate = false;
+        var guard = 0;
+        while (sim.Phase == BattlePhase.Running && sim.DissipatedSwords == 0 && guard++ < 40)
+        {
+            sim.Tick();
+            var swords = sim.Snapshot.Swords;
+            for (var i = 0; i < swords.Count; i++)
+            {
+                var sword = swords[i];
+                if (targetId < 0)
+                {
+                    targetId = sword.TargetId;
+                }
+                else if (sword.TargetId != targetId)
+                {
+                    failures.Add("sword retargeted from " + targetId + " to " + sword.TargetId);
+                    return;
+                }
+
+                if (sword.DissipatedThisTick && sim.LeakCount > 0 && sim.KilledEnemies == 0 && sim.LastHitDamage == 0)
+                {
+                    leakedBeforeDissipate = true;
+                }
+            }
+        }
+
+        if (!leakedBeforeDissipate || sim.DissipatedSwords < 1 || sim.KilledEnemies != 0 || targetId < 0)
+        {
+            failures.Add("sword did not dissipate on a leaked target, dissipated=" + sim.DissipatedSwords + " kills=" + sim.KilledEnemies + " leaks=" + sim.LeakCount + " target=" + targetId);
+            return;
+        }
+
+        Notes.Add("sword: leaked target " + targetId + " dissipated without retarget or damage");
+    }
+
+    private static void CheckProjectileSpeedRejected(string root, List<string> failures)
+    {
+        var tower = File.ReadAllText(Path.Combine(root, "content", "towers", "tower_jin.json"));
+        TowerDefinition parsed;
+        string error;
+        if (SliceTables.TryParseTower(tower.Replace("\"projectileSpeed\": 0.0467", "\"projectileSpeed\": 0.039"), out parsed, out error))
+        {
+            failures.Add("projectileSpeed 0.039 should be rejected");
+        }
+
+        if (!SliceTables.TryParseTower(tower.Replace("\"projectileSpeed\": 0.0467", "\"projectileSpeed\": 0.04"), out parsed, out error))
+        {
+            failures.Add("projectileSpeed 0.04 should load: " + error);
+        }
+
+        var stripped = tower.Replace("\n    \"projectileSpeed\": 0.0467,", string.Empty);
+        if (SliceTables.TryParseTower(stripped, out parsed, out error))
+        {
+            failures.Add("missing projectileSpeed should be rejected");
+        }
+
+        var slow = MiniBattle(10, 0.006, 0.039, 60, 1, 3);
+        CombatSimulation sim;
+        if (CombatSimulation.TryCreate(slow, out sim, out error))
+        {
+            failures.Add("TryCreate accepted projectileSpeed 0.039");
+        }
+
+        var nan = MiniBattle(10, 0.006, double.NaN, 60, 1, 3);
+        if (CombatSimulation.TryCreate(nan, out sim, out error))
+        {
+            failures.Add("TryCreate accepted a non-finite projectileSpeed");
+        }
+
+        Notes.Add("sword: projectileSpeed < 0.04 rejected, 0.04 accepted");
+    }
+
+    private static void CheckReservedDamageSkipsDoomedTarget(List<string> failures)
+    {
+        var content = MiniBattle(10, 0.006, 0.0467, 10, 2, 3);
+        content.Tower.BuildCost = 10;
+        content.Level.Economy.StartingAmount = 120;
+        CombatSimulation sim;
+        string error;
+        if (!CombatSimulation.TryCreate(content, out sim, out error))
+        {
+            failures.Add(error);
+            return;
+        }
+
+        sim.EnqueuePlace(content.Tower.Id, "cell_a");
+        sim.EnqueuePlace(content.Tower.Id, "cell_b");
+        sim.Begin();
+        sim.Tick();
+        var spawned = 0;
+        var swords = sim.Snapshot.Swords;
+        for (var i = 0; i < swords.Count; i++)
+        {
+            if (swords[i].SpawnedThisTick)
+            {
+                spawned++;
+            }
+        }
+
+        if (sim.Snapshot.Towers.Count != 2 || spawned != 1 || sim.ReservedHoldShots < 1)
+        {
+            failures.Add("reserved damage should skip the second shot, towers=" + sim.Snapshot.Towers.Count + " spawned=" + spawned + " holds=" + sim.ReservedHoldShots);
+            return;
+        }
+
+        if (FirstHp(sim) != 10 || sim.LastHitDamage != 0)
+        {
+            failures.Add("reserved hold tick changed hp " + FirstHp(sim) + " lastHit=" + sim.LastHitDamage);
+            return;
+        }
+
+        Notes.Add("sword: in-flight reserve skipped a second shot on a 10 hp target");
+    }
+
+    private static void CheckSwordHitCueFiresOnce(List<string> failures)
+    {
+        if (!CombatSimulation.ShouldBeginSwordHit(true, false)
+            || CombatSimulation.ShouldBeginSwordHit(true, true)
+            || CombatSimulation.ShouldBeginSwordHit(false, false)
+            || CombatSimulation.ShouldBeginSwordHit(false, true))
+        {
+            failures.Add("hit cue should start once, only on the hit tick before the sword is already ending");
+            return;
+        }
+
+        Notes.Add("sword: hit cue fires once per sword");
+    }
+
+    /// <summary>
+    /// 终局后快照冻住，同一把剑会跨很多帧再被看到。淡出时间过了也不能再收尾或再播命中。
+    /// </summary>
+    private static void CheckFrozenSnapshotRetiresOnce(List<string> failures)
+    {
+        if (!HoldFrozenCue(7, true, false, failures, "hit"))
+        {
+            return;
+        }
+
+        if (!HoldFrozenCue(8, false, true, failures, "dissipate"))
+        {
+            return;
+        }
+
+        var reused = new SwordCueTrack();
+        reused.BeginFrame();
+        var first = reused.Observe(1, true, false, 0f);
+        reused.EndFrame(0f);
+        var step = 1f / 60f;
+        var anim = 0f;
+        for (var frame = 0; frame < 60; frame++)
+        {
+            anim += step;
+            reused.BeginFrame();
+            reused.Observe(1, true, false, anim);
+            reused.EndFrame(anim);
+        }
+
+        if (!reused.IsRetired(1))
+        {
+            failures.Add("frozen sword was not retired after the fade");
+            return;
+        }
+
+        reused.Clear();
+        reused.BeginFrame();
+        var again = reused.Observe(1, true, false, 0f);
+        if (!again.BeginHit || !again.Show)
+        {
+            failures.Add("clearing the cue track should allow sword id 1 to hit again");
+            return;
+        }
+
+        if (!first.BeginHit)
+        {
+            failures.Add("first frozen frame should begin the hit");
+            return;
+        }
+
+        Notes.Add("sword: frozen snapshot retires once, and a new battle can reuse the id");
+    }
+
+    private static bool HoldFrozenCue(int id, bool hit, bool dissipate, List<string> failures, string label)
+    {
+        var track = new SwordCueTrack();
+        var hits = 0;
+        var fades = 0;
+        var step = 1f / 60f;
+        var anim = 0f;
+        for (var frame = 0; frame < 90; frame++)
+        {
+            track.BeginFrame();
+            var decision = track.Observe(id, hit, dissipate, anim);
+            if (decision.BeginHit)
+            {
+                hits++;
+            }
+
+            if (decision.BeginFade)
+            {
+                fades++;
+            }
+
+            if (frame > 30 && decision.Show)
+            {
+                failures.Add(label + " sword was shown again after it should have retired, frame=" + frame);
+                return false;
+            }
+
+            track.EndFrame(anim);
+            anim += step;
+        }
+
+        var expectHits = hit ? 1 : 0;
+        var expectFades = dissipate && !hit ? 1 : 0;
+        if (hits != expectHits || fades != expectFades || !track.IsRetired(id))
+        {
+            failures.Add(label + " frozen cue hits=" + hits + " fades=" + fades + " retired=" + track.IsRetired(id));
+            return false;
+        }
+
+        return true;
+    }
+
+    private static void CheckDoomedSwordDissipatesWhenBattleEnds(List<string> failures)
+    {
+        var content = MiniBattle(10, 0.1, 0.0467, 30, 1, 3);
+        content.Level.Waypoints[1].X = 0.4;
+        content.Level.Waypoints[1].Y = 0.5;
+        var sim = StartPlacedOn(content, "cell_a");
+        var guard = 0;
+        while (sim.Phase == BattlePhase.Running && guard++ < 20)
+        {
+            sim.Tick();
+        }
+
+        if (sim.Phase != BattlePhase.Won || sim.LeakCount != 1 || sim.KilledEnemies != 0 || sim.Balance != 35 || sim.LastHitDamage != 0)
+        {
+            failures.Add("ending a battle with a sword in flight changed the outcome, phase=" + sim.Phase + " leaks=" + sim.LeakCount + " kills=" + sim.KilledEnemies + " balance=" + sim.Balance + " lastHit=" + sim.LastHitDamage);
+            return;
+        }
+
+        var dissipated = false;
+        var swords = sim.Snapshot.Swords;
+        for (var i = 0; i < swords.Count; i++)
+        {
+            if (swords[i].DissipatedThisTick && !swords[i].HitThisTick)
+            {
+                dissipated = true;
+            }
+        }
+
+        if (!dissipated || sim.DissipatedSwords < 1)
+        {
+            failures.Add("doomed in-flight sword was dropped instead of dissipating, swords=" + swords.Count + " dissipated=" + sim.DissipatedSwords);
+            return;
+        }
+
+        Notes.Add("sword: battle end dissipates the in-flight sword without damage, balance=" + sim.Balance + " (120 - 100 + wave clear 15)");
+    }
+
+    private static int FirstHp(CombatSimulation sim)
+    {
+        if (sim.Snapshot.Enemies.Count == 0)
+        {
+            return 0;
+        }
+
+        return sim.Snapshot.Enemies[0].Hp;
+    }
+
+    /// <summary>
+    /// 短关，只给飞剑规则用。cell_a 贴在出生点旁边；cell_b 略偏，但仍在 0.28 射程内。
+    /// </summary>
+    private static SliceBattleContent MiniBattle(int damage, double enemySpeed, double projectileSpeed, int maxHp, int enemyCount, int loseLeaks)
+    {
+        return new SliceBattleContent
+        {
+            Tower = new TowerDefinition
+            {
+                Id = SliceRules.SliceTowerId,
+                DisplayName = "剑阵",
+                Element = "jin",
+                BuildCost = 100,
+                Damage = damage,
+                Range = 0.28,
+                AttackIntervalTicks = 8,
+                ProjectileSpeed = projectileSpeed,
+                TargetPriority = SliceRules.TargetFirstAlongPath,
+            },
+            Enemy = new EnemyDefinition
+            {
+                Id = SliceRules.SliceEnemyId,
+                DisplayName = "当康",
+                MaxHp = maxHp,
+                Speed = enemySpeed,
+                LeakDamage = 1,
+                RewardCurrencyId = "lingshi",
+                RewardAmount = 8,
+            },
+            Level = new LevelDefinition
+            {
+                Id = SliceRules.SliceLevelId,
+                DisplayName = "mini",
+                PathId = "path_mini",
+                Space = SliceRules.SpaceHeightUnits16x9,
+                Waypoints = new List<WaypointDefinition>
+                {
+                    new WaypointDefinition { Id = "a", X = 0.2, Y = 0.5 },
+                    new WaypointDefinition { Id = "b", X = 1.2, Y = 0.5 },
+                },
+                Waves = new List<WaveDefinition>
+                {
+                    new WaveDefinition
+                    {
+                        Id = "wave_01",
+                        Spawns = new List<SpawnDefinition>
+                        {
+                            new SpawnDefinition
+                            {
+                                EnemyId = SliceRules.SliceEnemyId,
+                                Count = enemyCount,
+                                IntervalTicks = 48,
+                                HpMultiplier = 1,
+                            },
+                        },
+                    },
+                },
+                BuildCells = new List<BuildCellDefinition>
+                {
+                    new BuildCellDefinition { Id = "cell_a", X = 0.25, Y = 0.55 },
+                    new BuildCellDefinition { Id = "cell_b", X = 0.32, Y = 0.62 },
+                },
+                Economy = new LevelEconomyDefinition
+                {
+                    CurrencyId = "lingshi",
+                    StartingAmount = 120,
+                    WaveClearBase = 15,
+                    WaveClearPerWaveIndex = 5,
+                },
+                WinRule = SliceRules.WinAllWavesCleared,
+                LoseRule = SliceRules.LoseLeakCount,
+                LoseLeakCount = loseLeaks,
+            },
+        };
     }
 
     private static string FindRoot()

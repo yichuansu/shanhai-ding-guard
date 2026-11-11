@@ -23,6 +23,11 @@ namespace ShanhaiDingGuard.Presentation
         public Sprite Heart;
         public Sprite Wave;
         public Material Additive;
+        public Sprite Sword;
+        public Sprite[] SwordShimmer;
+        public Sprite SwordAfterimage;
+        public Sprite[] SwordHit;
+        public Texture2D SwordTrail;
         public bool Ready;
 
         public static BattleArt Load()
@@ -42,6 +47,11 @@ namespace ShanhaiDingGuard.Presentation
             art.Heart = Resources.Load<Sprite>("BattleArt/hud_heart");
             art.Wave = Resources.Load<Sprite>("BattleArt/hud_wave");
             art.Additive = Resources.Load<Material>("BattleArt/SpriteAdditive");
+            art.Sword = Resources.Load<Sprite>("BattleArt/proj_jin_sword");
+            art.SwordShimmer = LoadFrames("BattleArt/proj_jin_sword_shimmer_strip", "shimmer_", 4);
+            art.SwordAfterimage = Resources.Load<Sprite>("BattleArt/proj_jin_trail_afterimage");
+            art.SwordHit = LoadFrames("BattleArt/proj_jin_hit_strip", "hit_", 3);
+            art.SwordTrail = Resources.Load<Texture2D>("BattleArt/proj_jin_trail");
             art.Ready = art.TowerBody != null
                 && art.TowerFx != null
                 && art.Walk != null
