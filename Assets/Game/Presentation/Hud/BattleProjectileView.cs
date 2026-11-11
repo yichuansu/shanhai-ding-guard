@@ -15,19 +15,18 @@ namespace ShanhaiDingGuard.Presentation
     /// 命中或消散那一拍把飞剑钉在本拍模拟落点，α 不再把它拉回段起点。
     /// 竖直偏移用 progress = 已飞距离 ÷（已飞 + 剩余），从塔顶 0.6 world 收到身体中心 0.37 world。
     /// progress 到 1 时偏移落在身体中心，和命中特效、扣血同一帧。
-    /// 拖尾 Time = 0.25s / 倍速，1 倍速下长度仍约 126 px。
+    /// 拖尾 Time = <see cref="SwordCueTrack.TrailSeconds"/> / 倍速（0.25s / 倍速），1 倍速下长度仍约 126 px。
+    /// 淡出时长用 <see cref="SwordCueTrack.FadeSeconds"/>，不再在这里抄一份。
     /// </summary>
     public sealed class BattleProjectileView
     {
         private const float SpawnLift = 0.6f;
         private const float HitLift = 0.37f;
-        private const float TrailSeconds = 0.25f;
         private const float TrailWidth = 0.20f;
         private const float TrailMinVertex = 0.05f;
         private const float HiltLocalX = -0.183f;
         private const float ShimmerFps = 12f;
         private const float HitFps = 20f;
-        private const float FadeSeconds = 0.2f;
         private const float FadeInSeconds = 0.05f;
 
         private sealed class SwordVisual
@@ -53,12 +52,14 @@ namespace ShanhaiDingGuard.Presentation
         }
 
         private readonly List<SwordVisual> _swords = new List<SwordVisual>();
+        private readonly Stack<SwordVisual> _pool = new Stack<SwordVisual>();
         private readonly List<HitVisual> _hits = new List<HitVisual>();
         private readonly List<SwordImpact> _impacts = new List<SwordImpact>();
         private readonly List<Material> _materials = new List<Material>();
         private readonly HashSet<string> _flashed = new HashSet<string>();
         private readonly SwordCueTrack _cues = new SwordCueTrack();
         private CombatSimulation _trackedSim;
+        private BattlePhase _trackedPhase = BattlePhase.Ready;
         private Transform _root;
         private Func<double, double, Vector3> _toWorld;
         private Sprite _pixel;
@@ -72,12 +73,14 @@ namespace ShanhaiDingGuard.Presentation
 
         public void DestroyRuntimeArt()
         {
-            for (var i = 0; i < _swords.Count; i++)
+            for (var i = _swords.Count - 1; i >= 0; i--)
             {
-                if (_swords[i].Root != null)
-                {
-                    UnityEngine.Object.Destroy(_swords[i].Root.gameObject);
-                }
+                DestroySword(_swords[i]);
+            }
+
+            while (_pool.Count > 0)
+            {
+                DestroySword(_pool.Pop());
             }
 
             for (var i = 0; i < _hits.Count; i++)
@@ -101,6 +104,7 @@ namespace ShanhaiDingGuard.Presentation
             _hits.Clear();
             _cues.Clear();
             _trackedSim = null;
+            _trackedPhase = BattlePhase.Ready;
         }
 
         public void Sync(
@@ -118,18 +122,21 @@ namespace ShanhaiDingGuard.Presentation
                 return;
             }
 
-            if (!ReferenceEquals(sim, _trackedSim) || snapshot.Phase == BattlePhase.Ready)
+            // 回收进对象池不会 Clear。离开战斗时 DestroyRuntimeArt 仍会 Clear。
+            if (SwordCueTrack.ShouldResetForBattle(_trackedSim != null, ReferenceEquals(sim, _trackedSim), _trackedPhase, snapshot.Phase))
             {
                 DropAllSwords();
                 _cues.Clear();
-                _trackedSim = sim;
             }
+
+            _trackedSim = sim;
+            _trackedPhase = snapshot.Phase;
 
             _impacts.Clear();
             sim.CopySwordImpacts(_impacts);
             _flashed.Clear();
             _cues.BeginFrame();
-            var trailTime = TrailSeconds / Mathf.Max(1, speed);
+            var trailTime = SwordCueTrack.TrailSeconds / Mathf.Max(1, speed);
 
             if (snapshot.Swords != null)
             {
@@ -311,13 +318,21 @@ namespace ShanhaiDingGuard.Presentation
                 visual.Facing = Mathf.Atan2(dy, dx) * Mathf.Rad2Deg;
             }
 
+            var fresh = !visual.HasLast;
             visual.HasLast = true;
             visual.LastWorld = world;
             visual.Root.position = world;
             visual.Root.rotation = Quaternion.Euler(0f, 0f, visual.Facing);
             if (visual.Trail != null)
             {
+                // 从池里拿出来时先清掉旧拖尾，再在新位置打开，避免从上一把剑的落点拉一条线。
+                if (fresh)
+                {
+                    visual.Trail.Clear();
+                }
+
                 visual.Trail.time = trailTime;
+                visual.Trail.emitting = visual.FadeStart < 0f;
             }
 
             var shown = sword == null || (!sword.HitThisTick && visual.FadeStart < 0f);
@@ -420,7 +435,7 @@ namespace ShanhaiDingGuard.Presentation
                 }
 
                 var age = anim - visual.FadeStart;
-                var alpha = 1f - (age / FadeSeconds);
+                var alpha = 1f - (age / SwordCueTrack.FadeSeconds);
                 if (visual.Sword != null && visual.Sword.enabled)
                 {
                     var rgb = visual.Sword.sprite == _pixel
@@ -445,7 +460,7 @@ namespace ShanhaiDingGuard.Presentation
                     continue;
                 }
 
-                DestroySword(_swords[i]);
+                ReleaseSword(_swords[i]);
                 _swords.RemoveAt(i);
             }
         }
@@ -454,9 +469,10 @@ namespace ShanhaiDingGuard.Presentation
         {
             for (var i = _swords.Count - 1; i >= 0; i--)
             {
-                DestroySword(_swords[i]);
-                _swords.RemoveAt(i);
+                ReleaseSword(_swords[i]);
             }
+
+            _swords.Clear();
         }
 
         private void SpawnHit(Vector3 world, float anim, BattleArt art)
@@ -516,6 +532,60 @@ namespace ShanhaiDingGuard.Presentation
                 }
             }
 
+            SwordVisual visual;
+            if (_pool.Count > 0)
+            {
+                visual = _pool.Pop();
+                PreparePooledSword(visual, id);
+            }
+            else
+            {
+                visual = CreateSword(id, art);
+            }
+
+            _swords.Add(visual);
+            return visual;
+        }
+
+        /// <summary>
+        /// 对象池只换掉这把剑的画面状态。SwordCueTrack 仍按剑 Id 记账，这里不 Clear。
+        /// </summary>
+        private void PreparePooledSword(SwordVisual visual, int id)
+        {
+            visual.Id = id;
+            visual.SpawnAnim = -1f;
+            visual.FadeStart = -1f;
+            visual.Ending = false;
+            visual.HasLast = false;
+            visual.Facing = 0f;
+            visual.LastWorld = Vector3.zero;
+            if (visual.Root != null)
+            {
+                visual.Root.gameObject.name = "ProjJinSword-" + id;
+                visual.Root.gameObject.SetActive(true);
+                visual.Root.localRotation = Quaternion.identity;
+            }
+
+            if (visual.Sword != null)
+            {
+                visual.Sword.enabled = true;
+            }
+
+            if (visual.Afterimage != null)
+            {
+                visual.Afterimage.enabled = visual.Afterimage.sprite != null;
+            }
+
+            if (visual.Trail != null)
+            {
+                visual.Trail.emitting = false;
+                visual.Trail.Clear();
+                visual.Trail.time = SwordCueTrack.TrailSeconds;
+            }
+        }
+
+        private SwordVisual CreateSword(int id, BattleArt art)
+        {
             var root = new GameObject("ProjJinSword-" + id);
             root.transform.SetParent(_root, false);
             var swordRenderer = root.AddComponent<SpriteRenderer>();
@@ -546,7 +616,7 @@ namespace ShanhaiDingGuard.Presentation
                 emit.transform.SetParent(root.transform, false);
                 emit.transform.localPosition = new Vector3(HiltLocalX, 0f, 0f);
                 trail = emit.AddComponent<TrailRenderer>();
-                trail.time = TrailSeconds;
+                trail.time = SwordCueTrack.TrailSeconds;
                 trail.minVertexDistance = TrailMinVertex;
                 trail.widthMultiplier = TrailWidth;
                 trail.widthCurve = AnimationCurve.Linear(0f, 1f, 1f, 1f);
@@ -567,7 +637,7 @@ namespace ShanhaiDingGuard.Presentation
                 }
             }
 
-            var visual = new SwordVisual
+            return new SwordVisual
             {
                 Id = id,
                 Root = root.transform,
@@ -577,8 +647,44 @@ namespace ShanhaiDingGuard.Presentation
                 TrailMaterial = trailMaterial,
                 SpawnAnim = -1f,
             };
-            _swords.Add(visual);
-            return visual;
+        }
+
+        /// <summary>
+        /// 回收 GameObject 和 TrailRenderer。拖尾关掉并清空，避免下一把剑拖着上一段残影。
+        /// 不销毁材质，也不碰 SwordCueTrack。
+        /// </summary>
+        private void ReleaseSword(SwordVisual visual)
+        {
+            if (visual == null || visual.Root == null)
+            {
+                return;
+            }
+
+            visual.Id = 0;
+            visual.Ending = false;
+            visual.FadeStart = -1f;
+            visual.SpawnAnim = -1f;
+            visual.HasLast = false;
+            visual.Facing = 0f;
+            if (visual.Sword != null)
+            {
+                visual.Sword.enabled = false;
+            }
+
+            if (visual.Afterimage != null)
+            {
+                visual.Afterimage.enabled = false;
+            }
+
+            if (visual.Trail != null)
+            {
+                visual.Trail.emitting = false;
+                visual.Trail.Clear();
+                visual.Trail.time = SwordCueTrack.TrailSeconds;
+            }
+
+            visual.Root.gameObject.SetActive(false);
+            _pool.Push(visual);
         }
 
         private void DestroySword(SwordVisual visual)

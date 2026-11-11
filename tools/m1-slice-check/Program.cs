@@ -45,6 +45,10 @@ internal static class Program
             CheckSwordHitCueFiresOnce(failures);
             CheckFrozenSnapshotRetiresOnce(failures);
             CheckDoomedSwordDissipatesWhenBattleEnds(failures);
+            CheckLiveTargetSwordFadesOnceAtOutcome(failures);
+            CheckPooledVisualDoesNotResetCue(failures);
+            CheckCueResetOnlyOnBattleChange(failures);
+            CheckTrailTimeUsesSingleSource(failures);
         }
 
         CheckLevelProgressRoundTrip(failures);
@@ -1772,7 +1776,14 @@ internal static class Program
             failures.Add("TryCreate accepted a non-finite projectileSpeed");
         }
 
-        Notes.Add("sword: projectileSpeed < 0.04 rejected, 0.04 accepted");
+        var unset = MiniBattle(10, 0.006, 0.0467, 60, 1, 3);
+        unset.Tower.ProjectileSpeed = 0d;
+        if (CombatSimulation.TryCreate(unset, out sim, out error))
+        {
+            failures.Add("TryCreate accepted an unset projectileSpeed instead of rejecting it");
+        }
+
+        Notes.Add("sword: projectileSpeed < 0.04 rejected, 0.04 accepted, unset 0 rejected");
     }
 
     private static void CheckReservedDamageSkipsDoomedTarget(List<string> failures)
@@ -1961,6 +1972,221 @@ internal static class Program
         }
 
         Notes.Add("sword: battle end dissipates the in-flight sword without damage, balance=" + sim.Balance + " (120 - 100 + wave clear 15)");
+    }
+
+    /// <summary>
+    /// 失败拍刚射出、还在追活目标的剑以前停在塔上。终局记成消散，不扣血；轨道只淡出一次。
+    /// </summary>
+    private static void CheckLiveTargetSwordFadesOnceAtOutcome(List<string> failures)
+    {
+        var content = MiniBattle(10, 0.05, 0.0467, 10000, 2, 1);
+        content.Tower.AttackIntervalTicks = 1;
+        content.Level.Waves[0].Spawns[0].IntervalTicks = 17;
+        var sim = StartPlacedOn(content, "cell_a");
+        var guard = 0;
+        while (sim.Phase == BattlePhase.Running && guard++ < 40)
+        {
+            sim.Tick();
+        }
+
+        if (sim.Phase != BattlePhase.Lost || sim.LeakCount != 1 || sim.KilledEnemies != 0 || sim.LastHitDamage != 0 || sim.Balance != 20)
+        {
+            failures.Add("live-target end changed the outcome, phase=" + sim.Phase + " leaks=" + sim.LeakCount + " kills=" + sim.KilledEnemies + " lastHit=" + sim.LastHitDamage + " balance=" + sim.Balance + " tick=" + sim.TickCount);
+            return;
+        }
+
+        var cell = content.Level.BuildCells[0];
+        SwordView spawned = null;
+        var swords = sim.Snapshot.Swords;
+        for (var i = 0; i < swords.Count; i++)
+        {
+            var sword = swords[i];
+            if (!sword.SpawnedThisTick || !sword.DissipatedThisTick || sword.HitThisTick || sword.Active)
+            {
+                continue;
+            }
+
+            if (Math.Abs(sword.X - cell.X) > 1e-9 || Math.Abs(sword.Y - cell.Y) > 1e-9)
+            {
+                continue;
+            }
+
+            var enemies = sim.Snapshot.Enemies;
+            for (var n = 0; n < enemies.Count; n++)
+            {
+                if (enemies[n].InstanceId == sword.TargetId)
+                {
+                    spawned = sword;
+                    break;
+                }
+            }
+
+            if (spawned != null)
+            {
+                break;
+            }
+        }
+
+        if (spawned == null)
+        {
+            failures.Add("losing tick did not dissipate the sword just fired at a living target, swords=" + swords.Count + " dissipated=" + sim.DissipatedSwords);
+            return;
+        }
+
+        var before = sim.DissipatedSwords;
+        var tick = sim.TickCount;
+        sim.Tick();
+        if (sim.Phase != BattlePhase.Lost || sim.TickCount != tick || sim.DissipatedSwords != before || sim.Balance != 20 || sim.LeakCount != 1)
+        {
+            failures.Add("a tick after loss dissipated the live-target sword again or moved the baseline");
+            return;
+        }
+
+        if (!HoldFrozenCue(spawned.Id, false, true, failures, "live-target"))
+        {
+            return;
+        }
+
+        Notes.Add("sword: losing tick dissipates the just-fired live-target sword once, id=" + spawned.Id);
+    }
+
+    /// <summary>
+    /// 对象池把画面改绑到新 Id 时不能 Clear。旧剑只淡出一次，新剑单独记账；换局 Clear 之后旧 Id 才能再来。
+    /// </summary>
+    private static void CheckPooledVisualDoesNotResetCue(List<string> failures)
+    {
+        var track = new SwordCueTrack();
+        track.BeginFrame();
+        var first = track.Observe(4, false, true, 0f);
+        track.EndFrame(0f);
+        if (!first.BeginFade || first.BeginHit || !first.Show)
+        {
+            failures.Add("pooled cue setup should begin one fade");
+            return;
+        }
+
+        var extraFades = 0;
+        var anim = 0f;
+        for (var frame = 0; frame < 10; frame++)
+        {
+            anim += 1f / 60f;
+            track.BeginFrame();
+            var again = track.Observe(4, false, true, anim);
+            if (again.BeginFade)
+            {
+                extraFades++;
+            }
+
+            var rebound = track.Observe(5, false, false, anim);
+            if (!rebound.Show || rebound.BeginFade || rebound.BeginHit)
+            {
+                failures.Add("rebinding a pooled sword to a new id disturbed the cue");
+                return;
+            }
+
+            track.EndFrame(anim);
+        }
+
+        if (extraFades != 0 || track.IsRetired(4) || track.IsRetired(5))
+        {
+            failures.Add("pooled rebinding restarted the fade, extra=" + extraFades + " retired4=" + track.IsRetired(4) + " retired5=" + track.IsRetired(5));
+            return;
+        }
+
+        anim = SwordCueTrack.RetireAfterSeconds;
+        track.BeginFrame();
+        var last = track.Observe(4, false, true, anim);
+        var dropped = track.EndFrame(anim);
+        var droppedOld = false;
+        for (var i = 0; i < dropped.Count; i++)
+        {
+            if (dropped[i] == 4)
+            {
+                droppedOld = true;
+            }
+        }
+
+        if (last.BeginFade || !track.IsRetired(4) || !droppedOld)
+        {
+            failures.Add("pooled sword should retire once when the hold elapses");
+            return;
+        }
+
+        track.BeginFrame();
+        var after = track.Observe(4, false, true, anim + 1f);
+        var still = track.Observe(5, false, false, anim + 1f);
+        track.EndFrame(anim + 1f);
+        if (after.Show || after.BeginFade || !still.Show)
+        {
+            failures.Add("retired sword faded again after its visual would have been recycled");
+            return;
+        }
+
+        track.Clear();
+        track.BeginFrame();
+        var restarted = track.Observe(4, false, true, 0f);
+        if (!restarted.BeginFade || !restarted.Show)
+        {
+            failures.Add("Clear on battle change should let the recycled id fade again");
+            return;
+        }
+
+        Notes.Add("sword: pooling a visual does not reset SwordCueTrack; Clear still resets a new battle");
+    }
+
+    private static void CheckCueResetOnlyOnBattleChange(List<string> failures)
+    {
+        if (SwordCueTrack.ShouldResetForBattle(false, false, BattlePhase.Ready, BattlePhase.Ready)
+            || SwordCueTrack.ShouldResetForBattle(true, true, BattlePhase.Ready, BattlePhase.Ready))
+        {
+            failures.Add("ready frames before and during the countdown should not clear the cue track");
+            return;
+        }
+
+        if (!SwordCueTrack.ShouldResetForBattle(true, false, BattlePhase.Lost, BattlePhase.Ready)
+            || !SwordCueTrack.ShouldResetForBattle(true, true, BattlePhase.Running, BattlePhase.Ready)
+            || !SwordCueTrack.ShouldResetForBattle(true, true, BattlePhase.Lost, BattlePhase.Ready))
+        {
+            failures.Add("a new sim or a return to ready should clear the cue track");
+            return;
+        }
+
+        if (SwordCueTrack.ShouldResetForBattle(true, true, BattlePhase.Running, BattlePhase.Running)
+            || SwordCueTrack.ShouldResetForBattle(true, true, BattlePhase.Running, BattlePhase.Lost)
+            || SwordCueTrack.ShouldResetForBattle(true, true, BattlePhase.Running, BattlePhase.Won))
+        {
+            failures.Add("ending or continuing a battle should keep the cue track so swords can fade");
+            return;
+        }
+
+        Notes.Add("sword: cue clear stays on sim change or return to ready, not on every ready frame");
+    }
+
+    private static void CheckTrailTimeUsesSingleSource(List<string> failures)
+    {
+        var trail = TrailTime(1);
+        var doubled = TrailTime(2);
+        var stalled = TrailTime(0);
+        if (Math.Abs(trail - 0.25f) > 1e-6 || Math.Abs(doubled - 0.125f) > 1e-6 || Math.Abs(stalled - trail) > 1e-6)
+        {
+            failures.Add("trail time should stay 0.25s / speed multiplier, speed at least 1, got " + trail + " / " + doubled);
+            return;
+        }
+
+        if (SwordCueTrack.RetireAfterSeconds + 1e-6 < SwordCueTrack.FadeSeconds
+            || SwordCueTrack.RetireAfterSeconds + 1e-6 < SwordCueTrack.TrailSeconds)
+        {
+            failures.Add("retire hold is not max(FadeSeconds, TrailSeconds)");
+            return;
+        }
+
+        Notes.Add("sword: trail time is SwordCueTrack.TrailSeconds / speed");
+    }
+
+    private static float TrailTime(int speed)
+    {
+        var divisor = speed < 1 ? 1 : speed;
+        return SwordCueTrack.TrailSeconds / divisor;
     }
 
     private static int FirstHp(CombatSimulation sim)

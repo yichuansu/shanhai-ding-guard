@@ -791,14 +791,9 @@ namespace ShanhaiDingGuard.Gameplay.CombatSimulation
                     continue;
                 }
 
-                var enemy = FindEnemy(sword.TargetId);
-                if (!sword.TargetLost && enemy != null && enemy.Alive)
-                {
-                    continue;
-                }
-
-                // 终局不再把这段飞完，但要记成消散。快照里还能看到这一拍，表现层才会淡出。
-                // 不扣血、不发击杀奖。
+                // 终局不再把这段飞完。目标已死、已漏，或仍追着活人，都记成消散。
+                // 失败拍刚射出、坐标还在塔上的剑也走这条，表现层才会淡出，不留残影。
+                // 不扣血、不发击杀奖，因此不改漏怪数和灵石。
                 Retire(sword, false, true);
             }
 

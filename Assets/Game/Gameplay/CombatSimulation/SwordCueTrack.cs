@@ -36,6 +36,25 @@ namespace ShanhaiDingGuard.Gameplay.CombatSimulation
             get { return FadeSeconds > TrailSeconds ? FadeSeconds : TrailSeconds; }
         }
 
+        /// <summary>
+        /// 开战前还没绑定模拟，或相位一直停在 Ready，都不要 Clear。
+        /// 换了一场模拟，或从战斗中回到 Ready，才清空。胜负当帧不能清，飞剑还要淡出。
+        /// </summary>
+        public static bool ShouldResetForBattle(bool hasSim, bool sameSim, BattlePhase previous, BattlePhase current)
+        {
+            if (!hasSim)
+            {
+                return false;
+            }
+
+            if (!sameSim)
+            {
+                return true;
+            }
+
+            return current == BattlePhase.Ready && previous != BattlePhase.Ready;
+        }
+
         public void Clear()
         {
             _slots.Clear();

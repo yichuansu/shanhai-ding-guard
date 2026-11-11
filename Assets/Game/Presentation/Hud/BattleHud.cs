@@ -51,17 +51,21 @@ namespace ShanhaiDingGuard.Presentation
         private bool _showPathDebug;
         private int _cellCursor;
         private Sprite _pixel;
+        private Texture2D _pixelTexture;
+        private int _fittedScreenWidth = -1;
+        private int _fittedScreenHeight = -1;
+        private float _fittedAspect = -1f;
 
         public event Action<BattleFinished> Finished;
 
         private void Awake()
         {
-            FitBattleCamera();
+            FitBattleCameraIfScreenChanged();
         }
 
         private async void Start()
         {
-            FitBattleCamera();
+            FitBattleCameraIfScreenChanged();
             var loaded = await SliceContentLoader.LoadSliceAsync();
             if (!isActiveAndEnabled)
             {
@@ -90,6 +94,7 @@ namespace ShanhaiDingGuard.Presentation
 
         private void Update()
         {
+            FitBattleCameraIfScreenChanged();
             if (Pressed(BackRect()) || PressedKey(Key.Escape))
             {
                 SceneManager.LoadScene("Hub");
@@ -163,10 +168,13 @@ namespace ShanhaiDingGuard.Presentation
                 _sprites.DestroyRuntimeArt();
                 _sprites = null;
             }
+
+            ReleasePixel();
         }
 
         private void OnGUI()
         {
+            FitBattleCameraIfScreenChanged();
             DrawButton(StartRect(), _started ? "进行中" : "开战");
             DrawButton(PlaceRect(), PlaceLabel());
             DrawButton(SpeedRect(), "倍速 " + _clock.Speed + "x");
@@ -362,7 +370,8 @@ namespace ShanhaiDingGuard.Presentation
             for (var i = 0; i < cells.Count; i++)
             {
                 var screen = camera.WorldToScreenPoint(ToWorld(cells[i].X, cells[i].Y));
-                GUI.Label(new Rect(screen.x - 18f, (Screen.height - screen.y) - 36f, 36f, 22f), (i + 1).ToString(), style);
+                var label = new Rect(screen.x - 18f, (Screen.height - screen.y) - 36f, 36f, 22f);
+                GUI.Label(FitLabelToSafeArea(label), (i + 1).ToString(), style);
             }
         }
 
@@ -404,7 +413,7 @@ namespace ShanhaiDingGuard.Presentation
 
         private void BuildView()
         {
-            FitBattleCamera();
+            FitBattleCameraIfScreenChanged();
             _pixel = Pixel();
             _viewRoot = new GameObject("SliceView").transform;
             if (GameObject.Find("BattleBackground") == null)
@@ -537,11 +546,36 @@ namespace ShanhaiDingGuard.Presentation
 
         private Sprite Pixel()
         {
+            ReleasePixel();
             var texture = new Texture2D(1, 1, TextureFormat.RGBA32, false);
+            texture.name = "BattlePixel";
             texture.SetPixel(0, 0, Color.white);
             texture.Apply();
             texture.filterMode = FilterMode.Point;
-            return Sprite.Create(texture, new Rect(0f, 0f, 1f, 1f), new Vector2(0.5f, 0.5f), 1f);
+            texture.hideFlags = HideFlags.HideAndDontSave;
+            var sprite = Sprite.Create(texture, new Rect(0f, 0f, 1f, 1f), new Vector2(0.5f, 0.5f), 1f);
+            sprite.name = "BattlePixel";
+            sprite.hideFlags = HideFlags.HideAndDontSave;
+            _pixelTexture = texture;
+            return sprite;
+        }
+
+        /// <summary>
+        /// 1×1 纯色纹理和 Sprite 是运行时 new 出来的，场景卸载不会带走它们。
+        /// </summary>
+        private void ReleasePixel()
+        {
+            if (_pixel != null)
+            {
+                Destroy(_pixel);
+                _pixel = null;
+            }
+
+            if (_pixelTexture != null)
+            {
+                Destroy(_pixelTexture);
+                _pixelTexture = null;
+            }
         }
 
         /// <summary>
@@ -556,6 +590,32 @@ namespace ShanhaiDingGuard.Presentation
             }
 
             return new Vector3((float)((x - 0.889) * WorldUnitsPerHeight), (float)((y - 0.5) * WorldUnitsPerHeight), 0f);
+        }
+
+        /// <summary>
+        /// 分辨率、窗口尺寸或相机宽高比变化时重算正交 size。公式不变：16:9 为 4.5；更宽保持 4.5；
+        /// 更窄时抬高，让 16 world 宽留在画面里。4:3 的 aspect 是 4/3，sizeForWidth = 8 / (4/3) = 6。
+        /// </summary>
+        private void FitBattleCameraIfScreenChanged()
+        {
+            var camera = Camera.main;
+            if (camera == null)
+            {
+                return;
+            }
+
+            var width = Screen.width;
+            var height = Screen.height;
+            var aspect = camera.aspect;
+            if (width == _fittedScreenWidth && height == _fittedScreenHeight && Mathf.Abs(aspect - _fittedAspect) < 0.0001f)
+            {
+                return;
+            }
+
+            FitBattleCamera();
+            _fittedScreenWidth = width;
+            _fittedScreenHeight = height;
+            _fittedAspect = camera.aspect;
         }
 
         private static void FitBattleCamera()
@@ -704,7 +764,50 @@ namespace ShanhaiDingGuard.Presentation
         {
             var width = Sx(320f);
             var height = Sy(80f);
-            return new Rect((Screen.width - width) * 0.5f, (Screen.height - height) * 0.5f, width, height);
+            var safe = SafeArea();
+            var top = Mathf.Max(0f, Screen.height - (safe.y + safe.height));
+            var centerX = safe.x + (safe.width * 0.5f);
+            var centerY = top + (safe.height * 0.5f);
+            return new Rect(centerX - (width * 0.5f), centerY - (height * 0.5f), width, height);
+        }
+
+        /// <summary>
+        /// 格子编号跟着世界坐标走，但整块标签收进 Screen.safeArea，避免刘海或圆角挡住。
+        /// </summary>
+        private static Rect FitLabelToSafeArea(Rect rect)
+        {
+            var safe = SafeArea();
+            var top = Mathf.Max(0f, Screen.height - (safe.y + safe.height));
+            var bottom = top + safe.height;
+            var left = safe.x;
+            var right = safe.x + safe.width;
+            if (rect.width >= safe.width)
+            {
+                rect.x = left;
+            }
+            else if (rect.x < left)
+            {
+                rect.x = left;
+            }
+            else if (rect.x + rect.width > right)
+            {
+                rect.x = right - rect.width;
+            }
+
+            if (rect.height >= safe.height)
+            {
+                rect.y = top;
+            }
+            else if (rect.y < top)
+            {
+                rect.y = top;
+            }
+            else if (rect.y + rect.height > bottom)
+            {
+                rect.y = bottom - rect.height;
+            }
+
+            return rect;
         }
 
         private static float Sx(float referenceX)

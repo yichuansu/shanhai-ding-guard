@@ -98,6 +98,7 @@ namespace ShanhaiDingGuard.Presentation
         private Func<double, double, Vector3> _toWorld;
         private int _lastLeak;
         private float _afterBattle;
+        private bool _missingSpeedWarned;
 
         public BattleArt Art
         {
@@ -227,11 +228,34 @@ namespace ShanhaiDingGuard.Presentation
 
             UpdateDeaths(anim);
             UpdateFxFrames(anim);
-            if (_projectiles != null)
+            double projectileSpeed;
+            if (_projectiles != null && TryReadProjectileSpeed(out projectileSpeed))
             {
-                var projectileSpeed = _content != null && _content.Tower != null ? _content.Tower.ProjectileSpeed : 0.0467;
                 _projectiles.Sync(sim, snapshot, alpha, anim, _art, projectileSpeed, clock != null ? clock.Speed : 1, PlayTowerFlash);
             }
+        }
+
+        /// <summary>
+        /// 飞剑插值只用塔表上的 projectileSpeed。缺字段或低于下限时加载阶段已经失败；
+        /// 这里不再静默回退到 0.0467，打一条警告后跳过飞剑插值。
+        /// </summary>
+        private bool TryReadProjectileSpeed(out double projectileSpeed)
+        {
+            projectileSpeed = 0d;
+            var tower = _content != null ? _content.Tower : null;
+            if (tower != null && tower.ProjectileSpeed >= CombatSimulation.MinProjectileSpeedPerTick)
+            {
+                projectileSpeed = tower.ProjectileSpeed;
+                return true;
+            }
+
+            if (!_missingSpeedWarned)
+            {
+                _missingSpeedWarned = true;
+                Debug.LogWarning("塔表缺少可用的 projectileSpeed（须 ≥ 0.04 高度单位/tick）。飞剑不使用 0.0467 硬编码回退，本场不插值飞剑。");
+            }
+
+            return false;
         }
 
         private void SyncArt(CombatSimulation sim, BattleSnapshot snapshot, float alpha, float anim, int cursorCell)
