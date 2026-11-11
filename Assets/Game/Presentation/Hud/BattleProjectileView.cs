@@ -56,8 +56,9 @@ namespace ShanhaiDingGuard.Presentation
         private readonly List<HitVisual> _hits = new List<HitVisual>();
         private readonly List<SwordImpact> _impacts = new List<SwordImpact>();
         private readonly List<Material> _materials = new List<Material>();
-        private readonly HashSet<int> _seen = new HashSet<int>();
         private readonly HashSet<string> _flashed = new HashSet<string>();
+        private readonly SwordCueTrack _cues = new SwordCueTrack();
+        private CombatSimulation _trackedSim;
         private Transform _root;
         private Func<double, double, Vector3> _toWorld;
         private Sprite _pixel;
@@ -98,6 +99,8 @@ namespace ShanhaiDingGuard.Presentation
             _materials.Clear();
             _swords.Clear();
             _hits.Clear();
+            _cues.Clear();
+            _trackedSim = null;
         }
 
         public void Sync(
@@ -115,10 +118,17 @@ namespace ShanhaiDingGuard.Presentation
                 return;
             }
 
+            if (!ReferenceEquals(sim, _trackedSim) || snapshot.Phase == BattlePhase.Ready)
+            {
+                DropAllSwords();
+                _cues.Clear();
+                _trackedSim = sim;
+            }
+
             _impacts.Clear();
             sim.CopySwordImpacts(_impacts);
-            _seen.Clear();
             _flashed.Clear();
+            _cues.BeginFrame();
             var trailTime = TrailSeconds / Mathf.Max(1, speed);
 
             if (snapshot.Swords != null)
@@ -126,21 +136,17 @@ namespace ShanhaiDingGuard.Presentation
                 for (var i = 0; i < snapshot.Swords.Count; i++)
                 {
                     var sword = snapshot.Swords[i];
+                    var decision = _cues.Observe(sword.Id, sword.HitThisTick, sword.DissipatedThisTick, anim);
+                    if (!decision.Show)
+                    {
+                        continue;
+                    }
+
                     var visual = FindOrCreate(sword.Id, art);
-                    _seen.Add(sword.Id);
                     float progress;
-                    double aimX;
-                    double aimY;
                     var world = DisplayWorld(sword, snapshot, sim.Path, projectileSpeed, alpha, out progress);
                     Place(visual, world, sword, art, anim, trailTime);
-                    if (CombatSimulation.ShouldBeginSwordHit(sword.HitThisTick, visual.Ending))
-                    {
-                        BeginHit(visual, world, anim, art);
-                    }
-                    else if (sword.DissipatedThisTick)
-                    {
-                        BeginFade(visual, anim);
-                    }
+                    ApplyCue(visual, decision, world, anim, art);
                 }
             }
 
@@ -152,40 +158,43 @@ namespace ShanhaiDingGuard.Presentation
                     onTowerFlash(impact.CellId, anim);
                 }
 
-                if (_seen.Contains(impact.Id))
+                if (!impact.Hit && !impact.Dissipated)
                 {
                     continue;
                 }
 
-                if (impact.Hit)
+                var decision = _cues.Observe(impact.Id, impact.Hit, impact.Dissipated, anim);
+                if (!decision.Show || (!decision.BeginHit && !decision.BeginFade))
                 {
-                    var world = Lifted(impact.X, impact.Y, 1f);
-                    SpawnHit(world, anim, art);
+                    continue;
                 }
-                else if (impact.Dissipated)
-                {
-                    var visual = FindOrCreate(impact.Id, art);
-                    var world = Lifted(impact.X, impact.Y, 1f);
-                    Place(visual, world, null, art, anim, trailTime);
-                    BeginFade(visual, anim);
-                    _seen.Add(impact.Id);
-                }
+
+                var visual = FindOrCreate(impact.Id, art);
+                var world = Lifted(impact.X, impact.Y, 1f);
+                Place(visual, world, null, art, anim, trailTime);
+                ApplyCue(visual, decision, world, anim, art);
             }
 
-            for (var i = _swords.Count - 1; i >= 0; i--)
+            var drop = _cues.EndFrame(anim);
+            for (var i = 0; i < drop.Count; i++)
             {
-                var visual = _swords[i];
-                if (_seen.Contains(visual.Id) || visual.Ending)
-                {
-                    continue;
-                }
-
-                DestroySword(visual);
-                _swords.RemoveAt(i);
+                DropSword(drop[i]);
             }
 
             UpdateFades(anim);
             UpdateHits(anim, art);
+        }
+
+        private void ApplyCue(SwordVisual visual, SwordCueTrack.Decision decision, Vector3 world, float anim, BattleArt art)
+        {
+            if (decision.BeginHit)
+            {
+                BeginHit(visual, world, anim, art);
+            }
+            else if (decision.BeginFade)
+            {
+                BeginFade(visual, anim);
+            }
         }
 
         private Vector3 DisplayWorld(
@@ -424,12 +433,29 @@ namespace ShanhaiDingGuard.Presentation
                 {
                     visual.Afterimage.color = new Color(1f, 1f, 1f, Mathf.Clamp01(alpha));
                 }
+            }
+        }
 
-                if (age >= Mathf.Max(FadeSeconds, TrailSeconds))
+        private void DropSword(int id)
+        {
+            for (var i = _swords.Count - 1; i >= 0; i--)
+            {
+                if (_swords[i].Id != id)
                 {
-                    DestroySword(visual);
-                    _swords.RemoveAt(i);
+                    continue;
                 }
+
+                DestroySword(_swords[i]);
+                _swords.RemoveAt(i);
+            }
+        }
+
+        private void DropAllSwords()
+        {
+            for (var i = _swords.Count - 1; i >= 0; i--)
+            {
+                DestroySword(_swords[i]);
+                _swords.RemoveAt(i);
             }
         }
 

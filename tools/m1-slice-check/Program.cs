@@ -43,6 +43,7 @@ internal static class Program
             CheckProjectileSpeedRejected(root, failures);
             CheckReservedDamageSkipsDoomedTarget(failures);
             CheckSwordHitCueFiresOnce(failures);
+            CheckFrozenSnapshotRetiresOnce(failures);
             CheckDoomedSwordDissipatesWhenBattleEnds(failures);
         }
 
@@ -1828,6 +1829,101 @@ internal static class Program
         }
 
         Notes.Add("sword: hit cue fires once per sword");
+    }
+
+    /// <summary>
+    /// 终局后快照冻住，同一把剑会跨很多帧再被看到。淡出时间过了也不能再收尾或再播命中。
+    /// </summary>
+    private static void CheckFrozenSnapshotRetiresOnce(List<string> failures)
+    {
+        if (!HoldFrozenCue(7, true, false, failures, "hit"))
+        {
+            return;
+        }
+
+        if (!HoldFrozenCue(8, false, true, failures, "dissipate"))
+        {
+            return;
+        }
+
+        var reused = new SwordCueTrack();
+        reused.BeginFrame();
+        var first = reused.Observe(1, true, false, 0f);
+        reused.EndFrame(0f);
+        var step = 1f / 60f;
+        var anim = 0f;
+        for (var frame = 0; frame < 60; frame++)
+        {
+            anim += step;
+            reused.BeginFrame();
+            reused.Observe(1, true, false, anim);
+            reused.EndFrame(anim);
+        }
+
+        if (!reused.IsRetired(1))
+        {
+            failures.Add("frozen sword was not retired after the fade");
+            return;
+        }
+
+        reused.Clear();
+        reused.BeginFrame();
+        var again = reused.Observe(1, true, false, 0f);
+        if (!again.BeginHit || !again.Show)
+        {
+            failures.Add("clearing the cue track should allow sword id 1 to hit again");
+            return;
+        }
+
+        if (!first.BeginHit)
+        {
+            failures.Add("first frozen frame should begin the hit");
+            return;
+        }
+
+        Notes.Add("sword: frozen snapshot retires once, and a new battle can reuse the id");
+    }
+
+    private static bool HoldFrozenCue(int id, bool hit, bool dissipate, List<string> failures, string label)
+    {
+        var track = new SwordCueTrack();
+        var hits = 0;
+        var fades = 0;
+        var step = 1f / 60f;
+        var anim = 0f;
+        for (var frame = 0; frame < 90; frame++)
+        {
+            track.BeginFrame();
+            var decision = track.Observe(id, hit, dissipate, anim);
+            if (decision.BeginHit)
+            {
+                hits++;
+            }
+
+            if (decision.BeginFade)
+            {
+                fades++;
+            }
+
+            if (frame > 30 && decision.Show)
+            {
+                failures.Add(label + " sword was shown again after it should have retired, frame=" + frame);
+                return false;
+            }
+
+            track.EndFrame(anim);
+            anim += step;
+        }
+
+        var expectHits = hit ? 1 : 0;
+        var expectFades = dissipate && !hit ? 1 : 0;
+        if (hits != expectHits || fades != expectFades || !track.IsRetired(id))
+        {
+            failures.Add(label + " frozen cue hits=" + hits + " fades=" + fades + " retired=" + track.IsRetired(id));
+            return false;
+        }
+
+        return true;
     }
 
     private static void CheckDoomedSwordDissipatesWhenBattleEnds(List<string> failures)
