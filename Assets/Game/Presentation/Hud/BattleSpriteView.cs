@@ -89,13 +89,13 @@ namespace ShanhaiDingGuard.Presentation
         private readonly HashSet<int> _seenIds = new HashSet<int>();
         private readonly List<int> _staleIds = new List<int>();
         private BattleArt _art = new BattleArt();
+        private BattleProjectileView _projectiles;
         private Sprite _shadowSprite;
         private Texture2D _shadowTexture;
         private SliceBattleContent _content;
         private Transform _root;
         private Sprite _pixel;
         private Func<double, double, Vector3> _toWorld;
-        private int _syncedTick = -1;
         private int _lastLeak;
         private float _afterBattle;
 
@@ -120,6 +120,11 @@ namespace ShanhaiDingGuard.Presentation
                 UnityEngine.Object.Destroy(_shadowTexture);
                 _shadowTexture = null;
             }
+
+            if (_projectiles != null)
+            {
+                _projectiles.DestroyRuntimeArt();
+            }
         }
 
         public void Build(Transform root, SliceBattleContent content, Func<double, double, Vector3> toWorld, Sprite pixel)
@@ -129,6 +134,8 @@ namespace ShanhaiDingGuard.Presentation
             _toWorld = toWorld;
             _pixel = pixel;
             _art = BattleArt.Load();
+            _projectiles = new BattleProjectileView();
+            _projectiles.Build(_root, _toWorld, _pixel);
             var cells = content.Level.BuildCells;
             for (var i = 0; i < cells.Count; i++)
             {
@@ -209,16 +216,9 @@ namespace ShanhaiDingGuard.Presentation
             }
 
             var anim = (float)((snapshot.Tick + alpha) * SimClock.TickSeconds) + _afterBattle;
-            var tickDelta = _syncedTick < 0 ? 0 : snapshot.Tick - _syncedTick;
-            if (tickDelta < 0)
-            {
-                tickDelta = 0;
-            }
-
-            _syncedTick = snapshot.Tick;
             if (_art.Ready)
             {
-                SyncArt(sim, snapshot, alpha, anim, tickDelta, cursorCell);
+                SyncArt(sim, snapshot, alpha, anim, cursorCell);
             }
             else
             {
@@ -227,9 +227,14 @@ namespace ShanhaiDingGuard.Presentation
 
             UpdateDeaths(anim);
             UpdateFxFrames(anim);
+            if (_projectiles != null)
+            {
+                var projectileSpeed = _content != null && _content.Tower != null ? _content.Tower.ProjectileSpeed : 0.0467;
+                _projectiles.Sync(sim, snapshot, alpha, anim, _art, projectileSpeed, clock != null ? clock.Speed : 1, PlayTowerFlash);
+            }
         }
 
-        private void SyncArt(CombatSimulation sim, BattleSnapshot snapshot, float alpha, float anim, int tickDelta, int cursorCell)
+        private void SyncArt(CombatSimulation sim, BattleSnapshot snapshot, float alpha, float anim, int cursorCell)
         {
             _goneBuffer.Clear();
             CollectGone(snapshot, _goneBuffer);
@@ -362,7 +367,6 @@ namespace ShanhaiDingGuard.Presentation
                 visual.Renderer.color = Color.white;
             }
 
-            StepAttacks(snapshot, deaths, tickDelta, anim);
         }
 
         private void SyncFallback(CombatSimulation sim, BattleSnapshot snapshot, float alpha)
@@ -525,74 +529,13 @@ namespace ShanhaiDingGuard.Presentation
             }
         }
 
-        private void StepAttacks(BattleSnapshot snapshot, List<EnemyVisual> deaths, int tickDelta, float anim)
+        private void PlayTowerFlash(string cellId, float anim)
         {
-            var interval = _content.Tower.AttackIntervalTicks;
-            if (interval < 1)
+            var marker = FindTower(cellId);
+            if (marker != null)
             {
-                interval = 1;
+                SpawnFx(marker, anim);
             }
-
-            for (var i = 0; i < snapshot.Towers.Count; i++)
-            {
-                var tower = snapshot.Towers[i];
-                var marker = FindTower(tower.CellId);
-                if (marker == null)
-                {
-                    continue;
-                }
-
-                // 一帧补多个 tick 时冷却仍按 tick 走，但同一座塔只播一个 additive，避免叠成一块。
-                var played = false;
-                for (var n = 0; n < tickDelta; n++)
-                {
-                    if (marker.Cooldown > 0)
-                    {
-                        marker.Cooldown--;
-                    }
-
-                    if (marker.Cooldown == 0 && WouldFire(tower, snapshot, deaths))
-                    {
-                        if (!played)
-                        {
-                            SpawnFx(marker, anim);
-                            played = true;
-                        }
-
-                        marker.Cooldown = interval;
-                    }
-                }
-            }
-        }
-
-        private static bool WouldFire(TowerView tower, BattleSnapshot snapshot, List<EnemyVisual> deaths)
-        {
-            for (var i = 0; i < snapshot.Enemies.Count; i++)
-            {
-                var enemy = snapshot.Enemies[i];
-                if (InRange(enemy.X, enemy.Y, tower))
-                {
-                    return true;
-                }
-            }
-
-            for (var i = 0; i < deaths.Count; i++)
-            {
-                if (InRange(deaths[i].LastX, deaths[i].LastY, tower))
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        private static bool InRange(double x, double y, TowerView tower)
-        {
-            var dx = x - tower.X;
-            var dy = y - tower.Y;
-            var range = tower.Range;
-            return (dx * dx) + (dy * dy) <= (range * range) + 1e-9;
         }
 
         private void SpawnFx(TowerVisual tower, float anim)
@@ -616,11 +559,7 @@ namespace ShanhaiDingGuard.Presentation
             {
                 var go = Create("TowerJinFx", _art.TowerFx[0], SortFx);
                 var renderer = go.GetComponent<SpriteRenderer>();
-                if (_art.Additive != null)
-                {
-                    renderer.sharedMaterial = _art.Additive;
-                }
-
+                // Alpha 版 tower_jin_fx 走默认精灵混合。不套 SpriteAdditive，亮草地会偏黄。
                 slot = new FxVisual { Renderer = renderer };
                 _fx.Add(slot);
             }

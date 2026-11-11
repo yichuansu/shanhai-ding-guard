@@ -52,6 +52,9 @@ namespace ShanhaiDingGuard.Content
         }
 
         public const string TargetFirstAlongPath = "first_along_path";
+
+        /// <summary>飞剑速度下限，高度单位/tick。更慢的锁定落点容易打空，表和模拟都拒绝。</summary>
+        public const double MinProjectileSpeedPerTick = 0.04;
         public const string WinAllWavesCleared = "all_waves_cleared";
 
         /// <summary>
@@ -84,6 +87,10 @@ namespace ShanhaiDingGuard.Content
         public int Damage;
         public double Range;
         public int AttackIntervalTicks;
+
+        /// <summary>飞剑速度，高度单位/tick。低于 0.04 的表拒绝加载。</summary>
+        public double ProjectileSpeed;
+
         public string TargetPriority;
         public bool MergeEnabled;
     }
