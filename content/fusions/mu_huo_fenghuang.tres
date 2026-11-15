@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="FusionRecipe" format=3]
+
+[ext_resource type="Script" path="res://content/defs/fusion_recipe.gd" id="1_p0s5a"]
+
+[resource]
+script = ExtResource("1_p0s5a")
+id = &"mu_huo_fenghuang"
+a = &"jingwei"
+b = &"bifang"
+result = &"fenghuang"
+description = "木生火：精卫衔木，毕方引火，化为凤皇。"

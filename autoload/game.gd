@@ -4,13 +4,10 @@ extends Node
 const PROFILE_PATH := "user://profile.json"
 const RUN_PATH := "user://run.json"
 const STARTING_BEASTS: Array[StringName] = [&"jingwei", &"bifang"]
-const REST_HEAL := 3
-const SHOP_TALISMAN_PRICE := 5
-const SHOP_TALISMAN_COUNT := 2
-const EVENT_SHELLS := 4
 
 const SCENE_MAP := "res://scenes/map/map_screen.tscn"
 const SCENE_BATTLE := "res://scenes/battle/battle_screen.tscn"
+const SCENE_NODE := "res://scenes/node/node_screen.tscn"
 
 var profile: Profile
 var run: RunState
@@ -57,8 +54,11 @@ func node_type(node_id: int) -> MapNode.Type:
 	return run.map.nodes[node_id].type
 
 
-## 进入节点。战斗节点切到战斗场景；其他节点先用灰盒占位效果，返回提示文字。
+## 进入节点：战斗节点切到战斗场景，其余切到节点界面（集市 / 炼鼎 / 奇遇 / 祭祀）。
 func enter_node(node_id: int) -> String:
+	if run.pending_reward.size() > 0:
+		get_tree().change_scene_to_file(SCENE_NODE)
+		return ""
 	if not run.enter_node(node_id):
 		return "现在去不了这个节点。"
 	var node := run.map.nodes[node_id]
@@ -67,10 +67,48 @@ func enter_node(node_id: int) -> String:
 		save()
 		get_tree().change_scene_to_file(SCENE_BATTLE)
 		return ""
-	var message := _resolve_noncombat(node)
-	last_report = message
 	save()
-	return message
+	get_tree().change_scene_to_file(SCENE_NODE)
+	return ""
+
+
+## 已解锁进奖励池的异兽：图鉴里捕获过的 + 本局守鼎人的开局异兽。
+func unlocked_beasts() -> Array[StringName]:
+	var out: Array[StringName] = []
+	for key: String in profile.bestiary:
+		out.append(StringName(key))
+	var keeper: KeeperDef = Content.lib.keepers.get(run.keeper_id)
+	if keeper != null:
+		for id in keeper.starting_beasts:
+			if not out.has(id):
+				out.append(id)
+	return out
+
+
+## 节点界面当前该显示什么："reward" 或节点类型名。
+func node_mode() -> String:
+	if run == null:
+		return ""
+	if not run.pending_reward.is_empty():
+		return "reward"
+	match run.current_node_type():
+		MapNode.Type.SHOP:
+			return "shop"
+		MapNode.Type.FORGE:
+			return "forge"
+		MapNode.Type.EVENT:
+			return "event"
+		MapNode.Type.REST:
+			return "rest"
+	return ""
+
+
+## 战斗结束后：有奖励先去领，否则回路线图。
+func after_battle() -> void:
+	if run != null and not run.pending_reward.is_empty():
+		get_tree().change_scene_to_file(SCENE_NODE)
+	else:
+		goto_map()
 
 
 func battle_def_for_node(node_id: int) -> BattleDef:
@@ -104,33 +142,22 @@ func make_battle_setup(node_id: int) -> BattleSetup:
 
 
 func finish_battle(sim: BattleSim) -> void:
-	var lines: PackedStringArray = []
-	run.ding_hp = clampi(sim.ding_hp, 0, run.ding_max)
-	run.shells += sim.shells_earned
-	run.talismans = maxi(run.talismans - sim.run_talismans_spent(), 0)
-	lines.append("获得贝币 %d" % sim.shells_earned)
+	var newly: PackedStringArray = []
 	for id in sim.captured_beasts:
-		var def: BeastDef = Content.lib.beasts.get(id)
-		var name := def.display_name if def else String(id)
-		var first := profile.record_capture(id)
-		if run.add_beast(id) == null:
-			lines.append("%s 已收入图鉴，但阵容已满，只能放生" % name)
-		else:
-			lines.append("收服 %s%s" % [name, "（图鉴新增）" if first else ""])
-	if sim.outcome == BattleSim.Outcome.LOST:
-		run.finished = true
-		lines.append("鼎破，本局结束。")
-	else:
-		var t := node_type(pending_node_id)
-		if t == MapNode.Type.ELITE:
-			var relic := _grant_random_relic()
-			if relic != null:
-				lines.append("获得法宝 %s" % relic.display_name)
-		if t == MapNode.Type.BOSS:
-			run.finished = true
-			run.won = true
-			profile.runs_won += 1
-			lines.append("冀州之鼎已修复。灰盒版本只有一州，本局胜利。")
+		if profile.record_capture(id):
+			newly.append(RunRules.beast_name(Content.lib, id))
+	var summary := {
+		"won": sim.outcome == BattleSim.Outcome.WON,
+		"ding_hp": sim.ding_hp,
+		"shells": sim.shells_earned,
+		"talismans_spent": sim.run_talismans_spent(),
+		"captured": sim.captured_beasts,
+	}
+	var lines := RunRules.apply_battle_result(run, Content.lib, pending_node_id, summary, unlocked_beasts())
+	if not newly.is_empty():
+		lines.append("图鉴新增：" + "、".join(newly))
+	if run.won:
+		profile.runs_won += 1
 	pending_node_id = -1
 	last_report = "；".join(lines)
 	save()
@@ -144,41 +171,3 @@ func save() -> void:
 	SaveStore.save_json(PROFILE_PATH, profile.to_dict())
 	if run != null:
 		SaveStore.save_json(RUN_PATH, run.to_dict())
-
-
-func _resolve_noncombat(node: MapNode) -> String:
-	match node.type:
-		MapNode.Type.REST:
-			var before := run.ding_hp
-			run.ding_hp = mini(run.ding_max, run.ding_hp + REST_HEAL)
-			return "祭祀：鼎耐久 %d → %d" % [before, run.ding_hp]
-		MapNode.Type.SHOP:
-			if run.shells >= SHOP_TALISMAN_PRICE:
-				run.shells -= SHOP_TALISMAN_PRICE
-				run.talismans += SHOP_TALISMAN_COUNT
-				return "集市：花 %d 贝币买了 %d 张镇鼎符（灰盒占位）" % [SHOP_TALISMAN_PRICE, SHOP_TALISMAN_COUNT]
-			return "集市：贝币不够（灰盒占位）"
-		MapNode.Type.FORGE:
-			var merged := run.merge_first_pair()
-			if merged == null:
-				return "炼鼎：没有可以合成的同种异兽（灰盒占位）"
-			return "炼鼎：%s 升到 %d 阶" % [merged.beast_id, merged.tier]
-		MapNode.Type.EVENT:
-			run.shells += EVENT_SHELLS
-			return "奇遇：拾得 %d 贝币（灰盒占位，正式版是山海经事件）" % EVENT_SHELLS
-	return ""
-
-
-func _grant_random_relic() -> RelicDef:
-	var pool: Array[StringName] = []
-	var ids := Content.lib.relics.keys()
-	ids.sort()
-	for id: StringName in ids:
-		if not run.relic_ids.has(id):
-			pool.append(id)
-	if pool.is_empty():
-		return null
-	var rng := RngStream.new(run.battle_seed(pending_node_id)).derive("relic")
-	var pick := pool[rng.next_int(0, pool.size() - 1)]
-	run.relic_ids.append(pick)
-	return Content.lib.relics[pick]

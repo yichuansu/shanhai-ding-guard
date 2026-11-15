@@ -1,24 +1,24 @@
 [gd_resource type="Resource" script_class="BeastDef" format=3]
 
-[ext_resource type="Script" path="res://content/defs/beast_def.gd" id="1_h3uww"]
-[ext_resource type="Script" path="res://content/defs/effect_def.gd" id="2_lnjyd"]
+[ext_resource type="Script" path="res://content/defs/effect_def.gd" id="1_h3uww"]
+[ext_resource type="Script" path="res://content/defs/beast_def.gd" id="2_lnjyd"]
 
 [sub_resource type="Resource" id="Resource_kognb"]
-script = ExtResource("2_lnjyd")
+script = ExtResource("1_h3uww")
 op = &"slow"
 amount = 0.6
 duration_ticks = 15
 description = "见则其邑大水：命中后减速 40%，1.5 秒"
 
 [sub_resource type="Resource" id="Resource_bthm1"]
-script = ExtResource("2_lnjyd")
+script = ExtResource("1_h3uww")
 op = &"splash"
 amount = 0.6
 radius = 140.0
 description = "大水：周围敌人受到 60% 伤害"
 
 [resource]
-script = ExtResource("1_h3uww")
+script = ExtResource("2_lnjyd")
 id = &"huashe"
 display_name = "化蛇"
 name_en = "Huashe, the Flood Serpent"
@@ -34,4 +34,4 @@ damage = 110
 attack_range = 270.0
 attack_interval_ticks = 15
 crit_chance = 0.1
-traits = Array[ExtResource("2_lnjyd")]([SubResource("Resource_kognb"), SubResource("Resource_bthm1")])
+traits = Array[ExtResource("1_h3uww")]([SubResource("Resource_kognb"), SubResource("Resource_bthm1")])

@@ -1,0 +1,40 @@
+[gd_resource type="Resource" script_class="EventDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/event_option.gd" id="1_7u3um"]
+[ext_resource type="Script" path="res://content/defs/effect_def.gd" id="2_wi6bk"]
+[ext_resource type="Script" path="res://content/defs/event_def.gd" id="3_5s3td"]
+
+[sub_resource type="Resource" id="Resource_n1od5"]
+script = ExtResource("2_wi6bk")
+trigger = &"run"
+op = &"gain_relic"
+param_id = &"lushu"
+
+[sub_resource type="Resource" id="Resource_d2kqs"]
+script = ExtResource("1_7u3um")
+label = "用贝币换它脱下的皮"
+hint = "花 10 贝币：获得法宝鹿蜀皮"
+cost_shells = 10
+outcomes = Array[ExtResource("2_wi6bk")]([SubResource("Resource_n1od5")])
+success_text = "鹿蜀留下一张带虎纹的皮毛。"
+
+[sub_resource type="Resource" id="Resource_ofe1w"]
+script = ExtResource("2_wi6bk")
+trigger = &"run"
+op = &"heal_ding"
+amount = 3.0
+
+[sub_resource type="Resource" id="Resource_ulqc1"]
+script = ExtResource("1_7u3um")
+label = "驻足听它唱完"
+hint = "修鼎 3"
+outcomes = Array[ExtResource("2_wi6bk")]([SubResource("Resource_ofe1w")])
+success_text = "歌声里，铜鼎的裂痕似乎合拢了些。"
+
+[resource]
+script = ExtResource("3_5s3td")
+id = &"niuyang_lushu"
+title = "杻阳鹿蜀"
+source_text = "又东三百七十里，曰杻阳之山……有兽焉，其状如马而白首，其文如虎而赤尾，其音如谣，其名曰鹿蜀，佩之宜子孙。"
+situation = "一匹白首虎纹的马在山谷里唱着歌谣般的长鸣。"
+options = Array[ExtResource("1_7u3um")]([SubResource("Resource_d2kqs"), SubResource("Resource_ulqc1")])

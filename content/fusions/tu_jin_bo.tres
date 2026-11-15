@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="FusionRecipe" format=3]
+
+[ext_resource type="Script" path="res://content/defs/fusion_recipe.gd" id="1_2qls8"]
+
+[resource]
+script = ExtResource("1_2qls8")
+id = &"tu_jin_bo"
+a = &"dangkang"
+b = &"mingshe"
+result = &"bo"
+description = "土生金：当康丰年之土，鸣蛇如磬之金，化为御兵之驳。"

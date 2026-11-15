@@ -4,7 +4,8 @@ extends Resource
 ## 长度单位是 1920×1080 设计像素，速度按每秒填写，模拟按 10Hz 换算。
 
 enum Role { RANGED, AREA, GUARD, AUSPICIOUS }
-enum Rarity { MINION, COMMON, ELITE, BOSS }
+## RARE 只能靠炼鼎融合获得，不会作为敌人出现。追加在末尾，保证已存的 .tres 数值不变。
+enum Rarity { MINION, COMMON, ELITE, BOSS, RARE }
 
 @export var id: StringName
 @export var display_name: String = ""
@@ -43,5 +44,7 @@ enum Rarity { MINION, COMMON, ELITE, BOSS }
 ## 被打垮后多少拍恢复。
 @export var guard_recover_ticks: int = 50
 @export_subgroup("")
+## 作为敌人时的技能（首领机制）：periodic / stun_towers、hp_below / summon。
+@export var abilities: Array[EffectDef] = []
 ## "见则"特性。
 @export var traits: Array[EffectDef] = []

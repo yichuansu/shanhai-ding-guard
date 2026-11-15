@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="FusionRecipe" format=3]
+
+[ext_resource type="Script" path="res://content/defs/fusion_recipe.gd" id="1_608bq"]
+
+[resource]
+script = ExtResource("1_608bq")
+id = &"huo_tu_kui"
+a = &"bifang"
+b = &"lili"
+result = &"kui"
+description = "火生土：毕方之火锻狸力之土，化为声如雷的夔。"

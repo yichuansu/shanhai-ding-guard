@@ -15,3 +15,4 @@ id = &"luoshu"
 display_name = "洛书"
 description = "所有异兽伤害 +10%。"
 effects = Array[ExtResource("1_ntltf")]([SubResource("Resource_fo51j")])
+price = 35

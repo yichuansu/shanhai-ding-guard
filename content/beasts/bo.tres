@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="BeastDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/effect_def.gd" id="1_gcurm"]
+[ext_resource type="Script" path="res://content/defs/beast_def.gd" id="2_71hv1"]
+
+[resource]
+script = ExtResource("2_71hv1")
+id = &"bo"
+display_name = "驳"
+name_en = "Bo, the Tiger-Eating Horse"
+element = &"jin"
+rarity = 4
+lore = "有兽焉，其状如马而白身黑尾，一角，虎牙爪，音如鼓音，其名曰驳，是食虎豹，可以御兵。"
+max_hp = 3000
+spirit_reward = 3
+shell_reward = 3
+capturable = false
+contact_damage = 5.0
+deploy_cost = 10
+damage = 520
+attack_range = 390.0
+attack_interval_ticks = 20
+projectile_speed = 950.0
+crit_chance = 0.25
+crit_multiplier = 2.5

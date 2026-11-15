@@ -36,6 +36,8 @@ var _bursts: Array[Dictionary] = []
 var _rings: Array[Dictionary] = []
 ## 捕获：{from, life, max_life, color}
 var _captures: Array[Dictionary] = []
+## 毒涎飞线：{from, to, life, max_life}
+var _venoms: Array[Dictionary] = []
 var _ding_flash := 0.0
 var _time := 0.0
 
@@ -71,6 +73,15 @@ func on_events(events: Array[Dictionary]) -> void:
 			"wave_called":
 				if int(ev["bonus"]) > 0:
 					_popup("提前召唤 +%d 灵" % int(ev["bonus"]), sim.path.points[0] + Vector2(-60, 60), SPIRIT_COLOR, 30, 1.4, 40.0)
+			"towers_stunned":
+				for slot: int in ev["slots"]:
+					var st: TowerUnit = sim.towers.get(slot)
+					if st != null:
+						_venoms.append({"from": ev["position"], "to": st.position, "life": 0.5, "max_life": 0.5})
+						_popup("毒涎！", st.position + Vector2(0, -60), Color("8e24aa"), 32, 1.0, 40.0)
+			"summoned":
+				_popup("九首！召出 %d 只" % int(ev["count"]), ev["position"] + Vector2(0, -80), Color("e53935"), 40, 1.4, 50.0)
+				_bursts.append({"position": ev["position"], "color": Color("8e24aa"), "life": 0.6, "max_life": 0.6, "radius": 120.0})
 			"guard_broken":
 				var g: TowerUnit = sim.towers.get(ev["slot"])
 				if g != null:
@@ -87,13 +98,14 @@ func _process(delta: float) -> void:
 		_flashes[id] -= 1
 		if _flashes[id] <= 0:
 			_flashes.erase(id)
-	for list: Array in [_popups, _bursts, _rings, _captures]:
+	for list: Array in [_popups, _bursts, _rings, _captures, _venoms]:
 		for item: Dictionary in list:
 			item["life"] -= delta
 	_popups = _popups.filter(func(p: Dictionary) -> bool: return p["life"] > 0.0)
 	_bursts = _bursts.filter(func(b: Dictionary) -> bool: return b["life"] > 0.0)
 	_rings = _rings.filter(func(r: Dictionary) -> bool: return r["life"] > 0.0)
 	_captures = _captures.filter(func(c: Dictionary) -> bool: return c["life"] > 0.0)
+	_venoms = _venoms.filter(func(v: Dictionary) -> bool: return v["life"] > 0.0)
 	_ding_flash = maxf(_ding_flash - delta, 0.0)
 	queue_redraw()
 
@@ -165,6 +177,8 @@ func _draw_towers(now: float) -> void:
 		var col: Color = Elements.COLORS.get(t.def.element, Color.GRAY)
 		if t.is_guard and not t.guard_ready() and t.guard_active:
 			col = col.darkened(0.5)
+		if t.stunned_ticks > 0:
+			col = col.lerp(Color("6a1b9a"), 0.6)
 		var since := now - float(t.last_fire_tick)
 		var recoil := 1.0 + 0.18 * clampf(1.0 - since / RECOIL_TICKS, 0.0, 1.0)
 		var half := 34.0 * recoil
@@ -175,6 +189,8 @@ func _draw_towers(now: float) -> void:
 		# 等级点
 		for i in t.level:
 			draw_circle(t.position + Vector2(-16 + i * 16, -46), 6.0, CAPTURE_COLOR)
+		if t.stunned_ticks > 0:
+			draw_arc(t.position, 46.0, 0.0, TAU, 32, Color("8e24aa"), 5.0)
 		if t.instance.tier > 1:
 			draw_string(FONT, t.position + Vector2(20, -38), "★%d" % t.instance.tier, HORIZONTAL_ALIGNMENT_LEFT, 60, 20, TEXT_DARK)
 		if t.is_guard and t.guard_active:
@@ -229,6 +245,11 @@ func _draw_effects() -> void:
 			var trail: Vector2 = c["from"].lerp(ding_pos, maxf(eased - i * 0.05, 0.0))
 			draw_circle(trail, 14.0 - i * 2.0, Color(0.1, 0.1, 0.1, 0.6 - i * 0.1))
 		draw_circle(pos, 18.0, Color(c["color"], 1.0 - k * 0.5))
+	for v in _venoms:
+		var k: float = 1.0 - v["life"] / v["max_life"]
+		var tip: Vector2 = (v["from"] as Vector2).lerp(v["to"], minf(k * 2.0, 1.0))
+		draw_line(v["from"], tip, Color(0.56, 0.14, 0.67, 1.0 - k), 8.0 * (1.0 - k) + 2.0)
+		draw_circle(tip, 12.0, Color(0.56, 0.14, 0.67, 1.0 - k))
 	for r in _rings:
 		var k: float = 1.0 - r["life"] / 0.5
 		draw_arc(r["position"], r["radius"] * (0.6 + 0.6 * k), 0.0, TAU, 48, Color(1, 0.85, 0.3, 1.0 - k), 10.0 * (1.0 - k) + 2.0)

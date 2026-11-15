@@ -1,0 +1,34 @@
+[gd_resource type="Resource" script_class="BeastDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/effect_def.gd" id="1_ejva3"]
+[ext_resource type="Script" path="res://content/defs/beast_def.gd" id="2_h3gha"]
+
+[sub_resource type="Resource" id="Resource_84b35"]
+script = ExtResource("1_ejva3")
+op = &"stagger"
+amount = 0.25
+duration_ticks = 10
+description = "其声如雷：命中时 25% 概率震慑敌人 1 秒"
+
+[resource]
+script = ExtResource("2_h3gha")
+id = &"kui"
+display_name = "夔"
+name_en = "Kui, the One-Legged Thunder Ox"
+role = 2
+rarity = 4
+lore = "东海中有流波山……其上有兽，状如牛，苍身而无角，一足……其声如雷，其名曰夔。黄帝得之，以其皮为鼓……声闻五百里，以威天下。"
+max_hp = 3000
+spirit_reward = 3
+shell_reward = 3
+capturable = false
+contact_damage = 5.0
+deploy_cost = 10
+damage = 90
+attack_range = 220.0
+attack_interval_ticks = 12
+projectile_speed = 700.0
+crit_chance = 0.05
+guard_hp = 1600
+block_count = 3
+traits = Array[ExtResource("1_ejva3")]([SubResource("Resource_84b35")])

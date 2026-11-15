@@ -20,7 +20,7 @@ const JIZHOU_SLOTS := [
 
 
 func _initialize() -> void:
-	for dir in ["beasts", "relics", "battles", "keepers", "formations"]:
+	for dir in ["beasts", "relics", "battles", "keepers", "formations", "fusions", "events"]:
 		DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("%s/%s" % [OUT, dir]))
 	_save(ElementChart.new(), "element_chart.tres")
 	for b in _beasts():
@@ -33,6 +33,10 @@ func _initialize() -> void:
 		_save(k, "keepers/%s.tres" % k.id)
 	for f in _formations():
 		_save(f, "formations/%s.tres" % f.element)
+	for r in _fusions():
+		_save(r, "fusions/%s.tres" % r.id)
+	for ev in _events():
+		_save(ev, "events/%s.tres" % ev.id)
 	print("灰盒内容已生成。")
 	quit()
 
@@ -127,9 +131,30 @@ func _beasts() -> Array[BeastDef]:
 			"有兽焉，其状如猿，而白首赤足，名曰朱厌，见则大兵。",
 			[4800, 85.0, 2, 6, 5], [8, 50, 250.0, 9, 650.0],
 			[_effect(&"passive", &"adjacent_damage_pct", 0.25, 0, 0.0, "见则大兵：相邻异兽伤害 +25%")]), 0.1),
-		_beast(&"xiangliu", "相柳", "Xiangliu, the Nine-Headed Serpent", Elements.SHUI, R.AREA, Q.BOSS,
+		_abilities(_beast(&"xiangliu", "相柳", "Xiangliu, the Nine-Headed Serpent", Elements.SHUI, R.AREA, Q.BOSS,
 			"共工之臣曰相柳氏，九首，以食于九山……禹杀相柳，其血腥，不可以树五谷种。",
-			[30000, 42.0, 10, 15, 15], [0, 0, 0.0, 10, 600.0]),
+			[30000, 42.0, 10, 15, 15], [0, 0, 0.0, 10, 600.0]), [
+				_ability(&"periodic", &"stun_towers", 0.0, 35, 90, 2, &"", "毒涎：每 9 秒喷向最近的两只异兽，使其 3.5 秒无法攻击"),
+				_ability(&"hp_below", &"summon", 0.66, 0, 0, 5, &"dingsha_shui", "九首：血量降到三分之二时召出 5 只鼎煞"),
+				_ability(&"hp_below", &"summon", 0.33, 0, 0, 6, &"dingsha_shui", "九首：血量降到三分之一时再召出 6 只"),
+			]),
+		_crit(_beast(&"fenghuang", "凤皇", "Fenghuang, the Five-Hued Phoenix", Elements.HUO, R.RANGED, Q.RARE,
+			"丹穴之山……有鸟焉，其状如鸡，五采而文，名曰凤皇……是鸟也，饮食自然，自歌自舞，见则天下安宁。",
+			[3000, 100.0, 1, 3, 3], [9, 120, 330.0, 8, 850.0],
+			[_effect(&"on_hit", &"burn", 20.0, 20, 0.0, "五采之火：命中后每 0.1 秒灼烧 20，持续 2 秒"),
+			_effect(&"passive", &"adjacent_damage_pct", 0.2, 0, 0.0, "见则天下安宁：相邻异兽伤害 +20%")]), 0.15),
+		_crit(_beast(&"yinglong", "应龙", "Yinglong, the Winged Rain Dragon", Elements.SHUI, R.AREA, Q.RARE,
+			"应龙处南极，杀蚩尤与夸父，不得复上，故下数旱，旱而为应龙之状，乃得大雨。",
+			[3000, 100.0, 1, 3, 3], [10, 200, 310.0, 14, 750.0],
+			[_effect(&"on_hit", &"splash", 0.8, 0, 170.0, "乃得大雨：周围敌人受到 80% 伤害"),
+			_effect(&"on_hit", &"slow", 0.5, 20, 0.0, "命中后减速 50%，2 秒")]), 0.1),
+		_crit(_beast(&"bo", "驳", "Bo, the Tiger-Eating Horse", Elements.JIN, R.RANGED, Q.RARE,
+			"有兽焉，其状如马而白身黑尾，一角，虎牙爪，音如鼓音，其名曰驳，是食虎豹，可以御兵。",
+			[3000, 100.0, 1, 3, 3], [10, 520, 390.0, 20, 950.0]), 0.25, 2.5),
+		_crit(_guard(_beast(&"kui", "夔", "Kui, the One-Legged Thunder Ox", Elements.TU, R.GUARD, Q.RARE,
+			"东海中有流波山……其上有兽，状如牛，苍身而无角，一足……其声如雷，其名曰夔。黄帝得之，以其皮为鼓……声闻五百里，以威天下。",
+			[3000, 100.0, 1, 3, 3], [10, 90, 220.0, 12, 700.0],
+			[_effect(&"on_hit", &"stagger", 0.25, 10, 0.0, "其声如雷：命中时 25% 概率震慑敌人 1 秒")]), 1600, 3), 0.05),
 		_beast(&"dingsha_tu", "鼎煞（土）", "Cauldron Wraith (Earth)", Elements.TU, R.RANGED, Q.MINION,
 			"九鼎崩裂时溢出的浊气。", [340, 105.0, 1, 1, 0], [0, 0, 0.0, 10, 600.0]),
 		_beast(&"dingsha_shui", "鼎煞（水）", "Cauldron Wraith (Water)", Elements.SHUI, R.RANGED, Q.MINION,
@@ -137,6 +162,25 @@ func _beasts() -> Array[BeastDef]:
 		_beast(&"dingsha_huo", "鼎煞（火）", "Cauldron Wraith (Fire)", Elements.HUO, R.RANGED, Q.MINION,
 			"九鼎崩裂时溢出的浊气。", [360, 115.0, 1, 1, 0], [0, 0, 0.0, 10, 600.0]),
 	]
+
+
+func _abilities(b: BeastDef, list: Array[EffectDef]) -> BeastDef:
+	b.abilities = list
+	return b
+
+
+func _ability(trigger: StringName, op: StringName, amount: float, duration: int, interval: int, count: int, param: StringName, desc: String) -> EffectDef:
+	var e := _effect(trigger, op, amount, duration, 0.0, desc)
+	e.interval_ticks = interval
+	e.count = count
+	e.param_id = param
+	return e
+
+
+func _run_effect(op: StringName, amount: float = 0.0, param: StringName = &"") -> EffectDef:
+	var e := _effect(&"run", op, amount)
+	e.param_id = param
+	return e
 
 
 func _crit(b: BeastDef, chance: float, mult: float = 2.0) -> BeastDef:
@@ -237,18 +281,122 @@ func _formations() -> Array[FormationDef]:
 	]
 
 
+func _relic(id: StringName, name: String, desc: String, price: int, effects: Array[EffectDef]) -> RelicDef:
+	var r := RelicDef.new()
+	r.id = id
+	r.display_name = name
+	r.description = desc
+	r.price = price
+	r.effects = effects
+	return r
+
+
+## 法宝取自《山海经》里的奇物，效果从原文的"服之……""佩之……"化来。
 func _relics() -> Array[RelicDef]:
-	var hetu := RelicDef.new()
-	hetu.id = &"hetu"
-	hetu.display_name = "河图"
-	hetu.description = "每场战斗额外获得 1 张临时镇鼎符。"
-	hetu.effects = [_effect(&"on_battle_start", &"add_talismans", 1)]
-	var luoshu := RelicDef.new()
-	luoshu.id = &"luoshu"
-	luoshu.display_name = "洛书"
-	luoshu.description = "所有异兽伤害 +10%。"
-	luoshu.effects = [_effect(&"passive", &"global_damage_pct", 0.1)]
-	return [hetu, luoshu]
+	return [
+		_relic(&"hetu", "河图", "每场战斗额外获得 1 张临时镇鼎符。", 30,
+			[_effect(&"on_battle_start", &"add_talismans", 1)]),
+		_relic(&"luoshu", "洛书", "所有异兽伤害 +10%。", 35,
+			[_effect(&"passive", &"global_damage_pct", 0.1)]),
+		_relic(&"ditai_qi", "帝台之棋", "帝台之石，所以祷百神者也。每场战斗开局灵气 +6。", 28,
+			[_effect(&"on_battle_start", &"add_spirit", 6)]),
+		_relic(&"migu", "迷穀", "佩之不迷。提前召唤的灵气奖励翻倍。", 25,
+			[_effect(&"passive", &"early_call_mult", 1.0)]),
+		_relic(&"zhuyu", "祝余", "食之不饥。每 3 秒额外 +1 灵气。", 30,
+			[_effect(&"passive", &"spirit_income", 1, 30)]),
+		_relic(&"yugao", "玉膏", "黄帝是食是飨。获得时铜鼎耐久上限 +2。", 22,
+			[_effect(&"on_pickup", &"ding_max", 2)]),
+		_relic(&"lushu", "鹿蜀皮", "佩之宜子孙。战斗获得的贝币 +30%。", 25,
+			[_effect(&"passive", &"shell_bonus_pct", 0.3)]),
+	]
+
+
+func _fusion(id: StringName, a: StringName, b: StringName, result: StringName, desc: String) -> FusionRecipe:
+	var f := FusionRecipe.new()
+	f.id = id
+	f.a = a
+	f.b = b
+	f.result = result
+	f.description = desc
+	return f
+
+
+## 配方按五行相生："生"的一方加"被生"的一方，融成被生一方五行的稀有异兽。
+func _fusions() -> Array[FusionRecipe]:
+	return [
+		_fusion(&"mu_huo_fenghuang", &"jingwei", &"bifang", &"fenghuang", "木生火：精卫衔木，毕方引火，化为凤皇。"),
+		_fusion(&"jin_shui_yinglong", &"mingshe", &"huashe", &"yinglong", "金生水：鸣蛇之旱遇化蛇之水，旱极而为应龙，乃得大雨。"),
+		_fusion(&"tu_jin_bo", &"dangkang", &"mingshe", &"bo", "土生金：当康丰年之土，鸣蛇如磬之金，化为御兵之驳。"),
+		_fusion(&"huo_tu_kui", &"bifang", &"lili", &"kui", "火生土：毕方之火锻狸力之土，化为声如雷的夔。"),
+	]
+
+
+func _option(label: String, hint: String, cost: int, chance: float, outcomes: Array[EffectDef], fails: Array[EffectDef] = [], ok_text: String = "", fail_text: String = "") -> EventOption:
+	var o := EventOption.new()
+	o.label = label
+	o.hint = hint
+	o.cost_shells = cost
+	o.success_chance = chance
+	o.outcomes = outcomes
+	o.fail_outcomes = fails
+	o.success_text = ok_text
+	o.fail_text = fail_text
+	return o
+
+
+func _event(id: StringName, title: String, source: String, situation: String, options: Array[EventOption]) -> EventDef:
+	var e := EventDef.new()
+	e.id = id
+	e.title = title
+	e.source_text = source
+	e.situation = situation
+	e.options = options
+	return e
+
+
+func _events() -> Array[EventDef]:
+	return [
+		_event(&"qingqiu_hu", "青丘之狐",
+			"又东三百里，曰青丘之山……有兽焉，其状如狐而九尾，其音如婴儿，能食人；食者不蛊。",
+			"夜宿青丘，林间传来婴儿般的啼声，九条尾影在月下晃动。",
+			[_option("献上贝币，求它庇佑", "花 8 贝币：镇鼎符 +1，修鼎 2", 8, 1.0,
+				[_run_effect(&"gain_talismans", 1), _run_effect(&"heal_ding", 2)], [], "九尾狐收下供奉，绕鼎三匝而去。"),
+			_option("循声追去", "一半可能得到法宝，一半可能被咬伤铜鼎", 0, 0.5,
+				[_run_effect(&"gain_relic")], [_run_effect(&"lose_ding", 3)],
+				"狐影消失处留下一件宝物。", "林中扑出一张巨口，铜鼎被啃出裂痕。"),
+			_option("绕道而行", "什么也不发生", 0, 1.0, [], [], "你没有理会那啼声。")]),
+		_event(&"mi_yugao", "峚山玉膏",
+			"西北四百二十里，曰峚山……其中多白玉，是有玉膏，其原沸沸汤汤，黄帝是食是飨。",
+			"山涧里白玉如脂，玉膏正汩汩涌出。",
+			[_option("以玉膏涂鼎", "铜鼎耐久上限 +2", 0, 1.0, [_run_effect(&"ding_max", 2)], [], "玉膏渗进鼎身，纹路愈发温润。"),
+			_option("采白玉换钱", "贝币 +12", 0, 1.0, [_run_effect(&"gain_shells", 12)], [], "你背走了一袋白玉。")]),
+		_event(&"zhaoyao_zhuyu", "招摇祝余",
+			"南山经之首曰䧿山。其首曰招摇之山……有草焉，其状如韭而青华，其名曰祝余，食之不饥。",
+			"招摇山坡上长满青花如韭的草。",
+			[_option("采祝余", "获得法宝祝余（已有则得贝币）", 0, 1.0, [_run_effect(&"gain_relic", 0, &"zhuyu")], [], "你采了一大把祝余。"),
+			_option("继续赶路", "贝币 +4", 0, 1.0, [_run_effect(&"gain_shells", 4)], [], "路边拾到几枚贝币。")]),
+		_event(&"ditai_qi", "帝台之棋",
+			"休与之山，其上有石焉，名曰帝台之棋，五色而文，其状如鹑卵。帝台之石，所以祷百神者也，服之不蛊。",
+			"山顶散落着五色斑斓、状如鹌鹑蛋的石子。",
+			[_option("以石祷神", "随机一只异兽升一阶", 0, 1.0, [_run_effect(&"tier_up_random")], [], "石子在掌心发烫，一只异兽的气息变强了。"),
+			_option("把石子做成符", "镇鼎符 +2", 0, 1.0, [_run_effect(&"gain_talismans", 2)], [], "你把石子磨成了两张镇鼎符。")]),
+		_event(&"liubo_kui", "流波山之夔",
+			"东海中有流波山，入海七千里。其上有兽，状如牛，苍身而无角，一足，出入水则必风雨，其光如日月，其声如雷，其名曰夔。",
+			"海上风雨大作，雷声中一头独足苍牛踏浪而来。",
+			[_option("以鼎为鼓，与之相搏", "铜鼎耐久 -4，夔加入阵容（阵容满则离去）", 0, 1.0,
+				[_run_effect(&"lose_ding", 4), _run_effect(&"gain_beast", 0, &"kui")], [], "鼎声与雷声相应，夔低下了头。"),
+			_option("远远观望", "贝币 +6", 0, 1.0, [_run_effect(&"gain_shells", 6)], [], "风雨过后，沙滩上留下几枚贝币。")]),
+		_event(&"migu_tree", "迷穀之木",
+			"有木焉，其状如穀而黑理，其华四照，其名曰迷穀，佩之不迷。",
+			"一棵黑纹古树开着四面放光的花。",
+			[_option("折一枝佩上", "获得法宝迷穀（已有则得贝币）", 0, 1.0, [_run_effect(&"gain_relic", 0, &"migu")], [], "花枝的光照亮了前路。"),
+			_option("伐木卖钱", "贝币 +10", 0, 1.0, [_run_effect(&"gain_shells", 10)], [], "你卖掉了木材。")]),
+		_event(&"niuyang_lushu", "杻阳鹿蜀",
+			"又东三百七十里，曰杻阳之山……有兽焉，其状如马而白首，其文如虎而赤尾，其音如谣，其名曰鹿蜀，佩之宜子孙。",
+			"一匹白首虎纹的马在山谷里唱着歌谣般的长鸣。",
+			[_option("用贝币换它脱下的皮", "花 10 贝币：获得法宝鹿蜀皮", 10, 1.0, [_run_effect(&"gain_relic", 0, &"lushu")], [], "鹿蜀留下一张带虎纹的皮毛。"),
+			_option("驻足听它唱完", "修鼎 3", 0, 1.0, [_run_effect(&"heal_ding", 3)], [], "歌声里，铜鼎的裂痕似乎合拢了些。")]),
+	]
 
 
 func _spawn(id: StringName, count: int, interval: int, hp_mult: float = 1.0) -> SpawnEntry:

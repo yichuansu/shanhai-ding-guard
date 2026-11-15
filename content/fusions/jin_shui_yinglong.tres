@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="FusionRecipe" format=3]
+
+[ext_resource type="Script" path="res://content/defs/fusion_recipe.gd" id="1_7pk3c"]
+
+[resource]
+script = ExtResource("1_7pk3c")
+id = &"jin_shui_yinglong"
+a = &"mingshe"
+b = &"huashe"
+result = &"yinglong"
+description = "金生水：鸣蛇之旱遇化蛇之水，旱极而为应龙，乃得大雨。"

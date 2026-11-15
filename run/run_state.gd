@@ -6,8 +6,8 @@ const SCHEMA := 1
 const DEFAULT_DING := 10
 const DEFAULT_TALISMANS := 5
 const DEFAULT_ROSTER_CAP := 6
-## 每深入路线图一层，敌人血量 +8%（同类肉鸽的幕内递增）。
-const DIFFICULTY_PER_LAYER := 0.08
+## 每深入路线图一层，敌人血量 +15%（同类肉鸽的幕内递增）。按整局模拟调到自动玩家通关率约 40%–50%。
+const DIFFICULTY_PER_LAYER := 0.15
 
 var seed_value := 0
 var keeper_id: StringName = &""
@@ -24,6 +24,14 @@ var ding_max := DEFAULT_DING
 var relic_ids: Array[StringName] = []
 var finished := false
 var won := false
+## 战后待领取的奖励：{"kind": "beast" | "relic", "options": [id...], "skip_shells": int}，空表示没有。
+var pending_reward: Dictionary = {}
+## 当前非战斗节点是否已处理（奇遇已选、炼鼎 / 祭祀已用）。进入新节点时重置。
+var node_resolved := false
+## 集市已售出的商品：节点 id(String) -> [商品序号...]
+var shop_bought: Dictionary = {}
+## 本局见过的奇遇，尽量不重复。
+var seen_events: Array[StringName] = []
 var _next_uid := 1
 
 
@@ -61,7 +69,32 @@ func enter_node(node_id: int) -> bool:
 		return false
 	current_node = node_id
 	visited.append(node_id)
+	node_resolved = false
 	return true
+
+
+func current_node_type() -> MapNode.Type:
+	return map.nodes[current_node].type if current_node >= 0 else MapNode.Type.BATTLE
+
+
+func instance_by_uid(uid: int) -> BeastInstance:
+	for b in roster:
+		if b.uid == uid:
+			return b
+	return null
+
+
+func remove_beast(uid: int) -> BeastInstance:
+	for i in roster.size():
+		if roster[i].uid == uid:
+			var b := roster[i]
+			roster.remove_at(i)
+			return b
+	return null
+
+
+func is_roster_full() -> bool:
+	return roster.size() >= roster_cap
 
 
 ## 阵容满了返回 null。
@@ -111,6 +144,10 @@ func to_dict() -> Dictionary:
 		"finished": finished,
 		"won": won,
 		"next_uid": _next_uid,
+		"pending_reward": pending_reward,
+		"node_resolved": node_resolved,
+		"shop_bought": shop_bought,
+		"seen_events": seen_events.map(func(e: StringName) -> String: return String(e)),
 	}
 
 
@@ -138,6 +175,21 @@ static func from_dict(d: Dictionary) -> RunState:
 	r.finished = bool(d.get("finished", false))
 	r.won = bool(d.get("won", false))
 	r._next_uid = int(d.get("next_uid", r.roster.size() + 1))
+	var pr: Dictionary = d.get("pending_reward", {})
+	if not pr.is_empty():
+		var opts: Array = []
+		for o: Variant in pr.get("options", []):
+			opts.append(str(o))
+		r.pending_reward = {"kind": str(pr.get("kind", "")), "options": opts, "skip_shells": int(pr.get("skip_shells", 0))}
+	r.node_resolved = bool(d.get("node_resolved", false))
+	var sb: Dictionary = d.get("shop_bought", {})
+	for key: String in sb:
+		var bought: Array = []
+		for i: Variant in sb[key]:
+			bought.append(int(i))
+		r.shop_bought[key] = bought
+	for e: Variant in d.get("seen_events", []):
+		r.seen_events.append(StringName(str(e)))
 	return r
 
 

@@ -92,6 +92,12 @@ func preview(index: int) -> Dictionary:
 	return out
 
 
+## 召唤出的敌人也算进所属波次，保证清波判定正确。
+func add_extra(index: int, n: int) -> void:
+	total_per_wave[index] += n
+	spawned_per_wave[index] += n
+
+
 func wave_fully_spawned(index: int) -> bool:
 	return spawned_per_wave[index] >= total_per_wave[index]
 

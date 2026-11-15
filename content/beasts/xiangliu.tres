@@ -1,10 +1,37 @@
 [gd_resource type="Resource" script_class="BeastDef" format=3]
 
-[ext_resource type="Script" path="res://content/defs/beast_def.gd" id="1_t6b0s"]
-[ext_resource type="Script" path="res://content/defs/effect_def.gd" id="2_ux52y"]
+[ext_resource type="Script" path="res://content/defs/effect_def.gd" id="1_t6b0s"]
+[ext_resource type="Script" path="res://content/defs/beast_def.gd" id="2_ux52y"]
+
+[sub_resource type="Resource" id="Resource_4gf3j"]
+script = ExtResource("1_t6b0s")
+trigger = &"periodic"
+op = &"stun_towers"
+duration_ticks = 35
+interval_ticks = 90
+count = 2
+description = "毒涎：每 9 秒喷向最近的两只异兽，使其 3.5 秒无法攻击"
+
+[sub_resource type="Resource" id="Resource_3vigh"]
+script = ExtResource("1_t6b0s")
+trigger = &"hp_below"
+op = &"summon"
+amount = 0.66
+count = 5
+param_id = &"dingsha_shui"
+description = "九首：血量降到三分之二时召出 5 只鼎煞"
+
+[sub_resource type="Resource" id="Resource_8of4e"]
+script = ExtResource("1_t6b0s")
+trigger = &"hp_below"
+op = &"summon"
+amount = 0.33
+count = 6
+param_id = &"dingsha_shui"
+description = "九首：血量降到三分之一时再召出 6 只"
 
 [resource]
-script = ExtResource("1_t6b0s")
+script = ExtResource("2_ux52y")
 id = &"xiangliu"
 display_name = "相柳"
 name_en = "Xiangliu, the Nine-Headed Serpent"
@@ -23,3 +50,4 @@ deploy_cost = 0
 damage = 0
 attack_range = 0.0
 attack_interval_ticks = 10
+abilities = Array[ExtResource("1_t6b0s")]([SubResource("Resource_4gf3j"), SubResource("Resource_3vigh"), SubResource("Resource_8of4e")])

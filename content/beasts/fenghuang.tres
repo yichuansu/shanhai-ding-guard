@@ -1,0 +1,38 @@
+[gd_resource type="Resource" script_class="BeastDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/effect_def.gd" id="1_jdwqt"]
+[ext_resource type="Script" path="res://content/defs/beast_def.gd" id="2_8f62k"]
+
+[sub_resource type="Resource" id="Resource_phxb3"]
+script = ExtResource("1_jdwqt")
+op = &"burn"
+amount = 20.0
+duration_ticks = 20
+description = "五采之火：命中后每 0.1 秒灼烧 20，持续 2 秒"
+
+[sub_resource type="Resource" id="Resource_8fuii"]
+script = ExtResource("1_jdwqt")
+trigger = &"passive"
+op = &"adjacent_damage_pct"
+amount = 0.2
+description = "见则天下安宁：相邻异兽伤害 +20%"
+
+[resource]
+script = ExtResource("2_8f62k")
+id = &"fenghuang"
+display_name = "凤皇"
+name_en = "Fenghuang, the Five-Hued Phoenix"
+element = &"huo"
+rarity = 4
+lore = "丹穴之山……有鸟焉，其状如鸡，五采而文，名曰凤皇……是鸟也，饮食自然，自歌自舞，见则天下安宁。"
+max_hp = 3000
+spirit_reward = 3
+shell_reward = 3
+capturable = false
+contact_damage = 5.0
+deploy_cost = 9
+damage = 120
+attack_range = 330.0
+projectile_speed = 850.0
+crit_chance = 0.15
+traits = Array[ExtResource("1_jdwqt")]([SubResource("Resource_phxb3"), SubResource("Resource_8fuii")])

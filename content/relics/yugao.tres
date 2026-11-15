@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="RelicDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/effect_def.gd" id="1_2qvf3"]
+[ext_resource type="Script" path="res://content/defs/relic_def.gd" id="2_blokr"]
+
+[sub_resource type="Resource" id="Resource_6jmai"]
+script = ExtResource("1_2qvf3")
+trigger = &"on_pickup"
+op = &"ding_max"
+amount = 2.0
+
+[resource]
+script = ExtResource("2_blokr")
+id = &"yugao"
+display_name = "玉膏"
+description = "黄帝是食是飨。获得时铜鼎耐久上限 +2。"
+effects = Array[ExtResource("1_2qvf3")]([SubResource("Resource_6jmai")])
+price = 22

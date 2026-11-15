@@ -1,10 +1,10 @@
 [gd_resource type="Resource" script_class="BeastDef" format=3]
 
-[ext_resource type="Script" path="res://content/defs/beast_def.gd" id="1_cw5tm"]
-[ext_resource type="Script" path="res://content/defs/effect_def.gd" id="2_3it6p"]
+[ext_resource type="Script" path="res://content/defs/effect_def.gd" id="1_cw5tm"]
+[ext_resource type="Script" path="res://content/defs/beast_def.gd" id="2_3it6p"]
 
 [resource]
-script = ExtResource("1_cw5tm")
+script = ExtResource("2_3it6p")
 id = &"dingsha_tu"
 display_name = "鼎煞（土）"
 name_en = "Cauldron Wraith (Earth)"

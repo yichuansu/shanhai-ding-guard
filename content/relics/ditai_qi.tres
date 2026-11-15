@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="RelicDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/effect_def.gd" id="1_phmf6"]
+[ext_resource type="Script" path="res://content/defs/relic_def.gd" id="2_vaafc"]
+
+[sub_resource type="Resource" id="Resource_kdiae"]
+script = ExtResource("1_phmf6")
+trigger = &"on_battle_start"
+op = &"add_spirit"
+amount = 6.0
+
+[resource]
+script = ExtResource("2_vaafc")
+id = &"ditai_qi"
+display_name = "帝台之棋"
+description = "帝台之石，所以祷百神者也。每场战斗开局灵气 +6。"
+effects = Array[ExtResource("1_phmf6")]([SubResource("Resource_kdiae")])
+price = 28

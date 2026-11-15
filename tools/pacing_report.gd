@@ -10,12 +10,12 @@ extends SceneTree
 ##   每杀命中        普通杂兵 2–5 下
 ##   单次伤害        两位到三位数
 
-## 模拟一局中段：守鼎人开局阵容 + 两只捕获来的异兽，敌人血量按第 4 层（×1.32），首领按第 7 层（×1.56）。
+## 模拟一局中段：守鼎人开局阵容 + 两只捕获来的异兽，敌人血量按第 4 层，首领按第 7 层。
 const ROSTER_EXTRA: Array[StringName] = [&"huashe", &"mingshe"]
 ## 首领战按一局末段：6 只异兽。
 const BOSS_EXTRA: Array[StringName] = [&"huashe", &"mingshe", &"zhuyan", &"fuzhu"]
-const MID_RUN_SCALE := 1.32
-const BOSS_SCALE := 1.56
+const MID_RUN_SCALE := 1.0 + RunState.DIFFICULTY_PER_LAYER * 4
+const BOSS_SCALE := 1.0 + RunState.DIFFICULTY_PER_LAYER * 7
 
 
 func _initialize() -> void:

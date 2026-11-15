@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="RelicDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/effect_def.gd" id="1_ypfl0"]
+[ext_resource type="Script" path="res://content/defs/relic_def.gd" id="2_g6mx8"]
+
+[sub_resource type="Resource" id="Resource_c75cf"]
+script = ExtResource("1_ypfl0")
+trigger = &"passive"
+op = &"early_call_mult"
+amount = 1.0
+
+[resource]
+script = ExtResource("2_g6mx8")
+id = &"migu"
+display_name = "迷穀"
+description = "佩之不迷。提前召唤的灵气奖励翻倍。"
+effects = Array[ExtResource("1_ypfl0")]([SubResource("Resource_c75cf")])
+price = 25

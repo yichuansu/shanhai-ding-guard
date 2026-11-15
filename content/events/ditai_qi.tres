@@ -1,0 +1,38 @@
+[gd_resource type="Resource" script_class="EventDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/event_option.gd" id="1_qv7hp"]
+[ext_resource type="Script" path="res://content/defs/effect_def.gd" id="2_bwauk"]
+[ext_resource type="Script" path="res://content/defs/event_def.gd" id="3_a8ili"]
+
+[sub_resource type="Resource" id="Resource_x7it8"]
+script = ExtResource("2_bwauk")
+trigger = &"run"
+op = &"tier_up_random"
+
+[sub_resource type="Resource" id="Resource_yg8h1"]
+script = ExtResource("1_qv7hp")
+label = "以石祷神"
+hint = "随机一只异兽升一阶"
+outcomes = Array[ExtResource("2_bwauk")]([SubResource("Resource_x7it8")])
+success_text = "石子在掌心发烫，一只异兽的气息变强了。"
+
+[sub_resource type="Resource" id="Resource_gf6i1"]
+script = ExtResource("2_bwauk")
+trigger = &"run"
+op = &"gain_talismans"
+amount = 2.0
+
+[sub_resource type="Resource" id="Resource_tx720"]
+script = ExtResource("1_qv7hp")
+label = "把石子做成符"
+hint = "镇鼎符 +2"
+outcomes = Array[ExtResource("2_bwauk")]([SubResource("Resource_gf6i1")])
+success_text = "你把石子磨成了两张镇鼎符。"
+
+[resource]
+script = ExtResource("3_a8ili")
+id = &"ditai_qi"
+title = "帝台之棋"
+source_text = "休与之山，其上有石焉，名曰帝台之棋，五色而文，其状如鹑卵。帝台之石，所以祷百神者也，服之不蛊。"
+situation = "山顶散落着五色斑斓、状如鹌鹑蛋的石子。"
+options = Array[ExtResource("1_qv7hp")]([SubResource("Resource_yg8h1"), SubResource("Resource_tx720")])

@@ -24,14 +24,21 @@ extends RefCounted
 ##   passive         / spirit_income            每 duration_ticks 拍额外 +amount 灵气
 ##   passive         / guard_hp_pct             作用域内（空 = 全部）镇守生命 +amount
 ##   passive         / capture_threshold_bonus  捕获血线 +amount
+##   passive         / early_call_mult          提前召唤奖励 ×(1+amount)
 ##   on_battle_start / add_talismans            本场额外 amount 张临时镇鼎符
+##   on_battle_start / add_spirit               开局额外 amount 灵气
 ##   on_hit          / slow                     移速 ×amount，持续 duration_ticks
 ##   on_hit          / burn                     每拍 amount 点伤害，持续 duration_ticks
 ##   on_hit          / splash                   radius 内其他敌人受到本次伤害 ×amount
 ##   on_hit          / ignite_nearby            radius 内最近的另一个敌人灼烧 amount，持续 duration_ticks
+##   on_hit          / stagger                  amount 概率让目标定身 duration_ticks
 ##   on_hit          / dry                      目标若被减速：额外造成本次伤害 ×amount，并解除减速
 ##   on_kill_nearby  / bonus_shells             radius 内有敌人被击杀时额外 amount 贝币
 ##   on_wave_end     / heal_ding                每清一波回复 amount 鼎耐久
+##
+## 敌人技能（BeastDef.abilities，首领机制）：
+##   periodic  / stun_towers   每 interval_ticks 拍定住最近的 count 只我方异兽 duration_ticks 拍
+##   hp_below  / summon        血量首次低于 amount 时，在自身位置召唤 count 只 param_id
 
 enum Outcome { RUNNING, WON, LOST }
 
@@ -89,6 +96,7 @@ var _wave_cleared: Array[bool] = []
 var _effects: Dictionary = {}
 var _global_damage_bonus := 0.0
 var _capture_bonus := 0.0
+var _early_call_mult := 1.0
 var _started := false
 var _hp_scale := 1.0
 
@@ -148,6 +156,8 @@ func begin() -> void:
 		if eff.op == &"add_talismans":
 			talismans += int(eff.amount)
 			bonus_talismans += int(eff.amount)
+		elif eff.op == &"add_spirit":
+			spirit += int(eff.amount)
 
 
 func queue_deploy(uid: int, slot: int) -> void:
@@ -252,7 +262,7 @@ func wave_gap_remaining() -> int:
 
 
 func early_call_bonus() -> int:
-	return ceili(wave_gap_remaining() / TICKS_PER_SECOND * EARLY_CALL_SPIRIT_PER_SECOND)
+	return ceili(wave_gap_remaining() / TICKS_PER_SECOND * EARLY_CALL_SPIRIT_PER_SECOND * _early_call_mult)
 
 
 ## 即将到来的那一波：beast_id -> 数量。全部出完返回空。
@@ -296,6 +306,7 @@ func step() -> void:
 	_income()
 	_spawn()
 	_move_enemies()
+	_enemy_abilities()
 	_update_guards()
 	_tick_statuses()
 	_move_projectiles()
@@ -487,6 +498,64 @@ func _move_enemies() -> void:
 			events.append({"type": "leaked", "enemy_id": e.id, "damage": e.def.leak_damage, "position": path.points[path.points.size() - 1]})
 
 
+func _enemy_abilities() -> void:
+	var summons: Array[Dictionary] = []
+	for e in enemies:
+		if not e.alive or e.def.abilities.is_empty():
+			continue
+		for i in e.def.abilities.size():
+			var ab := e.def.abilities[i]
+			match ab.trigger:
+				&"periodic":
+					var next: int = e.ability_next_tick.get(i, tick + ab.interval_ticks)
+					if tick >= next:
+						_ability_effect(e, ab)
+						next = tick + maxi(ab.interval_ticks, 1)
+					e.ability_next_tick[i] = next
+				&"hp_below":
+					if not e.ability_fired.has(i) and e.hp <= e.max_hp * ab.amount:
+						e.ability_fired[i] = true
+						summons.append({"enemy": e, "ability": ab})
+	for s in summons:
+		_ability_effect(s["enemy"], s["ability"])
+
+
+func _ability_effect(e: EnemyUnit, ab: EffectDef) -> void:
+	var from := enemy_position(e)
+	match ab.op:
+		&"stun_towers":
+			var targets: Array[TowerUnit] = []
+			for t: TowerUnit in towers.values():
+				targets.append(t)
+			targets.sort_custom(func(a: TowerUnit, b: TowerUnit) -> bool:
+				var da := a.position.distance_squared_to(from)
+				var db := b.position.distance_squared_to(from)
+				return da < db or (da == db and a.slot < b.slot))
+			var slots: Array[int] = []
+			for t in targets.slice(0, maxi(ab.count, 0)):
+				t.stunned_ticks = maxi(t.stunned_ticks, ab.duration_ticks)
+				slots.append(t.slot)
+			if not slots.is_empty():
+				events.append({"type": "towers_stunned", "slots": slots, "position": from, "enemy_id": e.id})
+		&"summon":
+			var def: BeastDef = _beasts.get(ab.param_id)
+			if def == null:
+				return
+			for n in ab.count:
+				var s := EnemyUnit.new()
+				s.id = _next_id
+				_next_id += 1
+				s.def = def
+				s.wave_index = e.wave_index
+				s.max_hp = maxi(1, roundi(def.max_hp * _hp_scale))
+				s.hp = s.max_hp
+				s.distance = maxf(e.distance - 30.0 * n, 0.0)
+				s.prev_distance = s.distance
+				enemies.append(s)
+			_waves.add_extra(e.wave_index, ab.count)
+			events.append({"type": "summoned", "position": from, "count": ab.count, "enemy_id": e.id})
+
+
 func _update_guards() -> void:
 	for t: TowerUnit in towers.values():
 		if not t.is_guard:
@@ -565,6 +634,9 @@ func _hit(e: EnemyUnit, p: Projectile) -> void:
 				e.slow_ticks = maxi(e.slow_ticks, eff.duration_ticks)
 			&"burn":
 				_apply_burn(e, eff.amount, eff.duration_ticks)
+			&"stagger":
+				if e.def.rarity != BeastDef.Rarity.BOSS and _rng.next_float() < eff.amount:
+					e.frozen_ticks = maxi(e.frozen_ticks, eff.duration_ticks)
 			&"dry":
 				if e.slow_ticks > 0:
 					e.hp -= p.damage * eff.amount
@@ -626,6 +698,9 @@ func _towers_fire() -> void:
 	slots.sort()
 	for s: int in slots:
 		var t: TowerUnit = towers[s]
+		if t.stunned_ticks > 0:
+			t.stunned_ticks -= 1
+			continue
 		if t.cooldown > 0:
 			t.cooldown -= 1
 		if t.cooldown > 0:
@@ -736,6 +811,7 @@ func _rebuild_effects() -> void:
 	_effects.clear()
 	_global_damage_bonus = 0.0
 	_capture_bonus = 0.0
+	_early_call_mult = 1.0
 	if keeper != null:
 		for eff in keeper.passives:
 			_register(null, eff, eff.element_scope)
@@ -768,6 +844,8 @@ func _rebuild_effects() -> void:
 				_global_damage_bonus += eff.amount
 			&"capture_threshold_bonus":
 				_capture_bonus += eff.amount
+			&"early_call_mult":
+				_early_call_mult += eff.amount
 	_recompute_bonuses()
 
 

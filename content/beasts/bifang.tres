@@ -1,17 +1,17 @@
 [gd_resource type="Resource" script_class="BeastDef" format=3]
 
-[ext_resource type="Script" path="res://content/defs/beast_def.gd" id="1_qcdoy"]
-[ext_resource type="Script" path="res://content/defs/effect_def.gd" id="2_txjkg"]
+[ext_resource type="Script" path="res://content/defs/effect_def.gd" id="1_qcdoy"]
+[ext_resource type="Script" path="res://content/defs/beast_def.gd" id="2_txjkg"]
 
 [sub_resource type="Resource" id="Resource_kov35"]
-script = ExtResource("2_txjkg")
+script = ExtResource("1_qcdoy")
 op = &"burn"
 amount = 12.0
 duration_ticks = 20
 description = "见则其邑有讹火：命中后每 0.1 秒灼烧 12，持续 2 秒"
 
 [sub_resource type="Resource" id="Resource_75ov6"]
-script = ExtResource("2_txjkg")
+script = ExtResource("1_qcdoy")
 op = &"ignite_nearby"
 amount = 8.0
 duration_ticks = 20
@@ -19,7 +19,7 @@ radius = 160.0
 description = "讹火：火星溅到附近另一个敌人身上"
 
 [resource]
-script = ExtResource("1_qcdoy")
+script = ExtResource("2_txjkg")
 id = &"bifang"
 display_name = "毕方"
 name_en = "Bifang, the One-Legged Fire Crane"
@@ -35,4 +35,4 @@ damage = 60
 attack_range = 290.0
 projectile_speed = 700.0
 crit_chance = 0.1
-traits = Array[ExtResource("2_txjkg")]([SubResource("Resource_kov35"), SubResource("Resource_75ov6")])
+traits = Array[ExtResource("1_qcdoy")]([SubResource("Resource_kov35"), SubResource("Resource_75ov6")])

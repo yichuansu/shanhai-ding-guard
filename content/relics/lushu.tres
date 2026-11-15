@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="RelicDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/effect_def.gd" id="1_jlhsu"]
+[ext_resource type="Script" path="res://content/defs/relic_def.gd" id="2_rph0a"]
+
+[sub_resource type="Resource" id="Resource_1n1uk"]
+script = ExtResource("1_jlhsu")
+trigger = &"passive"
+op = &"shell_bonus_pct"
+amount = 0.3
+
+[resource]
+script = ExtResource("2_rph0a")
+id = &"lushu"
+display_name = "鹿蜀皮"
+description = "佩之宜子孙。战斗获得的贝币 +30%。"
+effects = Array[ExtResource("1_jlhsu")]([SubResource("Resource_1n1uk")])
+price = 25

@@ -1,0 +1,40 @@
+[gd_resource type="Resource" script_class="BeastDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/effect_def.gd" id="1_4t10c"]
+[ext_resource type="Script" path="res://content/defs/beast_def.gd" id="2_mpegq"]
+
+[sub_resource type="Resource" id="Resource_5rrw1"]
+script = ExtResource("1_4t10c")
+op = &"splash"
+amount = 0.8
+radius = 170.0
+description = "乃得大雨：周围敌人受到 80% 伤害"
+
+[sub_resource type="Resource" id="Resource_lbr56"]
+script = ExtResource("1_4t10c")
+op = &"slow"
+amount = 0.5
+duration_ticks = 20
+description = "命中后减速 50%，2 秒"
+
+[resource]
+script = ExtResource("2_mpegq")
+id = &"yinglong"
+display_name = "应龙"
+name_en = "Yinglong, the Winged Rain Dragon"
+element = &"shui"
+role = 1
+rarity = 4
+lore = "应龙处南极，杀蚩尤与夸父，不得复上，故下数旱，旱而为应龙之状，乃得大雨。"
+max_hp = 3000
+spirit_reward = 3
+shell_reward = 3
+capturable = false
+contact_damage = 5.0
+deploy_cost = 10
+damage = 200
+attack_range = 310.0
+attack_interval_ticks = 14
+projectile_speed = 750.0
+crit_chance = 0.1
+traits = Array[ExtResource("1_4t10c")]([SubResource("Resource_5rrw1"), SubResource("Resource_lbr56")])

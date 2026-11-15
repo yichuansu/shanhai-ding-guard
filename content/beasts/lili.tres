@@ -1,10 +1,10 @@
 [gd_resource type="Resource" script_class="BeastDef" format=3]
 
-[ext_resource type="Script" path="res://content/defs/beast_def.gd" id="1_wbeiy"]
-[ext_resource type="Script" path="res://content/defs/effect_def.gd" id="2_1fodj"]
+[ext_resource type="Script" path="res://content/defs/effect_def.gd" id="1_wbeiy"]
+[ext_resource type="Script" path="res://content/defs/beast_def.gd" id="2_1fodj"]
 
 [resource]
-script = ExtResource("1_wbeiy")
+script = ExtResource("2_1fodj")
 id = &"lili"
 display_name = "狸力"
 name_en = "Lili, the Spurred Digger"

@@ -18,6 +18,9 @@ var burn_ticks := 0
 var frozen_ticks := 0
 ## 被哪个鼎位的镇守异兽挡住，-1 表示没有。
 var blocked_by := -1
+## 敌人技能状态：周期技能的下次触发拍、已触发的血线。
+var ability_next_tick: Dictionary = {}
+var ability_fired: Dictionary = {}
 var alive := true
 var leaked := false
 var captured := false

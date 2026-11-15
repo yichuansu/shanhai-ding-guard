@@ -1,0 +1,60 @@
+[gd_resource type="Resource" script_class="EventDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/event_option.gd" id="1_x31tl"]
+[ext_resource type="Script" path="res://content/defs/effect_def.gd" id="2_7jdnt"]
+[ext_resource type="Script" path="res://content/defs/event_def.gd" id="3_t0xhy"]
+
+[sub_resource type="Resource" id="Resource_ij4sl"]
+script = ExtResource("2_7jdnt")
+trigger = &"run"
+op = &"gain_talismans"
+amount = 1.0
+
+[sub_resource type="Resource" id="Resource_13exr"]
+script = ExtResource("2_7jdnt")
+trigger = &"run"
+op = &"heal_ding"
+amount = 2.0
+
+[sub_resource type="Resource" id="Resource_8gy8f"]
+script = ExtResource("1_x31tl")
+label = "献上贝币，求它庇佑"
+hint = "花 8 贝币：镇鼎符 +1，修鼎 2"
+cost_shells = 8
+outcomes = Array[ExtResource("2_7jdnt")]([SubResource("Resource_ij4sl"), SubResource("Resource_13exr")])
+success_text = "九尾狐收下供奉，绕鼎三匝而去。"
+
+[sub_resource type="Resource" id="Resource_y3y65"]
+script = ExtResource("2_7jdnt")
+trigger = &"run"
+op = &"lose_ding"
+amount = 3.0
+
+[sub_resource type="Resource" id="Resource_07vmv"]
+script = ExtResource("2_7jdnt")
+trigger = &"run"
+op = &"gain_relic"
+
+[sub_resource type="Resource" id="Resource_p3ol2"]
+script = ExtResource("1_x31tl")
+label = "循声追去"
+hint = "一半可能得到法宝，一半可能被咬伤铜鼎"
+success_chance = 0.5
+outcomes = Array[ExtResource("2_7jdnt")]([SubResource("Resource_07vmv")])
+fail_outcomes = Array[ExtResource("2_7jdnt")]([SubResource("Resource_y3y65")])
+success_text = "狐影消失处留下一件宝物。"
+fail_text = "林中扑出一张巨口，铜鼎被啃出裂痕。"
+
+[sub_resource type="Resource" id="Resource_chut8"]
+script = ExtResource("1_x31tl")
+label = "绕道而行"
+hint = "什么也不发生"
+success_text = "你没有理会那啼声。"
+
+[resource]
+script = ExtResource("3_t0xhy")
+id = &"qingqiu_hu"
+title = "青丘之狐"
+source_text = "又东三百里，曰青丘之山……有兽焉，其状如狐而九尾，其音如婴儿，能食人；食者不蛊。"
+situation = "夜宿青丘，林间传来婴儿般的啼声，九条尾影在月下晃动。"
+options = Array[ExtResource("1_x31tl")]([SubResource("Resource_8gy8f"), SubResource("Resource_p3ol2"), SubResource("Resource_chut8")])

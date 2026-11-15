@@ -8,6 +8,8 @@ var beasts: Dictionary = {}
 var relics: Dictionary = {}
 var battles: Dictionary = {}
 var keepers: Dictionary = {}
+var fusions: Dictionary = {}
+var events: Dictionary = {}
 ## element(StringName) -> FormationDef
 var formations: Dictionary = {}
 var chart: ElementChart
@@ -20,6 +22,8 @@ static func load_from(root: String = DEFAULT_ROOT) -> ContentLibrary:
 	lib._load_dir(root + "/relics", lib.relics)
 	lib._load_dir(root + "/battles", lib.battles)
 	lib._load_dir(root + "/keepers", lib.keepers)
+	lib._load_dir(root + "/fusions", lib.fusions)
+	lib._load_dir(root + "/events", lib.events)
 	lib._load_formations(root + "/formations")
 	var chart_path := root + "/element_chart.tres"
 	if ResourceLoader.exists(chart_path):
@@ -39,6 +43,39 @@ func battles_of_kind(kind: BattleDef.Kind) -> Array[BattleDef]:
 		var b: BattleDef = battles[id]
 		if b.kind == kind:
 			out.append(b)
+	return out
+
+
+## 能作为奖励、集市商品的异兽：普通且可捕获的。
+func common_beast_ids() -> Array[StringName]:
+	var out: Array[StringName] = []
+	for id: StringName in _sorted_keys(beasts):
+		var b: BeastDef = beasts[id]
+		if b.rarity == BeastDef.Rarity.COMMON and b.capturable:
+			out.append(id)
+	return out
+
+
+func relic_ids() -> Array[StringName]:
+	return _sorted_keys(relics)
+
+
+func event_ids() -> Array[StringName]:
+	return _sorted_keys(events)
+
+
+func fusion_list() -> Array[FusionRecipe]:
+	var out: Array[FusionRecipe] = []
+	for id: StringName in _sorted_keys(fusions):
+		out.append(fusions[id])
+	return out
+
+
+func _sorted_keys(d: Dictionary) -> Array[StringName]:
+	var out: Array[StringName] = []
+	for k: StringName in d:
+		out.append(k)
+	out.sort_custom(func(x: StringName, y: StringName) -> bool: return String(x) < String(y))
 	return out
 
 
@@ -119,6 +156,26 @@ func _validate() -> void:
 			if tier.count <= last:
 				errors.append("%s 阵档位必须递增" % element)
 			last = tier.count
+	for id: StringName in fusions:
+		var f: FusionRecipe = fusions[id]
+		for part in [f.a, f.b, f.result]:
+			if not beasts.has(part):
+				errors.append("融合配方 %s 引用了不存在的异兽 %s" % [id, part])
+	for id: StringName in events:
+		var ev: EventDef = events[id]
+		if ev.options.is_empty():
+			errors.append("奇遇 %s 没有选项" % id)
+		for opt in ev.options:
+			for eff in opt.outcomes + opt.fail_outcomes:
+				if eff.op == &"gain_beast" and not beasts.has(eff.param_id):
+					errors.append("奇遇 %s 引用了不存在的异兽 %s" % [id, eff.param_id])
+				if eff.op == &"gain_relic" and eff.param_id != &"" and not relics.has(eff.param_id):
+					errors.append("奇遇 %s 引用了不存在的法宝 %s" % [id, eff.param_id])
+	for id: StringName in beasts:
+		var bd: BeastDef = beasts[id]
+		for ab in bd.abilities:
+			if ab.op == &"summon" and not beasts.has(ab.param_id):
+				errors.append("%s 召唤了不存在的异兽 %s" % [id, ab.param_id])
 	for id: StringName in battles:
 		var battle: BattleDef = battles[id]
 		if battle.path_points.size() < 2:

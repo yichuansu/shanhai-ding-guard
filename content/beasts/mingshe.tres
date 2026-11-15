@@ -1,16 +1,16 @@
 [gd_resource type="Resource" script_class="BeastDef" format=3]
 
-[ext_resource type="Script" path="res://content/defs/beast_def.gd" id="1_md2yf"]
-[ext_resource type="Script" path="res://content/defs/effect_def.gd" id="2_bu1ws"]
+[ext_resource type="Script" path="res://content/defs/effect_def.gd" id="1_md2yf"]
+[ext_resource type="Script" path="res://content/defs/beast_def.gd" id="2_bu1ws"]
 
 [sub_resource type="Resource" id="Resource_o2ig6"]
-script = ExtResource("2_bu1ws")
+script = ExtResource("1_md2yf")
 op = &"dry"
 amount = 0.8
 description = "见则其邑大旱：命中减速中的敌人时额外造成 80% 伤害并蒸干水泽"
 
 [resource]
-script = ExtResource("1_md2yf")
+script = ExtResource("2_bu1ws")
 id = &"mingshe"
 display_name = "鸣蛇"
 name_en = "Mingshe, the Four-Winged Drought Snake"
@@ -28,4 +28,4 @@ attack_interval_ticks = 20
 projectile_speed = 800.0
 crit_chance = 0.2
 crit_multiplier = 2.5
-traits = Array[ExtResource("2_bu1ws")]([SubResource("Resource_o2ig6")])
+traits = Array[ExtResource("1_md2yf")]([SubResource("Resource_o2ig6")])

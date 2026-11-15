@@ -1,10 +1,10 @@
 [gd_resource type="Resource" script_class="BeastDef" format=3]
 
-[ext_resource type="Script" path="res://content/defs/beast_def.gd" id="1_pja4u"]
-[ext_resource type="Script" path="res://content/defs/effect_def.gd" id="2_e4xrl"]
+[ext_resource type="Script" path="res://content/defs/effect_def.gd" id="1_pja4u"]
+[ext_resource type="Script" path="res://content/defs/beast_def.gd" id="2_e4xrl"]
 
 [sub_resource type="Resource" id="Resource_sk2hh"]
-script = ExtResource("2_e4xrl")
+script = ExtResource("1_pja4u")
 trigger = &"on_kill_nearby"
 op = &"bonus_shells"
 amount = 1.0
@@ -12,7 +12,7 @@ radius = 320.0
 description = "见则天下大穰：附近敌人被击杀时额外得 1 贝币"
 
 [resource]
-script = ExtResource("1_pja4u")
+script = ExtResource("2_e4xrl")
 id = &"dangkang"
 display_name = "当康"
 name_en = "Dangkang, the Harvest Boar"
@@ -28,4 +28,4 @@ attack_range = 250.0
 attack_interval_ticks = 10
 projectile_speed = 650.0
 crit_chance = 0.05
-traits = Array[ExtResource("2_e4xrl")]([SubResource("Resource_sk2hh")])
+traits = Array[ExtResource("1_pja4u")]([SubResource("Resource_sk2hh")])

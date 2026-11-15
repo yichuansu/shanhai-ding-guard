@@ -59,3 +59,15 @@ func test_every_keeper_can_win_first_battle() -> void:
 		var sim := BattleSim.create(battle, lib.beasts, lib.chart, setup)
 		AutoPlayer.new().play(sim)
 		check_eq(sim.outcome, BattleSim.Outcome.WON, "%s 的开局阵容能守住第一场" % k.display_name)
+
+
+func test_p2_content() -> void:
+	var lib := ContentLibrary.load_from()
+	check(lib.relics.size() >= 7, "至少 7 件法宝")
+	check(lib.events.size() >= 7, "至少 7 个奇遇")
+	check_eq(lib.fusions.size(), 4, "四个融合配方")
+	for id in lib.event_ids():
+		var ev: EventDef = lib.events[id]
+		check(ev.source_text != "" and ev.options.size() >= 2, "%s 有原文和至少两个选项" % id)
+	var xiangliu: BeastDef = lib.beasts[&"xiangliu"]
+	check(xiangliu.abilities.size() >= 2, "相柳有首领技能")

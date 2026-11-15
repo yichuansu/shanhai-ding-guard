@@ -13,6 +13,8 @@ var level := 1
 var invested := 0
 ## 开火后的后坐动画用，表现层读。
 var last_fire_tick := -100
+## 被首领毒涎定住，期间不攻击。
+var stunned_ticks := 0
 ## 相生与光环带来的伤害加成，鼎位变化时重算。
 var damage_bonus := 0.0
 

@@ -102,6 +102,12 @@ func _react(events: Array[Dictionary]) -> void:
 				Sfx.play("wave")
 			"guard_broken":
 				_shake = maxf(_shake, 0.3)
+			"towers_stunned":
+				Sfx.play("skill")
+				_shake = maxf(_shake, 0.4)
+			"summoned":
+				Sfx.play("leak")
+				_shake = maxf(_shake, 0.7)
 			"spawned":
 				pass
 
@@ -159,8 +165,14 @@ func _slot_at(pos: Vector2) -> int:
 
 
 func _build_hud(def: BattleDef) -> void:
-	var layer := CanvasLayer.new()
-	add_child(layer)
+	var canvas := CanvasLayer.new()
+	add_child(canvas)
+	# CanvasLayer 会切断主题继承，所以在下面包一层全屏 Control 显式挂上界面主题。
+	var layer := Control.new()
+	layer.set_anchors_preset(Control.PRESET_FULL_RECT)
+	layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layer.theme = get_tree().root.theme
+	canvas.add_child(layer)
 	var top := HBoxContainer.new()
 	top.position = Vector2(40, 24)
 	top.add_theme_constant_override("separation", 20)
@@ -234,7 +246,7 @@ func _build_hud(def: BattleDef) -> void:
 	_result_label = _label(40, Color("1c2421"))
 	_result_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(_result_label)
-	box.add_child(_button("返回路线图", _leave))
+	box.add_child(_button("继续", _leave))
 
 
 func _rebuild_roster() -> void:
@@ -386,7 +398,7 @@ func _toggle_speed() -> void:
 
 
 func _leave() -> void:
-	Game.goto_map()
+	Game.after_battle()
 
 
 func _label(size: int, color: Color) -> Label:

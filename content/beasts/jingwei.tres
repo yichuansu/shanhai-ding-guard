@@ -1,10 +1,10 @@
 [gd_resource type="Resource" script_class="BeastDef" format=3]
 
-[ext_resource type="Script" path="res://content/defs/beast_def.gd" id="1_3dm0r"]
-[ext_resource type="Script" path="res://content/defs/effect_def.gd" id="2_x1kpi"]
+[ext_resource type="Script" path="res://content/defs/effect_def.gd" id="1_3dm0r"]
+[ext_resource type="Script" path="res://content/defs/beast_def.gd" id="2_x1kpi"]
 
 [sub_resource type="Resource" id="Resource_cavwd"]
-script = ExtResource("2_x1kpi")
+script = ExtResource("1_3dm0r")
 trigger = &"passive"
 op = &"bonus_vs_element"
 amount = 0.5
@@ -12,7 +12,7 @@ element_scope = &"shui"
 description = "衔木石以堙东海：对水属敌人伤害 +50%"
 
 [resource]
-script = ExtResource("1_3dm0r")
+script = ExtResource("2_x1kpi")
 id = &"jingwei"
 display_name = "精卫"
 name_en = "Jingwei, the Sea-Filling Bird"
@@ -28,4 +28,4 @@ attack_range = 300.0
 attack_interval_ticks = 4
 projectile_speed = 900.0
 crit_chance = 0.1
-traits = Array[ExtResource("2_x1kpi")]([SubResource("Resource_cavwd")])
+traits = Array[ExtResource("1_3dm0r")]([SubResource("Resource_cavwd")])
