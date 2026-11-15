@@ -16,6 +16,8 @@ const ACT_HEAL_RATIO := 0.5
 
 var seed_value := 0
 var keeper_id: StringName = &""
+## 本局的鼎劫等级。
+var ascension := 0
 var act := 0
 var map: RunMap
 var current_node := -1
@@ -40,11 +42,14 @@ var seen_events: Array[StringName] = []
 var _next_uid := 1
 
 
-static func new_run(seed_in: int, starting_beasts: Array[StringName], keeper: StringName = &"", starting_talismans: int = DEFAULT_TALISMANS) -> RunState:
+static func new_run(seed_in: int, starting_beasts: Array[StringName], keeper: StringName = &"", starting_talismans: int = DEFAULT_TALISMANS, ascension_level: int = 0) -> RunState:
 	var r := RunState.new()
 	r.seed_value = seed_in
 	r.keeper_id = keeper
 	r.talismans = starting_talismans
+	r.ascension = clampi(ascension_level, 0, Ascension.MAX_LEVEL)
+	r.ding_max = DEFAULT_DING + int(Ascension.mods(r.ascension)["ding_max_delta"])
+	r.ding_hp = r.ding_max
 	r._build_map()
 	for id in starting_beasts:
 		r.add_beast(id)
@@ -64,7 +69,28 @@ func difficulty_scale(node_id: int) -> float:
 
 
 func boss_scale() -> float:
-	return 1.0 + DIFFICULTY_PER_ACT * act
+	return (1.0 + DIFFICULTY_PER_ACT * act) * float(Ascension.mods(ascension)["boss_hp_mult"])
+
+
+## 本场战斗的完整配置（不含内容库查找以外的场景依赖），Game 和整局模拟共用。
+func make_battle_setup(lib: ContentLibrary, node_id: int) -> BattleSetup:
+	var m := Ascension.mods(ascension)
+	var setup := BattleSetup.new()
+	setup.roster = roster.duplicate()
+	for id in relic_ids:
+		if lib.relics.has(id):
+			setup.relics.append(lib.relics[id])
+	setup.ding_hp = ding_hp
+	setup.ding_max = ding_max
+	setup.talismans = mini(talismans, int(m["capture_limit"]))
+	setup.seed_value = battle_seed(node_id)
+	setup.keeper = lib.keepers.get(keeper_id)
+	setup.formations = lib.formation_list()
+	setup.hp_scale = difficulty_scale(node_id) * float(m["hp_mult"])
+	setup.boss_hp_scale = boss_scale()
+	setup.spirit_delta = int(m["spirit_delta"])
+	setup.speed_scale = float(m["speed_mult"])
+	return setup
 
 
 func region() -> StringName:
@@ -156,6 +182,7 @@ func to_dict() -> Dictionary:
 		"schema": SCHEMA,
 		"seed": seed_value,
 		"keeper": String(keeper_id),
+		"ascension": ascension,
 		"act": act,
 		"current_node": current_node,
 		"visited": Array(visited),
@@ -183,6 +210,7 @@ static func from_dict(d: Dictionary) -> RunState:
 	var r := RunState.new()
 	r.seed_value = int(d.get("seed", 0))
 	r.keeper_id = StringName(str(d.get("keeper", "")))
+	r.ascension = int(d.get("ascension", 0))
 	r.act = int(d.get("act", 0))
 	r._build_map()
 	r.current_node = int(d.get("current_node", -1))

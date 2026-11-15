@@ -41,7 +41,11 @@ func _ready() -> void:
 	var back := Button.new()
 	back.text = "返回"
 	back.custom_minimum_size = Vector2(140, 60)
-	back.pressed.connect(Game.goto_map)
+	back.pressed.connect(func() -> void:
+		if Game.has_active_run():
+			Game.goto_map()
+		else:
+			Game.goto_start())
 	top.add_child(back)
 	_title = _label(40, INK)
 	top.add_child(_title)

@@ -105,6 +105,7 @@ var _early_call_mult := 1.0
 var _started := false
 var _hp_scale := 1.0
 var _boss_hp_scale := 1.0
+var _speed_scale := 1.0
 ## 首领漏到鼎前：本拍必定判负，清波回复也救不回来。
 var _boss_leaked := false
 
@@ -128,6 +129,8 @@ static func create(def: BattleDef, beasts: Dictionary, chart: ElementChart, setu
 	sim.spirit = def.starting_spirit
 	sim._hp_scale = maxf(setup.hp_scale, 0.01)
 	sim._boss_hp_scale = maxf(setup.boss_hp_scale, 0.01)
+	sim._speed_scale = maxf(setup.speed_scale, 0.01)
+	sim.spirit = maxi(def.starting_spirit + setup.spirit_delta, 0)
 	sim._rng = RngStream.new(setup.seed_value)
 	sim._waves = WaveDirector.new(def.waves)
 	sim._resolved_per_wave.resize(def.waves.size())
@@ -496,7 +499,7 @@ func _move_enemies() -> void:
 				holder.guard_hp -= e.def.contact_damage
 				continue
 			e.blocked_by = -1
-		var speed := e.def.move_speed / TICKS_PER_SECOND
+		var speed := e.def.move_speed / TICKS_PER_SECOND * _speed_scale
 		if e.slow_ticks > 0:
 			speed *= e.slow_multiplier
 			e.slow_ticks -= 1

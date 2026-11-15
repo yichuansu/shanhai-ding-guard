@@ -58,7 +58,7 @@ static func apply_battle_result(run: RunState, lib: ContentLibrary, node_id: int
 	if not relics.is_empty():
 		var rng := RngStream.new(run.battle_seed(node_id)).derive("boss_reward")
 		rng.shuffle(relics)
-		run.pending_reward = {"kind": "relic", "options": _strings(relics.slice(0, REWARD_CHOICES)), "skip_shells": SKIP_REWARD_SHELLS * 3}
+		run.pending_reward = {"kind": "relic", "options": _strings(relics.slice(0, _choices(run))), "skip_shells": SKIP_REWARD_SHELLS * 3}
 	var heal := run.advance_act()
 	lines.append("%s之鼎已修复！铜鼎回复 %d 点耐久，前往%s。" % [region_name, heal, Regions.display(run.region())])
 	return lines
@@ -70,10 +70,14 @@ static func roll_reward(run: RunState, lib: ContentLibrary, node_id: int, unlock
 		var relics := unowned_relics(run, lib)
 		if not relics.is_empty():
 			rng.shuffle(relics)
-			return {"kind": "relic", "options": _strings(relics.slice(0, REWARD_CHOICES)), "skip_shells": SKIP_REWARD_SHELLS * 2}
+			return {"kind": "relic", "options": _strings(relics.slice(0, _choices(run))), "skip_shells": SKIP_REWARD_SHELLS * 2}
 	var pool := reward_pool(lib, unlocked)
 	rng.shuffle(pool)
-	return {"kind": "beast", "options": _strings(pool.slice(0, REWARD_CHOICES)), "skip_shells": SKIP_REWARD_SHELLS}
+	return {"kind": "beast", "options": _strings(pool.slice(0, _choices(run))), "skip_shells": SKIP_REWARD_SHELLS}
+
+
+static func _choices(run: RunState) -> int:
+	return int(Ascension.mods(run.ascension)["reward_choices"])
 
 
 ## 选第 index 个奖励。阵容满时必须给 release_uid（放生哪只），否则不生效并返回提示。
@@ -199,16 +203,17 @@ static func apply_run_effect(run: RunState, lib: ContentLibrary, eff: EffectDef,
 static func shop_offers(run: RunState, lib: ContentLibrary, node_id: int, unlocked: Array[StringName]) -> Array[Dictionary]:
 	var rng := RngStream.new(run.battle_seed(node_id)).derive("shop")
 	var offers: Array[Dictionary] = []
+	var price_mult := float(Ascension.mods(run.ascension)["shop_price_mult"])
 	var pool := reward_pool(lib, unlocked)
 	rng.shuffle(pool)
 	for id in pool.slice(0, SHOP_BEASTS):
-		offers.append({"kind": "beast", "id": String(id), "price": BEAST_PRICE + rng.next_int(-2, 2)})
+		offers.append({"kind": "beast", "id": String(id), "price": ceili((BEAST_PRICE + rng.next_int(-2, 2)) * price_mult)})
 	var relics := unowned_relics(run, lib)
 	rng.shuffle(relics)
 	for id in relics.slice(0, SHOP_RELICS):
-		offers.append({"kind": "relic", "id": String(id), "price": (lib.relics[id] as RelicDef).price})
-	offers.append({"kind": "talismans", "id": "", "price": TALISMAN_PACK_PRICE, "amount": TALISMAN_PACK})
-	offers.append({"kind": "repair", "id": "", "price": REPAIR_PRICE, "amount": REPAIR_AMOUNT})
+		offers.append({"kind": "relic", "id": String(id), "price": ceili((lib.relics[id] as RelicDef).price * price_mult)})
+	offers.append({"kind": "talismans", "id": "", "price": ceili(TALISMAN_PACK_PRICE * price_mult), "amount": TALISMAN_PACK})
+	offers.append({"kind": "repair", "id": "", "price": ceili(REPAIR_PRICE * price_mult), "amount": REPAIR_AMOUNT})
 	return offers
 
 
@@ -369,9 +374,13 @@ static func rest_heal(run: RunState) -> String:
 	if run.node_resolved:
 		return ""
 	var before := run.ding_hp
-	run.ding_hp = mini(run.ding_max, run.ding_hp + REST_HEAL)
+	run.ding_hp = mini(run.ding_max, run.ding_hp + rest_heal_amount(run))
 	run.node_resolved = true
 	return "祭祀修鼎：耐久 %d → %d" % [before, run.ding_hp]
+
+
+static func rest_heal_amount(run: RunState) -> int:
+	return ceili(REST_HEAL * float(Ascension.mods(run.ascension)["rest_heal_mult"]))
 
 
 static func rest_fortify(run: RunState) -> String:

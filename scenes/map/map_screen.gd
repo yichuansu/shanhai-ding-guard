@@ -45,29 +45,20 @@ func _ready() -> void:
 	_report = _label(22)
 	_report.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	root.add_child(_report)
-	var keepers := HBoxContainer.new()
-	keepers.add_theme_constant_override("separation", 16)
-	root.add_child(keepers)
+	var bottom := HBoxContainer.new()
+	bottom.add_theme_constant_override("separation", 16)
+	root.add_child(bottom)
 	var progress := Bestiary.progress(Content.lib, Game.profile)
 	var bestiary := Button.new()
 	bestiary.text = "山海经图鉴 %d/%d" % [progress.x, progress.y]
 	bestiary.custom_minimum_size = Vector2(280, 64)
 	bestiary.pressed.connect(Game.goto_bestiary)
-	keepers.add_child(bestiary)
-	var gap := Control.new()
-	gap.custom_minimum_size = Vector2(40, 0)
-	keepers.add_child(gap)
-	var hint := _label(22)
-	hint.text = "开新局，选择守鼎人："
-	keepers.add_child(hint)
-	for id in Content.lib.keeper_ids():
-		var k: KeeperDef = Content.lib.keepers[id]
-		var b := Button.new()
-		b.text = "%s · %s" % [k.display_name, k.skill.display_name if k.skill else ""]
-		b.tooltip_text = "%s\n技能：%s" % [k.description, k.skill.description if k.skill else ""]
-		b.custom_minimum_size = Vector2(220, 64)
-		b.pressed.connect(_on_new_run.bind(id))
-		keepers.add_child(b)
+	bottom.add_child(bestiary)
+	var start := Button.new()
+	start.text = "守鼎人与新的一局"
+	start.custom_minimum_size = Vector2(280, 64)
+	start.pressed.connect(Game.goto_start)
+	bottom.add_child(start)
 	if not Game.run.pending_reward.is_empty():
 		Game.after_battle.call_deferred()
 		return
@@ -82,13 +73,13 @@ func _refresh() -> void:
 		var label := def.display_name if def else String(b.beast_id)
 		names.append("%s%s" % [label, "" if b.tier == 1 else "★%d" % b.tier])
 	var keeper: KeeperDef = Content.lib.keepers.get(run.keeper_id)
-	_header.text = ("%s · " % keeper.display_name if keeper else "") + Regions.display(run.region()) + "（%d/%d）" % [run.act + 1, Regions.ORDER.size()] + " · 鼎 %d/%d · 贝币 %d · 镇鼎符 %d · 法宝 %d · 阵容（%d/%d）：%s" % [
+	_header.text = ("%s · 鼎劫 %d · " % [keeper.display_name, run.ascension] if keeper else "") + Regions.display(run.region()) + "（%d/%d）" % [run.act + 1, Regions.ORDER.size()] + " · 鼎 %d/%d · 贝币 %d · 镇鼎符 %d · 法宝 %d · 阵容（%d/%d）：%s" % [
 		run.ding_hp, run.ding_max, run.shells, run.talismans, run.relic_ids.size(),
 		run.roster.size(), run.roster_cap, "、".join(names)]
 	var status := ""
 	if run.finished:
 		status = "本局胜利！" if run.won else "本局失败。"
-		status += " 点下方按钮开新局。"
+		status += " 点下方「守鼎人与新的一局」再来一局。"
 	_report.text = "%s %s" % [Game.last_report, status]
 	for child in _columns.get_children():
 		_columns.remove_child(child)
@@ -146,11 +137,6 @@ func _on_node(id: int) -> void:
 	var message := Game.enter_node(id)
 	if message != "":
 		_refresh()
-
-
-func _on_new_run(keeper_id: StringName) -> void:
-	Game.start_new_run(-1, keeper_id)
-	_refresh()
 
 
 func _label(size: int) -> Label:

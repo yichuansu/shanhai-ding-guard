@@ -11,6 +11,8 @@ var bestiary: Dictionary = {}
 var seen: Dictionary = {}
 ## 击败过的首领：beast_id(String) -> 次数
 var defeated: Dictionary = {}
+## 鼎劫进度：keeper_id(String) -> 已解锁的最高等级（0 表示只能打 0 级）
+var ascension: Dictionary = {}
 var runs_started := 0
 var runs_won := 0
 var sim_speed := 1.0
@@ -60,6 +62,20 @@ func defeat_count(beast_id: StringName) -> int:
 	return int(defeated.get(String(beast_id), 0))
 
 
+func max_ascension(keeper_id: StringName) -> int:
+	return int(ascension.get(String(keeper_id), 0))
+
+
+## 用某位守鼎人在某一级通关。返回新解锁的等级，没有新解锁返回 -1。
+func record_win(keeper_id: StringName, level: int) -> int:
+	var key := String(keeper_id)
+	var next := mini(level + 1, Ascension.MAX_LEVEL)
+	if next > max_ascension(keeper_id):
+		ascension[key] = next
+		return next
+	return -1
+
+
 func _entry(key: String) -> Dictionary:
 	if not bestiary.has(key):
 		bestiary[key] = {"captures": 0, "obtained": false}
@@ -72,6 +88,7 @@ func to_dict() -> Dictionary:
 		"bestiary": bestiary,
 		"seen": seen.keys(),
 		"defeated": defeated,
+		"ascension": ascension,
 		"runs_started": runs_started,
 		"runs_won": runs_won,
 		"settings": {"sim_speed": sim_speed},
@@ -92,6 +109,9 @@ static func from_dict(d: Dictionary) -> Profile:
 	var dr: Dictionary = d.get("defeated", {})
 	for key: String in dr:
 		p.defeated[key] = int(dr[key])
+	var asc: Dictionary = d.get("ascension", {})
+	for key: String in asc:
+		p.ascension[key] = int(asc[key])
 	p.runs_started = int(d.get("runs_started", 0))
 	p.runs_won = int(d.get("runs_won", 0))
 	p.sim_speed = float((d.get("settings", {}) as Dictionary).get("sim_speed", 1.0))

@@ -31,3 +31,6 @@ starting_beasts = Array[StringName]([&"bifang", &"mingshe"])
 starting_talismans = 4
 passives = Array[ExtResource("1_jkin8")]([SubResource("Resource_x8d6e")])
 skill = SubResource("Resource_nyx8a")
+unlock_kind = &"defeat"
+unlock_param = &"xiangliu"
+unlock_hint = "羿之后人只追随屠过大患的人：击败一次相柳后解锁。"

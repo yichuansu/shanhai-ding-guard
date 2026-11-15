@@ -242,7 +242,7 @@ func _build_rest() -> void:
 		return
 	_body.add_child(_label(24, MUTED, "在两种祭礼中选一种。"))
 	var row := _row()
-	row.add_child(_card("祭地修鼎\n\n铜鼎耐久 +%d" % RunRules.REST_HEAL, func() -> void: _show(RunRules.rest_heal(Game.run))))
+	row.add_child(_card("祭地修鼎\n\n铜鼎耐久 +%d" % RunRules.rest_heal_amount(Game.run), func() -> void: _show(RunRules.rest_heal(Game.run))))
 	row.add_child(_card("祭天加固\n\n铜鼎耐久上限 +%d" % RunRules.REST_FORTIFY, func() -> void: _show(RunRules.rest_fortify(Game.run))))
 
 

@@ -9,6 +9,7 @@ const SCENE_MAP := "res://scenes/map/map_screen.tscn"
 const SCENE_BATTLE := "res://scenes/battle/battle_screen.tscn"
 const SCENE_NODE := "res://scenes/node/node_screen.tscn"
 const SCENE_BESTIARY := "res://scenes/bestiary/bestiary_screen.tscn"
+const SCENE_START := "res://scenes/start/start_screen.tscn"
 
 var profile: Profile
 var run: RunState
@@ -35,19 +36,20 @@ func has_active_run() -> bool:
 	return run != null and not run.finished
 
 
-func start_new_run(seed_value: int = -1, keeper_id: StringName = &"") -> void:
+func start_new_run(seed_value: int = -1, keeper_id: StringName = &"", ascension_level: int = 0) -> void:
 	if seed_value < 0:
 		seed_value = int(Time.get_unix_time_from_system()) ^ (Time.get_ticks_usec() & 0xffff)
 	if keeper_id == &"" or not Content.lib.keepers.has(keeper_id):
 		var ids := Content.lib.keeper_ids()
 		keeper_id = ids[0] if not ids.is_empty() else &""
 	var keeper: KeeperDef = Content.lib.keepers.get(keeper_id)
+	var level := clampi(ascension_level, 0, profile.max_ascension(keeper_id))
 	if keeper != null:
-		run = RunState.new_run(seed_value, keeper.starting_beasts, keeper_id, keeper.starting_talismans)
+		run = RunState.new_run(seed_value, keeper.starting_beasts, keeper_id, keeper.starting_talismans, level)
 	else:
 		run = RunState.new_run(seed_value, STARTING_BEASTS)
 	profile.runs_started += 1
-	last_report = "新的一局开始：%s。种子 %d" % [keeper.display_name if keeper else "无守鼎人", seed_value]
+	last_report = "新的一局开始：%s · 鼎劫第 %d 级。种子 %d" % [keeper.display_name if keeper else "无守鼎人", level, seed_value]
 	save()
 
 
@@ -127,23 +129,11 @@ func battle_def_for_node(node_id: int) -> BattleDef:
 
 
 func make_battle_setup(node_id: int) -> BattleSetup:
-	var setup := BattleSetup.new()
-	setup.roster = run.roster.duplicate()
-	for id in run.relic_ids:
-		if Content.lib.relics.has(id):
-			setup.relics.append(Content.lib.relics[id])
-	setup.ding_hp = run.ding_hp
-	setup.ding_max = run.ding_max
-	setup.talismans = mini(run.talismans, BattleSim.CAPTURE_LIMIT_PER_BATTLE)
-	setup.seed_value = run.battle_seed(node_id)
-	setup.keeper = Content.lib.keepers.get(run.keeper_id)
-	setup.hp_scale = run.difficulty_scale(node_id)
-	setup.boss_hp_scale = run.boss_scale()
-	setup.formations = Content.lib.formation_list()
-	return setup
+	return run.make_battle_setup(Content.lib, node_id)
 
 
 func finish_battle(sim: BattleSim) -> void:
+	var keepers_before := KeeperUnlocks.unlocked_ids(Content.lib, profile)
 	var newly: PackedStringArray = []
 	for id: StringName in sim.encountered:
 		profile.record_seen(id)
@@ -167,6 +157,12 @@ func finish_battle(sim: BattleSim) -> void:
 		lines.append("图鉴新增：" + "、".join(newly))
 	if run.won:
 		profile.runs_won += 1
+		var unlocked_level := profile.record_win(run.keeper_id, run.ascension)
+		if unlocked_level > 0:
+			lines.append("解锁鼎劫第 %d 级：%s" % [unlocked_level, Ascension.LEVEL_TEXT[unlocked_level - 1]])
+	for id in KeeperUnlocks.unlocked_ids(Content.lib, profile):
+		if not keepers_before.has(id):
+			lines.append("解锁新守鼎人：%s！" % (Content.lib.keepers[id] as KeeperDef).display_name)
 	pending_node_id = -1
 	last_report = "；".join(lines)
 	save()
@@ -185,6 +181,10 @@ func sync_bestiary() -> PackedStringArray:
 		if not profile.has_captured(b.beast_id) and profile.record_obtained(b.beast_id):
 			newly.append(RunRules.beast_name(Content.lib, b.beast_id))
 	return newly
+
+
+func goto_start() -> void:
+	get_tree().change_scene_to_file(SCENE_START)
 
 
 func goto_bestiary() -> void:

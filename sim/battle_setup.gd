@@ -14,4 +14,8 @@ var keeper: KeeperDef
 var hp_scale := 1.0
 ## 首领的血量倍率。首领血量按绝对值调，只随州数放大，不随路线图层数放大。
 var boss_hp_scale := 1.0
+## 开局灵气的加减（鼎劫）。
+var spirit_delta := 0
+## 敌人移速倍率（鼎劫）。
+var speed_scale := 1.0
 var formations: Array[FormationDef] = []

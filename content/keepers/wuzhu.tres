@@ -37,3 +37,6 @@ starting_beasts = Array[StringName]([&"jingwei", &"huashe"])
 starting_talismans = 6
 passives = Array[ExtResource("1_ugbrw")]([SubResource("Resource_dkeex"), SubResource("Resource_p6qsq")])
 skill = SubResource("Resource_aw0r4")
+unlock_kind = &"bestiary"
+unlock_value = 8
+unlock_hint = "巫祝通晓异兽之名：山海经图鉴收录满 8 只后解锁。"

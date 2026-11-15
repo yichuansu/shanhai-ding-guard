@@ -1,6 +1,8 @@
 extends SceneTree
 ## 整局模拟：自动玩家从开局一路打到首领（或鼎破），检验流程和整局难度曲线。
 ##   godot --headless --path . --script res://tools/simulate_runs.gd
+##   godot --headless --path . --script res://tools/simulate_runs.gd -- --matrix
+## --matrix：守鼎人 × 开局阵容交叉对照，用来分辨强弱来自守鼎人本身还是开局阵容。
 ##
 ## 策略（偏保守的普通玩家）：路线上优先战斗和精英以外的节点各走一点；战斗用 AutoPlayer；
 ## 奖励选第一个；集市先买异兽再买法宝；炼鼎能融合就融合、否则升阶；奇遇选第一个；祭祀残血修鼎、否则加固。
@@ -14,6 +16,10 @@ var _boss_leaks: Dictionary = {}
 
 func _initialize() -> void:
 	var lib := ContentLibrary.load_from()
+	if OS.get_cmdline_user_args().has("--matrix"):
+		_matrix(lib)
+		quit()
+		return
 	print("守鼎人\t通关\t平均到达层\t平均最终阵容\t平均剩余鼎\t死在")
 	for kid in lib.keeper_ids():
 		var wins := 0
@@ -45,10 +51,28 @@ func _initialize() -> void:
 	quit()
 
 
-func _play(lib: ContentLibrary, keeper_id: StringName, seed_value: int) -> Dictionary:
+func _matrix(lib: ContentLibrary) -> void:
+	var ids := lib.keeper_ids()
+	var header := "守鼎人＼开局阵容"
+	for rid in ids:
+		header += "\t%s的阵容" % (lib.keepers[rid] as KeeperDef).display_name
+	print(header)
+	for kid in ids:
+		var line := (lib.keepers[kid] as KeeperDef).display_name
+		for rid in ids:
+			var wins := 0
+			for s in SEEDS:
+				if _play(lib, kid, 1000 + s, (lib.keepers[rid] as KeeperDef).starting_beasts)["won"]:
+					wins += 1
+			line += "\t%d/%d" % [wins, SEEDS]
+		print(line)
+
+
+func _play(lib: ContentLibrary, keeper_id: StringName, seed_value: int, roster_override: Array[StringName] = []) -> Dictionary:
 	var keeper: KeeperDef = lib.keepers[keeper_id]
-	var run := RunState.new_run(seed_value, keeper.starting_beasts, keeper_id, keeper.starting_talismans)
-	var unlocked: Array[StringName] = keeper.starting_beasts.duplicate()
+	var start: Array[StringName] = roster_override if not roster_override.is_empty() else keeper.starting_beasts
+	var run := RunState.new_run(seed_value, start, keeper_id, keeper.starting_talismans)
+	var unlocked: Array[StringName] = start.duplicate()
 	var rng := RngStream.new(seed_value).derive("route")
 	var layer := 0
 	while not run.finished:
@@ -104,18 +128,7 @@ func _battle(lib: ContentLibrary, run: RunState, node_id: int) -> Dictionary:
 			kind = BattleDef.Kind.BOSS
 	var options := lib.battles_of_kind(kind, run.region())
 	var battle := options[RngStream.new(run.battle_seed(node_id)).next_int(0, options.size() - 1)]
-	var setup := BattleSetup.new()
-	setup.roster = run.roster.duplicate()
-	for id in run.relic_ids:
-		setup.relics.append(lib.relics[id])
-	setup.ding_hp = run.ding_hp
-	setup.ding_max = run.ding_max
-	setup.talismans = mini(run.talismans, BattleSim.CAPTURE_LIMIT_PER_BATTLE)
-	setup.seed_value = run.battle_seed(node_id)
-	setup.keeper = lib.keepers.get(run.keeper_id)
-	setup.formations = lib.formation_list()
-	setup.hp_scale = run.difficulty_scale(node_id)
-	setup.boss_hp_scale = run.boss_scale()
+	var setup := run.make_battle_setup(lib, node_id)
 	var sim := BattleSim.create(battle, lib.beasts, lib.chart, setup)
 	var region := Regions.display(run.region())
 	if kind == BattleDef.Kind.BOSS:
