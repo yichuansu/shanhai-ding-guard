@@ -63,6 +63,7 @@ func _ready() -> void:
 	if Game.has_active_run():
 		bottom.add_child(_button("继续当前一局", Game.goto_map, 260))
 	bottom.add_child(_button("山海经图鉴", Game.goto_bestiary, 260))
+	bottom.add_child(_button("美术预览", Game.goto_art_preview, 260))
 
 	var unlocked := KeeperUnlocks.unlocked_ids(Content.lib, Game.profile)
 	_selected = unlocked[0] if not unlocked.is_empty() else &""

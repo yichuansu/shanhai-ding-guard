@@ -1,0 +1,29 @@
+GIMP Palette
+Name: 山海守鼎
+Columns: 6
+#
+239 233 220	paper
+216 207 187	paper_shade
+ 28  36  33	ink
+ 59  69  64	ink_soft
+107 115 110	ink_wash
+245 241 232	highlight
+109  90  58	bronze_dark
+156 106  39	bronze
+201 162  90	bronze_light
+ 47 125 109	patina
+ 31  90  63	mu_dark
+ 47 125  90	mu_base
+127 181 149	mu_light
+125  42  29	huo_dark
+185  64  44	huo_base
+224 138 114	huo_light
+122  90  30	tu_dark
+184 137  46	tu_base
+226 192 122	tu_light
+142 152 157	jin_dark
+201 208 212	jin_base
+238 241 242	jin_light
+ 26  39  53	shui_dark
+ 38  56  77	shui_base
+ 91 116 145	shui_light

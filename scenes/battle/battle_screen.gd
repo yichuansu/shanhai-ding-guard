@@ -142,7 +142,14 @@ func _unhandled_input(event: InputEvent) -> void:
 	for e in sim.enemies:
 		if not sim.can_capture(e):
 			continue
-		if sim.enemy_position(e).distance_to(pos) <= 22.0 + ENEMY_PICK_PADDING + (20.0 if e.def.rarity >= BeastDef.Rarity.ELITE else 0.0):
+		var center := sim.enemy_position(e)
+		var reach := 22.0 + ENEMY_PICK_PADDING + (20.0 if e.def.rarity >= BeastDef.Rarity.ELITE else 0.0)
+		if BeastArt.has_art(e.def.id):
+			# 有美术时点在身体上，而不是脚底
+			var h := BeastArt.display_height(e.def)
+			center += Vector2(0, -h * 0.45)
+			reach = h * 0.5 + ENEMY_PICK_PADDING
+		if center.distance_to(pos) <= reach:
 			sim.queue_capture(e.id)
 			get_viewport().set_input_as_handled()
 			return

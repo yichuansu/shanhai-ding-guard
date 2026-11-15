@@ -10,6 +10,7 @@ const SCENE_BATTLE := "res://scenes/battle/battle_screen.tscn"
 const SCENE_NODE := "res://scenes/node/node_screen.tscn"
 const SCENE_BESTIARY := "res://scenes/bestiary/bestiary_screen.tscn"
 const SCENE_START := "res://scenes/start/start_screen.tscn"
+const SCENE_ART_PREVIEW := "res://scenes/art_preview/art_preview.tscn"
 
 var profile: Profile
 var run: RunState
@@ -185,6 +186,10 @@ func sync_bestiary() -> PackedStringArray:
 
 func goto_start() -> void:
 	get_tree().change_scene_to_file(SCENE_START)
+
+
+func goto_art_preview() -> void:
+	get_tree().change_scene_to_file(SCENE_ART_PREVIEW)
 
 
 func goto_bestiary() -> void:

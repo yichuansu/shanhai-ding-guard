@@ -119,13 +119,19 @@ services/ 本地存档（以后加云存档）
 | `assets/fonts/` | Noto Sans SC 子集（GB2312 一级字库 + 工程用字，约 1.2MB，SIL OFL 1.1） |
 | `assets/ui_theme.tres` | 全局界面主题（字体、字号、按钮配色） |
 
-## 美术接入预留
+## 美术
 
-灰盒全部用色块绘制。接入正式美术时：
+方向是"古籍刻本 × 青铜拓片"，不用 Unity 版的 Q 版卡通美术。规格见 [docs/ART_SPEC.md](docs/ART_SPEC.md)，AI 出图工作流见 [docs/ART_PIPELINE.md](docs/ART_PIPELINE.md)。
 
-- 异兽精灵放 `art/beasts/<beast_id>/`，`BeastDef` 增加 `sprite_frames` 字段（`SpriteFrames`，动作名 `idle / move / attack / hit / death`）。同一套资源既用于敌人也用于塔。
-- `BattleView._draw()` 换成按 id 池化的 `AnimatedSprite2D`，仍只读 `BattleSim`，用 `events` 触发命中、捕获、击杀特效。
-- 战场改成 `TileMapLayer` 地形 + 装饰物件；路径和鼎位在关卡场景里用 `Path2D`、`Marker2D` 绘制，再烘焙到 `BattleDef`。
+| 工具 | 作用 |
+| --- | --- |
+| `tools/art/palette.py` | 项目色板的唯一来源（纸、墨、五行各三档、青铜） |
+| `tools/art/export_palette.py` | 导出 Krita / GIMP 色板 `art_src/shanhai_palette.gpl` 和预览图 |
+| `tools/art/make_prompts.gd` | 按原文生成每只异兽的绘图提示词 → `art_src/PROMPTS.md` |
+| `tools/art/prepare_beast.py` | 去背景、裁边、统一 512×512、压到五行色板、加墨线外轮廓 → `art/beasts/<id>/body.png` |
+| 开局界面"美术预览" | 不进战斗查看每只异兽的图和动作，对比战斗实际尺寸 |
+
+游戏按命名约定自动找图（`scenes/battle/beast_art.gd`）：`art/beasts/<id>/body.png` 存在就显示图，否则显示灰盒色块，可以一只一只替换。铜鼎是 `art/props/ding.png`。单张图由 `BeastSprite` 用程序驱动动作：待机呼吸、行走颠簸、攻击前冲、受击闪白、死亡倒下，定身和毒涎叠加颜色。目前还没有正式美术。
 
 ## 一局的构成
 
@@ -214,7 +220,9 @@ xvfb-run -a -s "-screen 0 1920x1080x24" godot --path . --rendering-driver opengl
 
 **守鼎人平衡与解锁（已完成）**：开局界面、守鼎人解锁条件、鼎劫 1–10 级、按交叉对照重调三位守鼎人。
 
-**下一步**：正式美术接入（先做 AI 美术流程与规格）、导出预设与真机验证、第三州。
+**美术流程（已完成）**：美术规格与 AI 工作流文档、色板与 Krita 色板文件、按原文生成的 30 份提示词、一键处理脚本、按命名约定接入战斗（三层绘制、程序动作、铜鼎图）、美术预览工具。
+
+**下一步**：按工作流生成第一批正式美术、导出预设与真机验证、第三州。
 
 ## 授权
 
