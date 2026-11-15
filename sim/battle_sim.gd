@@ -77,6 +77,8 @@ var enemies: Array[EnemyUnit] = []
 var towers: Dictionary = {}
 var projectiles: Array[Projectile] = []
 var captured_beasts: Array[StringName] = []
+## 本场出现过的敌方异兽 id（含召唤物），图鉴记"已遇见"用。
+var encountered: Dictionary = {}
 ## element(StringName) -> 已生效的档位 count（HUD 显示用）
 var active_formations: Dictionary = {}
 ## 本拍发生的事，给表现层播特效和音效。每拍开头清空。
@@ -455,6 +457,7 @@ func _spawn() -> void:
 		e.max_hp = maxi(1, roundi(def.max_hp * float(req["hp_multiplier"]) * _hp_scale))
 		e.hp = e.max_hp
 		enemies.append(e)
+		encountered[def.id] = true
 		events.append({"type": "spawned", "enemy_id": e.id})
 
 
@@ -552,6 +555,7 @@ func _ability_effect(e: EnemyUnit, ab: EffectDef) -> void:
 				s.distance = maxf(e.distance - 30.0 * n, 0.0)
 				s.prev_distance = s.distance
 				enemies.append(s)
+				encountered[def.id] = true
 			_waves.add_extra(e.wave_index, ab.count)
 			events.append({"type": "summoned", "position": from, "count": ab.count, "enemy_id": e.id})
 

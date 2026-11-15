@@ -48,6 +48,15 @@ func _ready() -> void:
 	var keepers := HBoxContainer.new()
 	keepers.add_theme_constant_override("separation", 16)
 	root.add_child(keepers)
+	var progress := Bestiary.progress(Content.lib, Game.profile)
+	var bestiary := Button.new()
+	bestiary.text = "山海经图鉴 %d/%d" % [progress.x, progress.y]
+	bestiary.custom_minimum_size = Vector2(280, 64)
+	bestiary.pressed.connect(Game.goto_bestiary)
+	keepers.add_child(bestiary)
+	var gap := Control.new()
+	gap.custom_minimum_size = Vector2(40, 0)
+	keepers.add_child(gap)
 	var hint := _label(22)
 	hint.text = "开新局，选择守鼎人："
 	keepers.add_child(hint)

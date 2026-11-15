@@ -8,6 +8,7 @@ const STARTING_BEASTS: Array[StringName] = [&"jingwei", &"bifang"]
 const SCENE_MAP := "res://scenes/map/map_screen.tscn"
 const SCENE_BATTLE := "res://scenes/battle/battle_screen.tscn"
 const SCENE_NODE := "res://scenes/node/node_screen.tscn"
+const SCENE_BESTIARY := "res://scenes/bestiary/bestiary_screen.tscn"
 
 var profile: Profile
 var run: RunState
@@ -143,6 +144,13 @@ func make_battle_setup(node_id: int) -> BattleSetup:
 
 func finish_battle(sim: BattleSim) -> void:
 	var newly: PackedStringArray = []
+	for id: StringName in sim.encountered:
+		profile.record_seen(id)
+	if sim.outcome == BattleSim.Outcome.WON:
+		for id: StringName in sim.encountered:
+			var def: BeastDef = Content.lib.beasts.get(id)
+			if def != null and def.rarity == BeastDef.Rarity.BOSS:
+				profile.record_defeat(id)
 	for id in sim.captured_beasts:
 		if profile.record_capture(id):
 			newly.append(RunRules.beast_name(Content.lib, id))
@@ -167,7 +175,23 @@ func goto_map() -> void:
 	get_tree().change_scene_to_file(SCENE_MAP)
 
 
+## 阵容里出现过的异兽（奖励、集市、炼鼎、奇遇得到的）都记入图鉴。
+func sync_bestiary() -> PackedStringArray:
+	var newly := PackedStringArray()
+	if run == null:
+		return newly
+	for b in run.roster:
+		if not profile.has_captured(b.beast_id) and profile.record_obtained(b.beast_id):
+			newly.append(RunRules.beast_name(Content.lib, b.beast_id))
+	return newly
+
+
+func goto_bestiary() -> void:
+	get_tree().change_scene_to_file(SCENE_BESTIARY)
+
+
 func save() -> void:
+	sync_bestiary()
 	SaveStore.save_json(PROFILE_PATH, profile.to_dict())
 	if run != null:
 		SaveStore.save_json(RUN_PATH, run.to_dict())

@@ -4,31 +4,74 @@ extends RefCounted
 
 const SCHEMA := 1
 
-## beast_id(String) -> {"captures": int}
+## 收录过的异兽：beast_id(String) -> {"captures": int, "obtained": bool}
+## captures 是亲手捕获的次数；obtained 表示通过奖励、集市、炼鼎、奇遇得到过。两者任一即算收录。
 var bestiary: Dictionary = {}
+## 战斗中遇见过的异兽：beast_id(String) -> true
+var seen: Dictionary = {}
+## 击败过的首领：beast_id(String) -> 次数
+var defeated: Dictionary = {}
 var runs_started := 0
 var runs_won := 0
 var sim_speed := 1.0
 
 
-## 返回是否首次捕获。
+## 返回是否首次收录。
 func record_capture(beast_id: StringName) -> bool:
 	var key := String(beast_id)
 	var first := not bestiary.has(key)
-	if first:
-		bestiary[key] = {"captures": 0}
-	bestiary[key]["captures"] = int(bestiary[key]["captures"]) + 1
+	_entry(key)["captures"] = int(_entry(key)["captures"]) + 1
+	seen[key] = true
 	return first
+
+
+## 通过捕获以外的途径得到。返回是否首次收录。
+func record_obtained(beast_id: StringName) -> bool:
+	var key := String(beast_id)
+	var first := not bestiary.has(key)
+	_entry(key)["obtained"] = true
+	seen[key] = true
+	return first
+
+
+func record_seen(beast_id: StringName) -> void:
+	seen[String(beast_id)] = true
+
+
+func record_defeat(beast_id: StringName) -> void:
+	var key := String(beast_id)
+	defeated[key] = int(defeated.get(key, 0)) + 1
+	seen[key] = true
 
 
 func has_captured(beast_id: StringName) -> bool:
 	return bestiary.has(String(beast_id))
 
 
+func has_seen(beast_id: StringName) -> bool:
+	return seen.has(String(beast_id))
+
+
+func capture_count(beast_id: StringName) -> int:
+	return int((bestiary.get(String(beast_id), {}) as Dictionary).get("captures", 0))
+
+
+func defeat_count(beast_id: StringName) -> int:
+	return int(defeated.get(String(beast_id), 0))
+
+
+func _entry(key: String) -> Dictionary:
+	if not bestiary.has(key):
+		bestiary[key] = {"captures": 0, "obtained": false}
+	return bestiary[key]
+
+
 func to_dict() -> Dictionary:
 	return {
 		"schema": SCHEMA,
 		"bestiary": bestiary,
+		"seen": seen.keys(),
+		"defeated": defeated,
 		"runs_started": runs_started,
 		"runs_won": runs_won,
 		"settings": {"sim_speed": sim_speed},
@@ -41,7 +84,14 @@ static func from_dict(d: Dictionary) -> Profile:
 		return p
 	var raw: Dictionary = d.get("bestiary", {})
 	for key: String in raw:
-		p.bestiary[key] = {"captures": int((raw[key] as Dictionary).get("captures", 1))}
+		var e: Dictionary = raw[key]
+		p.bestiary[key] = {"captures": int(e.get("captures", 0)), "obtained": bool(e.get("obtained", false))}
+		p.seen[key] = true
+	for key: Variant in d.get("seen", []):
+		p.seen[str(key)] = true
+	var dr: Dictionary = d.get("defeated", {})
+	for key: String in dr:
+		p.defeated[key] = int(dr[key])
 	p.runs_started = int(d.get("runs_started", 0))
 	p.runs_won = int(d.get("runs_won", 0))
 	p.sim_speed = float((d.get("settings", {}) as Dictionary).get("sim_speed", 1.0))
