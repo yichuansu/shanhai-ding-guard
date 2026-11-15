@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="FusionRecipe" format=3]
+
+[ext_resource type="Script" path="res://content/defs/fusion_recipe.gd" id="1_ycc08"]
+
+[resource]
+script = ExtResource("1_ycc08")
+id = &"shui_mu_goumang"
+a = &"lingling"
+b = &"jiegou"
+result = &"goumang"
+description = "水生木：軨軨引来大水，絜钩登木而栖，春木生发，化为东方之神句芒。"

@@ -1,0 +1,31 @@
+[gd_resource type="Resource" script_class="BeastDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/effect_def.gd" id="1_xal25"]
+[ext_resource type="Script" path="res://content/defs/beast_def.gd" id="2_4iop4"]
+
+[sub_resource type="Resource" id="Resource_8pl73"]
+script = ExtResource("1_xal25")
+op = &"stagger"
+amount = 0.15
+duration_ticks = 10
+description = "见则其国有恐：命中时 15% 概率吓得敌人呆立 1 秒"
+
+[resource]
+script = ExtResource("2_4iop4")
+id = &"zhuru"
+display_name = "朱獳"
+name_en = "Zhuru, the Fish-Finned Fox"
+element = &"huo"
+region = &"qingzhou"
+lore = "耿山……有兽焉，其状如狐而鱼翼，其名曰朱獳，其鸣自叫，见则其国有恐。"
+max_hp = 1200
+move_speed = 115.0
+spirit_reward = 3
+shell_reward = 3
+contact_damage = 5.0
+deploy_cost = 7
+damage = 75
+attack_range = 300.0
+projectile_speed = 750.0
+crit_chance = 0.1
+traits = Array[ExtResource("1_xal25")]([SubResource("Resource_8pl73")])

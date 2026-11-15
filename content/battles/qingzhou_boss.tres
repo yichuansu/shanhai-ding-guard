@@ -1,0 +1,119 @@
+[gd_resource type="Resource" script_class="BattleDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/battle_def.gd" id="1_hfcdv"]
+[ext_resource type="Script" path="res://content/defs/wave_def.gd" id="2_b213r"]
+[ext_resource type="Script" path="res://content/defs/spawn_entry.gd" id="3_4nfcd"]
+
+[sub_resource type="Resource" id="Resource_gp22k"]
+script = ExtResource("3_4nfcd")
+beast_id = &"dingsha_mu"
+count = 12
+interval_ticks = 7
+
+[sub_resource type="Resource" id="Resource_5sc37"]
+script = ExtResource("2_b213r")
+gap_ticks_before = 80
+spawns = Array[ExtResource("3_4nfcd")]([SubResource("Resource_gp22k")])
+
+[sub_resource type="Resource" id="Resource_iwhdx"]
+script = ExtResource("3_4nfcd")
+beast_id = &"dingsha_jin"
+count = 12
+interval_ticks = 6
+hp_multiplier = 1.2
+
+[sub_resource type="Resource" id="Resource_yioen"]
+script = ExtResource("3_4nfcd")
+beast_id = &"lingling"
+interval_ticks = 6
+
+[sub_resource type="Resource" id="Resource_uf7ug"]
+script = ExtResource("2_b213r")
+gap_ticks_before = 150
+spawns = Array[ExtResource("3_4nfcd")]([SubResource("Resource_iwhdx"), SubResource("Resource_yioen")])
+
+[sub_resource type="Resource" id="Resource_d6uea"]
+script = ExtResource("3_4nfcd")
+beast_id = &"dingsha_mu"
+count = 12
+interval_ticks = 6
+hp_multiplier = 1.4
+
+[sub_resource type="Resource" id="Resource_vpb7i"]
+script = ExtResource("3_4nfcd")
+beast_id = &"zhuru"
+interval_ticks = 6
+
+[sub_resource type="Resource" id="Resource_o7muq"]
+script = ExtResource("2_b213r")
+gap_ticks_before = 150
+spawns = Array[ExtResource("3_4nfcd")]([SubResource("Resource_d6uea"), SubResource("Resource_vpb7i")])
+
+[sub_resource type="Resource" id="Resource_yi4t6"]
+script = ExtResource("3_4nfcd")
+beast_id = &"dingsha_jin"
+count = 14
+interval_ticks = 5
+hp_multiplier = 1.5
+
+[sub_resource type="Resource" id="Resource_ngp12"]
+script = ExtResource("3_4nfcd")
+beast_id = &"bibi"
+interval_ticks = 5
+hp_multiplier = 1.2
+
+[sub_resource type="Resource" id="Resource_wn6iy"]
+script = ExtResource("2_b213r")
+gap_ticks_before = 150
+spawns = Array[ExtResource("3_4nfcd")]([SubResource("Resource_yi4t6"), SubResource("Resource_ngp12")])
+
+[sub_resource type="Resource" id="Resource_ffhwy"]
+script = ExtResource("3_4nfcd")
+beast_id = &"dingsha_mu"
+count = 10
+interval_ticks = 5
+hp_multiplier = 1.7
+
+[sub_resource type="Resource" id="Resource_vb13m"]
+script = ExtResource("3_4nfcd")
+beast_id = &"dingsha_jin"
+count = 10
+interval_ticks = 5
+hp_multiplier = 1.7
+
+[sub_resource type="Resource" id="Resource_07hxj"]
+script = ExtResource("2_b213r")
+gap_ticks_before = 150
+spawns = Array[ExtResource("3_4nfcd")]([SubResource("Resource_ffhwy"), SubResource("Resource_vb13m")])
+
+[sub_resource type="Resource" id="Resource_tt3bk"]
+script = ExtResource("3_4nfcd")
+beast_id = &"fei"
+interval_ticks = 10
+
+[sub_resource type="Resource" id="Resource_a7pqg"]
+script = ExtResource("3_4nfcd")
+beast_id = &"dingsha_mu"
+count = 12
+hp_multiplier = 1.9
+
+[sub_resource type="Resource" id="Resource_7r4jy"]
+script = ExtResource("3_4nfcd")
+beast_id = &"dingsha_jin"
+count = 10
+hp_multiplier = 1.9
+
+[sub_resource type="Resource" id="Resource_obmtd"]
+script = ExtResource("2_b213r")
+gap_ticks_before = 150
+spawns = Array[ExtResource("3_4nfcd")]([SubResource("Resource_tt3bk"), SubResource("Resource_a7pqg"), SubResource("Resource_7r4jy")])
+
+[resource]
+script = ExtResource("1_hfcdv")
+id = &"qingzhou_boss"
+display_name = "青州 · 蜚"
+kind = 2
+region = &"qingzhou"
+path_points = PackedVector2Array(60, 600, 380, 560, 520, 360, 840, 300, 1000, 470, 860, 650, 560, 700, 430, 860, 800, 880, 1180, 820, 1300, 600, 1180, 420, 1340, 260, 1640, 300, 1760, 520, 1600, 720, 1760, 860)
+slots = PackedVector2Array(640, 480, 300, 420, 1000, 300, 1080, 640, 700, 780, 1440, 440, 1480, 620, 1620, 880)
+waves = Array[ExtResource("2_b213r")]([SubResource("Resource_5sc37"), SubResource("Resource_uf7ug"), SubResource("Resource_o7muq"), SubResource("Resource_wn6iy"), SubResource("Resource_07hxj"), SubResource("Resource_obmtd")])

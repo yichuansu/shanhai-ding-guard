@@ -79,6 +79,10 @@ func on_events(events: Array[Dictionary]) -> void:
 					if st != null:
 						_venoms.append({"from": ev["position"], "to": st.position, "life": 0.5, "max_life": 0.5})
 						_popup("毒涎！", st.position + Vector2(0, -60), Color("8e24aa"), 32, 1.0, 40.0)
+			"spirit_drained":
+				if int(ev["amount"]) > 0:
+					_popup("大疫！灵气 -%d" % int(ev["amount"]), ev["position"] + Vector2(0, -90), Color("8e24aa"), 36, 1.2, 50.0)
+					_rings.append({"position": ev["position"], "radius": 200.0, "life": 0.5})
 			"summoned":
 				_popup("九首！召出 %d 只" % int(ev["count"]), ev["position"] + Vector2(0, -80), Color("e53935"), 40, 1.4, 50.0)
 				_bursts.append({"position": ev["position"], "color": Color("8e24aa"), "life": 0.6, "max_life": 0.6, "radius": 120.0})
@@ -210,6 +214,11 @@ func _draw_enemies(a: float) -> void:
 		if _flashes.has(e.id):
 			col = col.lerp(Color.WHITE, 0.7)
 			pos += Vector2(randf_range(-3, 3), randf_range(-3, 3))
+		for ab in e.def.abilities:
+			if ab.trigger == &"aura" and ab.radius > 0.0:
+				var pulse := 0.5 + 0.5 * sin(_time * 3.0)
+				draw_circle(pos, ab.radius, Color(0.56, 0.14, 0.67, 0.06 + 0.04 * pulse))
+				draw_arc(pos, ab.radius, 0.0, TAU, 64, Color(0.56, 0.14, 0.67, 0.5), 3.0)
 		draw_circle(pos, radius, col)
 		if e.burn_ticks > 0:
 			draw_arc(pos, radius + 3.0, 0.0, TAU, 32, Color("ff7043"), 3.0)

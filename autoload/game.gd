@@ -119,9 +119,9 @@ func battle_def_for_node(node_id: int) -> BattleDef:
 			kind = BattleDef.Kind.ELITE
 		MapNode.Type.BOSS:
 			kind = BattleDef.Kind.BOSS
-	var options := Content.lib.battles_of_kind(kind)
+	var options := Content.lib.battles_of_kind(kind, run.region())
 	if options.is_empty():
-		options = Content.lib.battles_of_kind(BattleDef.Kind.NORMAL)
+		options = Content.lib.battles_of_kind(kind)
 	var rng := RngStream.new(run.battle_seed(node_id))
 	return options[rng.next_int(0, options.size() - 1)]
 
@@ -138,6 +138,7 @@ func make_battle_setup(node_id: int) -> BattleSetup:
 	setup.seed_value = run.battle_seed(node_id)
 	setup.keeper = Content.lib.keepers.get(run.keeper_id)
 	setup.hp_scale = run.difficulty_scale(node_id)
+	setup.boss_hp_scale = run.boss_scale()
 	setup.formations = Content.lib.formation_list()
 	return setup
 

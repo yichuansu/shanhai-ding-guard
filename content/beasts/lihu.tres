@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="BeastDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/effect_def.gd" id="1_llhkg"]
+[ext_resource type="Script" path="res://content/defs/beast_def.gd" id="2_gtm3a"]
+
+[sub_resource type="Resource" id="Resource_0k5ie"]
+script = ExtResource("1_llhkg")
+trigger = &"passive"
+op = &"spirit_income"
+amount = 1.0
+duration_ticks = 40
+description = "见则其国多土功：每 4 秒额外 +1 灵气"
+
+[resource]
+script = ExtResource("2_gtm3a")
+id = &"lihu"
+display_name = "鵹鹕"
+name_en = "Lihu, the Human-Footed Mandarin Duck"
+role = 3
+region = &"qingzhou"
+lore = "卢其之山……其中多鵹鹕，其状如鸳鸯而人足，其鸣自訆，见则其国多土功。"
+max_hp = 1000
+move_speed = 120.0
+spirit_reward = 3
+shell_reward = 3
+contact_damage = 5.0
+damage = 40
+attack_range = 250.0
+attack_interval_ticks = 10
+projectile_speed = 650.0
+crit_chance = 0.05
+traits = Array[ExtResource("1_llhkg")]([SubResource("Resource_0k5ie")])

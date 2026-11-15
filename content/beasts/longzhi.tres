@@ -1,0 +1,34 @@
+[gd_resource type="Resource" script_class="BeastDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/effect_def.gd" id="1_ahyeg"]
+[ext_resource type="Script" path="res://content/defs/beast_def.gd" id="2_ajm6s"]
+
+[sub_resource type="Resource" id="Resource_w2l10"]
+script = ExtResource("1_ahyeg")
+op = &"splash"
+amount = 0.4
+radius = 120.0
+description = "九首：周围敌人受到 40% 伤害"
+
+[resource]
+script = ExtResource("2_ajm6s")
+id = &"longzhi"
+display_name = "蠪蛭"
+name_en = "Longzhi, the Nine-Headed Fox"
+element = &"mu"
+rarity = 2
+region = &"qingzhou"
+lore = "凫丽之山……有兽焉，其状如狐，而九尾、九首、虎爪，名曰蠪蛭，其音如婴儿，是食人。"
+max_hp = 6000
+move_speed = 90.0
+leak_damage = 2
+spirit_reward = 6
+shell_reward = 5
+contact_damage = 15.0
+deploy_cost = 9
+damage = 90
+attack_range = 300.0
+attack_interval_ticks = 9
+projectile_speed = 800.0
+crit_chance = 0.1
+traits = Array[ExtResource("1_ahyeg")]([SubResource("Resource_w2l10")])

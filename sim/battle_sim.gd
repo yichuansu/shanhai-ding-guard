@@ -15,6 +15,7 @@ extends RefCounted
 ##   7. 飞弹移动；命中拍结算伤害与 on_hit 特效
 ##   8. 塔冷却与开火（跳过已被在途伤害预定致死的敌人）
 ##   9. 清理死亡单位，结算清波（on_wave_end），判定胜负
+## 首领漏到鼎前直接判负，不论铜鼎还剩多少耐久。
 ##
 ## 效果来源：异兽特性、法宝、守鼎人被动、五行阵（作用域为该五行）。支持的 trigger / op：
 ##   passive         / adjacent_damage_pct      相邻异兽伤害 +amount
@@ -39,6 +40,8 @@ extends RefCounted
 ## 敌人技能（BeastDef.abilities，首领机制）：
 ##   periodic  / stun_towers   每 interval_ticks 拍定住最近的 count 只我方异兽 duration_ticks 拍
 ##   hp_below  / summon        血量首次低于 amount 时，在自身位置召唤 count 只 param_id
+##   periodic  / drain_spirit  每 interval_ticks 拍吸走 amount 灵气
+##   aura      / weaken_towers radius 内的我方异兽伤害 -amount（持续，随敌人移动）
 
 enum Outcome { RUNNING, WON, LOST }
 
@@ -101,6 +104,9 @@ var _capture_bonus := 0.0
 var _early_call_mult := 1.0
 var _started := false
 var _hp_scale := 1.0
+var _boss_hp_scale := 1.0
+## 首领漏到鼎前：本拍必定判负，清波回复也救不回来。
+var _boss_leaked := false
 
 
 static func create(def: BattleDef, beasts: Dictionary, chart: ElementChart, setup: BattleSetup) -> BattleSim:
@@ -121,6 +127,7 @@ static func create(def: BattleDef, beasts: Dictionary, chart: ElementChart, setu
 	sim.talismans = setup.talismans
 	sim.spirit = def.starting_spirit
 	sim._hp_scale = maxf(setup.hp_scale, 0.01)
+	sim._boss_hp_scale = maxf(setup.boss_hp_scale, 0.01)
 	sim._rng = RngStream.new(setup.seed_value)
 	sim._waves = WaveDirector.new(def.waves)
 	sim._resolved_per_wave.resize(def.waves.size())
@@ -286,9 +293,21 @@ func run_talismans_spent() -> int:
 	return maxi(talismans_used - bonus_talismans, 0)
 
 
+## 敌方光环对某个位置的伤害削弱总量。
+func aura_weakening(pos: Vector2) -> float:
+	var total := 0.0
+	for e in enemies:
+		if not e.alive:
+			continue
+		for ab in e.def.abilities:
+			if ab.trigger == &"aura" and ab.op == &"weaken_towers" and pos.distance_to(enemy_position(e)) <= ab.radius:
+				total += ab.amount
+	return total
+
+
 func damage_against(t: TowerUnit, e: EnemyUnit) -> float:
 	var base := t.def.damage * TIER_DAMAGE_MULT[clampi(t.instance.tier, 1, BeastInstance.MAX_TIER)] * LEVEL_DAMAGE_MULT[clampi(t.level, 1, MAX_LEVEL)]
-	var bonus := t.damage_bonus + _global_damage_bonus
+	var bonus := t.damage_bonus + _global_damage_bonus - aura_weakening(t.position)
 	for eff in t.def.traits:
 		if eff.trigger == &"passive" and eff.op == &"bonus_vs_element" and eff.element_scope == e.def.element:
 			bonus += eff.amount
@@ -454,7 +473,8 @@ func _spawn() -> void:
 		_next_id += 1
 		e.def = def
 		e.wave_index = req["wave_index"]
-		e.max_hp = maxi(1, roundi(def.max_hp * float(req["hp_multiplier"]) * _hp_scale))
+		var scale := _boss_hp_scale if def.rarity == BeastDef.Rarity.BOSS else _hp_scale
+		e.max_hp = maxi(1, roundi(def.max_hp * float(req["hp_multiplier"]) * scale))
 		e.hp = e.max_hp
 		enemies.append(e)
 		encountered[def.id] = true
@@ -497,8 +517,11 @@ func _move_enemies() -> void:
 			e.alive = false
 			e.leaked = true
 			ding_hp -= e.def.leak_damage
+			if e.def.rarity == BeastDef.Rarity.BOSS:
+				ding_hp = mini(ding_hp, 0)
+				_boss_leaked = true
 			_resolve(e)
-			events.append({"type": "leaked", "enemy_id": e.id, "damage": e.def.leak_damage, "position": path.points[path.points.size() - 1]})
+			events.append({"type": "leaked", "enemy_id": e.id, "damage": e.def.leak_damage, "boss": e.def.rarity == BeastDef.Rarity.BOSS, "position": path.points[path.points.size() - 1]})
 
 
 func _enemy_abilities() -> void:
@@ -540,6 +563,10 @@ func _ability_effect(e: EnemyUnit, ab: EffectDef) -> void:
 				slots.append(t.slot)
 			if not slots.is_empty():
 				events.append({"type": "towers_stunned", "slots": slots, "position": from, "enemy_id": e.id})
+		&"drain_spirit":
+			var drained := mini(spirit, int(ab.amount))
+			spirit -= drained
+			events.append({"type": "spirit_drained", "amount": drained, "position": from, "enemy_id": e.id})
 		&"summon":
 			var def: BeastDef = _beasts.get(ab.param_id)
 			if def == null:
@@ -794,12 +821,13 @@ func _check_wave_clears() -> void:
 		events.append({"type": "wave_cleared", "wave_index": w})
 		for entry: Dictionary in _effects.get(&"on_wave_end", []):
 			var eff: EffectDef = entry.effect
-			if eff.op == &"heal_ding":
+			if eff.op == &"heal_ding" and ding_hp > 0:
 				ding_hp = mini(ding_max, ding_hp + int(eff.amount))
 
 
 func _check_outcome() -> void:
-	if ding_hp <= 0:
+	if ding_hp <= 0 or _boss_leaked:
+		ding_hp = mini(ding_hp, 0)
 		outcome = Outcome.LOST
 	elif _waves.finished_spawning and enemies.is_empty():
 		outcome = Outcome.WON

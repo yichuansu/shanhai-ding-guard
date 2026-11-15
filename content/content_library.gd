@@ -35,13 +35,14 @@ static func load_from(root: String = DEFAULT_ROOT) -> ContentLibrary:
 	return lib
 
 
-func battles_of_kind(kind: BattleDef.Kind) -> Array[BattleDef]:
+## region 为空时不限州。
+func battles_of_kind(kind: BattleDef.Kind, region: StringName = &"") -> Array[BattleDef]:
 	var out: Array[BattleDef] = []
 	var ids := battles.keys()
 	ids.sort()
 	for id: StringName in ids:
 		var b: BattleDef = battles[id]
-		if b.kind == kind:
+		if b.kind == kind and (region == &"" or b.region == region):
 			out.append(b)
 	return out
 
@@ -176,8 +177,14 @@ func _validate() -> void:
 		for ab in bd.abilities:
 			if ab.op == &"summon" and not beasts.has(ab.param_id):
 				errors.append("%s 召唤了不存在的异兽 %s" % [id, ab.param_id])
+	for region in Regions.ORDER:
+		for kind in [BattleDef.Kind.NORMAL, BattleDef.Kind.ELITE, BattleDef.Kind.BOSS]:
+			if battles_of_kind(kind, region).is_empty():
+				errors.append("%s 缺少%s战场" % [Regions.display(region), ["普通", "精英", "首领"][kind]])
 	for id: StringName in battles:
 		var battle: BattleDef = battles[id]
+		if not Regions.ORDER.has(battle.region):
+			errors.append("%s 的州 %s 不存在" % [id, battle.region])
 		if battle.path_points.size() < 2:
 			errors.append("%s 路径点少于 2 个" % id)
 		if battle.waves.is_empty():

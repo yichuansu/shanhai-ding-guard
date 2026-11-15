@@ -24,6 +24,7 @@ display_name = "凤皇"
 name_en = "Fenghuang, the Five-Hued Phoenix"
 element = &"huo"
 rarity = 4
+region = &""
 lore = "丹穴之山……有鸟焉，其状如鸡，五采而文，名曰凤皇……是鸟也，饮食自然，自歌自舞，见则天下安宁。"
 max_hp = 3000
 spirit_reward = 3

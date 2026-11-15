@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="BeastDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/effect_def.gd" id="1_hhuqq"]
+[ext_resource type="Script" path="res://content/defs/beast_def.gd" id="2_mxlht"]
+
+[sub_resource type="Resource" id="Resource_dnkm7"]
+script = ExtResource("1_hhuqq")
+trigger = &"passive"
+op = &"capture_threshold_bonus"
+amount = 0.05
+description = "见则其国多狡客：捕获线 +5%"
+
+[resource]
+script = ExtResource("2_mxlht")
+id = &"youyou"
+display_name = "峳峳"
+name_en = "Youyou, the Four-Horned Cunning Horse"
+element = &"jin"
+role = 3
+region = &"qingzhou"
+lore = "碧山……有兽焉，其状如马而羊目，四角，牛尾，其音如獆狗，其名曰峳峳，见则其国多狡客。"
+max_hp = 1300
+move_speed = 105.0
+spirit_reward = 3
+shell_reward = 3
+contact_damage = 5.0
+deploy_cost = 7
+damage = 60
+attack_interval_ticks = 10
+projectile_speed = 700.0
+crit_chance = 0.1
+traits = Array[ExtResource("1_hhuqq")]([SubResource("Resource_dnkm7")])

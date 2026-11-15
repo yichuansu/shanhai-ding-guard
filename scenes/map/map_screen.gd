@@ -82,7 +82,7 @@ func _refresh() -> void:
 		var label := def.display_name if def else String(b.beast_id)
 		names.append("%s%s" % [label, "" if b.tier == 1 else "★%d" % b.tier])
 	var keeper: KeeperDef = Content.lib.keepers.get(run.keeper_id)
-	_header.text = ("%s · " % keeper.display_name if keeper else "") + "冀州 · 鼎 %d/%d · 贝币 %d · 镇鼎符 %d · 法宝 %d · 阵容（%d/%d）：%s" % [
+	_header.text = ("%s · " % keeper.display_name if keeper else "") + Regions.display(run.region()) + "（%d/%d）" % [run.act + 1, Regions.ORDER.size()] + " · 鼎 %d/%d · 贝币 %d · 镇鼎符 %d · 法宝 %d · 阵容（%d/%d）：%s" % [
 		run.ding_hp, run.ding_max, run.shells, run.talismans, run.relic_ids.size(),
 		run.roster.size(), run.roster_cap, "、".join(names)]
 	var status := ""

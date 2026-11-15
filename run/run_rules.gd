@@ -45,12 +45,22 @@ static func apply_battle_result(run: RunState, lib: ContentLibrary, node_id: int
 		lines.append("鼎破，本局结束。")
 		return lines
 	var t := run.map.nodes[node_id].type
-	if t == MapNode.Type.BOSS:
+	if t != MapNode.Type.BOSS:
+		run.pending_reward = roll_reward(run, lib, node_id, unlocked)
+		return lines
+	var region_name := Regions.display(run.region())
+	if Regions.is_last_act(run.act):
 		run.finished = true
 		run.won = true
-		lines.append("冀州之鼎已修复。灰盒版本只有一州，本局胜利。")
-	else:
-		run.pending_reward = roll_reward(run, lib, node_id, unlocked)
+		lines.append("%s之鼎已修复。九州之中，已有 %d 鼎重归安宁，本局胜利！" % [region_name, Regions.ORDER.size()])
+		return lines
+	var relics := unowned_relics(run, lib)
+	if not relics.is_empty():
+		var rng := RngStream.new(run.battle_seed(node_id)).derive("boss_reward")
+		rng.shuffle(relics)
+		run.pending_reward = {"kind": "relic", "options": _strings(relics.slice(0, REWARD_CHOICES)), "skip_shells": SKIP_REWARD_SHELLS * 3}
+	var heal := run.advance_act()
+	lines.append("%s之鼎已修复！铜鼎回复 %d 点耐久，前往%s。" % [region_name, heal, Regions.display(run.region())])
 	return lines
 
 
@@ -203,7 +213,12 @@ static func shop_offers(run: RunState, lib: ContentLibrary, node_id: int, unlock
 
 
 static func is_sold(run: RunState, node_id: int, index: int) -> bool:
-	return (run.shop_bought.get(str(node_id), []) as Array).has(index)
+	return (run.shop_bought.get(_shop_key(run, node_id), []) as Array).has(index)
+
+
+## 不同州的路线图节点 id 会重复，售出记录按"州序号:节点"区分。
+static func _shop_key(run: RunState, node_id: int) -> String:
+	return "%d:%d" % [run.act, node_id]
 
 
 static func buy(run: RunState, lib: ContentLibrary, node_id: int, index: int, unlocked: Array[StringName], release_uid: int = -1) -> String:
@@ -236,7 +251,7 @@ static func buy(run: RunState, lib: ContentLibrary, node_id: int, index: int, un
 			message = "修鼎，耐久 %d/%d" % [run.ding_hp, run.ding_max]
 	run.shells -= int(o["price"])
 	if not repeatable:
-		var key := str(node_id)
+		var key := _shop_key(run, node_id)
 		var bought: Array = run.shop_bought.get(key, [])
 		bought.append(index)
 		run.shop_bought[key] = bought

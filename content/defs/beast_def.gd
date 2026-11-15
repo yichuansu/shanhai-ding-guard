@@ -13,6 +13,8 @@ enum Rarity { MINION, COMMON, ELITE, BOSS, RARE }
 @export var element: StringName = &"tu"
 @export var role: Role = Role.RANGED
 @export var rarity: Rarity = Rarity.COMMON
+## 出没的州（图鉴分栏用）。稀有异兽不属于任何州。
+@export var region: StringName = &"jizhou"
 ## 《山海经》原文摘录，图鉴展示用。
 @export_multiline var lore: String = ""
 

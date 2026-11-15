@@ -1,0 +1,41 @@
+[gd_resource type="Resource" script_class="BeastDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/effect_def.gd" id="1_tgs47"]
+[ext_resource type="Script" path="res://content/defs/beast_def.gd" id="2_i331t"]
+
+[sub_resource type="Resource" id="Resource_qixct"]
+script = ExtResource("1_tgs47")
+trigger = &"passive"
+op = &"spirit_income"
+amount = 1.0
+duration_ticks = 25
+description = "东方木神：每 2.5 秒额外 +1 灵气"
+
+[sub_resource type="Resource" id="Resource_b4jwk"]
+script = ExtResource("1_tgs47")
+trigger = &"passive"
+op = &"adjacent_damage_pct"
+amount = 0.3
+description = "春生万物：相邻异兽伤害 +30%"
+
+[resource]
+script = ExtResource("2_i331t")
+id = &"goumang"
+display_name = "句芒"
+name_en = "Goumang, God of the East and Wood"
+element = &"mu"
+role = 3
+rarity = 4
+region = &""
+lore = "东方句芒，鸟身人面，乘两龙。"
+max_hp = 3000
+spirit_reward = 3
+shell_reward = 3
+capturable = false
+contact_damage = 5.0
+deploy_cost = 10
+damage = 80
+attack_range = 300.0
+projectile_speed = 850.0
+crit_chance = 0.1
+traits = Array[ExtResource("1_tgs47")]([SubResource("Resource_qixct"), SubResource("Resource_b4jwk")])

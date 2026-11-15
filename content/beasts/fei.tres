@@ -1,0 +1,52 @@
+[gd_resource type="Resource" script_class="BeastDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/effect_def.gd" id="1_ods2a"]
+[ext_resource type="Script" path="res://content/defs/beast_def.gd" id="2_d1rvm"]
+
+[sub_resource type="Resource" id="Resource_lj5et"]
+script = ExtResource("1_ods2a")
+trigger = &"aura"
+op = &"weaken_towers"
+amount = 0.35
+radius = 260.0
+description = "行草则死：身边 260 范围内的异兽伤害 -35%"
+
+[sub_resource type="Resource" id="Resource_mas3o"]
+script = ExtResource("1_ods2a")
+trigger = &"periodic"
+op = &"drain_spirit"
+amount = 4.0
+interval_ticks = 80
+description = "见则天下大疫：每 8 秒吸走 4 点灵气"
+
+[sub_resource type="Resource" id="Resource_48aa6"]
+script = ExtResource("1_ods2a")
+trigger = &"hp_below"
+op = &"summon"
+amount = 0.5
+count = 3
+param_id = &"jiegou"
+description = "疫鸟随行：血量减半时召出 3 只絜钩（可以捕获）"
+
+[resource]
+script = ExtResource("2_d1rvm")
+id = &"fei"
+display_name = "蜚"
+name_en = "Fei, the One-Eyed Plague Ox"
+element = &"jin"
+role = 1
+rarity = 3
+region = &"qingzhou"
+lore = "太山……有兽焉，其状如牛而白首，一目而蛇尾，其名曰蜚，行水则竭，行草则死，见则天下大疫。"
+max_hp = 18000
+move_speed = 40.0
+leak_damage = 10
+spirit_reward = 15
+shell_reward = 15
+capturable = false
+contact_damage = 5.0
+deploy_cost = 0
+damage = 0
+attack_range = 0.0
+attack_interval_ticks = 10
+abilities = Array[ExtResource("1_ods2a")]([SubResource("Resource_lj5et"), SubResource("Resource_mas3o"), SubResource("Resource_48aa6")])

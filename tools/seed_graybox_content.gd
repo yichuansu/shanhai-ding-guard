@@ -23,7 +23,12 @@ func _initialize() -> void:
 	for dir in ["beasts", "relics", "battles", "keepers", "formations", "fusions", "events"]:
 		DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("%s/%s" % [OUT, dir]))
 	_save(ElementChart.new(), "element_chart.tres")
-	for b in _beasts():
+	var all_beasts := _beasts()
+	for b in all_beasts:
+		if b.rarity == BeastDef.Rarity.RARE:
+			b.region = &""
+	all_beasts.append_array(_qingzhou_beasts())
+	for b in all_beasts:
 		_save(b, "beasts/%s.tres" % b.id)
 	for r in _relics():
 		_save(r, "relics/%s.tres" % r.id)
@@ -133,7 +138,7 @@ func _beasts() -> Array[BeastDef]:
 			[_effect(&"passive", &"adjacent_damage_pct", 0.25, 0, 0.0, "见则大兵：相邻异兽伤害 +25%")]), 0.1),
 		_abilities(_beast(&"xiangliu", "相柳", "Xiangliu, the Nine-Headed Serpent", Elements.SHUI, R.AREA, Q.BOSS,
 			"共工之臣曰相柳氏，九首，以食于九山……禹杀相柳，其血腥，不可以树五谷种。",
-			[30000, 42.0, 10, 15, 15], [0, 0, 0.0, 10, 600.0]), [
+			[14000, 42.0, 10, 15, 15], [0, 0, 0.0, 10, 600.0]), [
 				_ability(&"periodic", &"stun_towers", 0.0, 35, 90, 2, &"", "毒涎：每 9 秒喷向最近的两只异兽，使其 3.5 秒无法攻击"),
 				_ability(&"hp_below", &"summon", 0.66, 0, 0, 5, &"dingsha_shui", "九首：血量降到三分之二时召出 5 只鼎煞"),
 				_ability(&"hp_below", &"summon", 0.33, 0, 0, 6, &"dingsha_shui", "九首：血量降到三分之一时再召出 6 只"),
@@ -181,6 +186,80 @@ func _run_effect(op: StringName, amount: float = 0.0, param: StringName = &"") -
 	var e := _effect(&"run", op, amount)
 	e.param_id = param
 	return e
+
+
+func _region(b: BeastDef, region: StringName) -> BeastDef:
+	b.region = region
+	return b
+
+
+## 青州：东方之州，五行属木。异兽取自《东山经》《海外东经》。
+func _qingzhou_beasts() -> Array[BeastDef]:
+	var R := BeastDef.Role
+	var Q := BeastDef.Rarity
+	var list: Array[BeastDef] = [
+		_crit(_guard(_beast(&"lingling", "軨軨", "Lingling, the Tiger-Striped Ox", Elements.SHUI, R.GUARD, Q.COMMON,
+			"空桑之山……有兽焉，其状如牛而虎文，其音如钦，其名曰軨軨，其鸣自叫，见则天下大水。",
+			[1700, 80.0, 1, 3, 3], [7, 60, 200.0, 10, 700.0],
+			[_effect(&"on_hit", &"slow", 0.7, 10, 0.0, "见则天下大水：命中后减速 30%，1 秒")]), 1100, 2), 0.05),
+		_crit(_beast(&"zhuru", "朱獳", "Zhuru, the Fish-Finned Fox", Elements.HUO, R.RANGED, Q.COMMON,
+			"耿山……有兽焉，其状如狐而鱼翼，其名曰朱獳，其鸣自叫，见则其国有恐。",
+			[1200, 115.0, 1, 3, 3], [7, 75, 300.0, 8, 750.0],
+			[_effect(&"on_hit", &"stagger", 0.15, 10, 0.0, "见则其国有恐：命中时 15% 概率吓得敌人呆立 1 秒")]), 0.1),
+		_crit(_beast(&"bibi", "獙獙", "Bibi, the Winged Drought Fox", Elements.HUO, R.AREA, Q.COMMON,
+			"姑逢之山……有兽焉，其状如狐而有翼，其音如鸿雁，其名曰獙獙，见则天下大旱。",
+			[1300, 110.0, 1, 3, 3], [8, 120, 270.0, 14, 650.0],
+			[_effect(&"on_hit", &"splash", 0.6, 0, 140.0, "大旱：周围敌人受到 60% 伤害"),
+			_effect(&"on_hit", &"dry", 0.6, 0, 0.0, "见则天下大旱：命中减速中的敌人时额外造成 60% 伤害并蒸干水泽")]), 0.1),
+		_crit(_beast(&"lihu", "鵹鹕", "Lihu, the Human-Footed Mandarin Duck", Elements.TU, R.AUSPICIOUS, Q.COMMON,
+			"卢其之山……其中多鵹鹕，其状如鸳鸯而人足，其鸣自訆，见则其国多土功。",
+			[1000, 120.0, 1, 3, 3], [6, 40, 250.0, 10, 650.0],
+			[_effect(&"passive", &"spirit_income", 1, 40, 0.0, "见则其国多土功：每 4 秒额外 +1 灵气")]), 0.05),
+		_crit(_beast(&"jiegou", "絜钩", "Jiegou, the Rat-Tailed Plague Duck", Elements.MU, R.RANGED, Q.COMMON,
+			"硜山……有鸟焉，其状如凫而鼠尾，善登木，其名曰絜钩，见则其国多疫。",
+			[900, 135.0, 1, 3, 3], [6, 34, 290.0, 4, 950.0],
+			[_effect(&"on_hit", &"burn", 6.0, 15, 0.0, "见则其国多疫：命中后染疫，每 0.1 秒受 6 点伤害，持续 1.5 秒")]), 0.1),
+		_crit(_beast(&"heyu", "合窳", "Heyu, the Man-Faced Boar", Elements.SHUI, R.RANGED, Q.COMMON,
+			"剡山……有兽焉，其状如彘而人面，黄身而赤尾，其名曰合窳，其音如婴儿。是兽也，食人，亦食虫蛇，见则天下大水。",
+			[1500, 95.0, 1, 3, 3], [8, 160, 320.0, 12, 800.0],
+			[_effect(&"passive", &"bonus_vs_element", 0.6, 0, 0.0, "亦食虫蛇：对木属敌人伤害 +60%", Elements.MU)]), 0.15),
+		_crit(_beast(&"youyou", "峳峳", "Youyou, the Four-Horned Cunning Horse", Elements.JIN, R.AUSPICIOUS, Q.COMMON,
+			"碧山……有兽焉，其状如马而羊目，四角，牛尾，其音如獆狗，其名曰峳峳，见则其国多狡客。",
+			[1300, 105.0, 1, 3, 3], [7, 60, 260.0, 10, 700.0],
+			[_effect(&"passive", &"capture_threshold_bonus", 0.05, 0, 0.0, "见则其国多狡客：捕获线 +5%")]), 0.1),
+		_crit(_beast(&"longzhi", "蠪蛭", "Longzhi, the Nine-Headed Fox", Elements.MU, R.RANGED, Q.ELITE,
+			"凫丽之山……有兽焉，其状如狐，而九尾、九首、虎爪，名曰蠪蛭，其音如婴儿，是食人。",
+			[6000, 90.0, 2, 6, 5], [9, 90, 300.0, 9, 800.0],
+			[_effect(&"on_hit", &"splash", 0.4, 0, 120.0, "九首：周围敌人受到 40% 伤害")]), 0.1),
+		_abilities(_beast(&"fei", "蜚", "Fei, the One-Eyed Plague Ox", Elements.JIN, R.AREA, Q.BOSS,
+			"太山……有兽焉，其状如牛而白首，一目而蛇尾，其名曰蜚，行水则竭，行草则死，见则天下大疫。",
+			[18000, 40.0, 10, 15, 15], [0, 0, 0.0, 10, 600.0]), [
+				_ability(&"aura", &"weaken_towers", 0.35, 0, 0, 0, &"", "行草则死：身边 260 范围内的异兽伤害 -35%"),
+				_ability(&"periodic", &"drain_spirit", 4.0, 0, 80, 0, &"", "见则天下大疫：每 8 秒吸走 4 点灵气"),
+				_ability(&"hp_below", &"summon", 0.5, 0, 0, 3, &"jiegou", "疫鸟随行：血量减半时召出 3 只絜钩（可以捕获）"),
+			]),
+		_beast(&"dingsha_mu", "鼎煞（木）", "Cauldron Wraith (Wood)", Elements.MU, R.RANGED, Q.MINION,
+			"九鼎崩裂时溢出的浊气。", [380, 120.0, 1, 1, 0], [0, 0, 0.0, 10, 600.0]),
+		_beast(&"dingsha_jin", "鼎煞（金）", "Cauldron Wraith (Metal)", Elements.JIN, R.RANGED, Q.MINION,
+			"九鼎崩裂时溢出的浊气。", [420, 105.0, 1, 1, 0], [0, 0, 0.0, 10, 600.0]),
+	]
+	for b in list:
+		b.region = &"qingzhou"
+	# 精英的接触伤害与冀州一致
+	list[7].contact_damage = 15.0
+	var fei_aura: EffectDef = list[8].abilities[0]
+	fei_aura.radius = 260.0
+	list.append(_region(_crit(_beast(&"goumang", "句芒", "Goumang, God of the East and Wood", Elements.MU, R.AUSPICIOUS, Q.RARE,
+		"东方句芒，鸟身人面，乘两龙。",
+		[3000, 100.0, 1, 3, 3], [10, 80, 300.0, 8, 850.0],
+		[_effect(&"passive", &"spirit_income", 1, 25, 0.0, "东方木神：每 2.5 秒额外 +1 灵气"),
+		_effect(&"passive", &"adjacent_damage_pct", 0.3, 0, 0.0, "春生万物：相邻异兽伤害 +30%")]), 0.1), &""))
+	list.append(_region(_crit(_beast(&"tianwu", "天吴", "Tianwu, the Eight-Headed Water Lord", Elements.SHUI, R.AREA, Q.RARE,
+		"朝阳之谷，神曰天吴，是为水伯……其为兽也，八首人面，八足八尾，皆青黄。",
+		[3000, 100.0, 1, 3, 3], [11, 260, 320.0, 16, 750.0],
+		[_effect(&"on_hit", &"splash", 0.7, 0, 180.0, "水伯：周围敌人受到 70% 伤害"),
+		_effect(&"on_hit", &"slow", 0.6, 15, 0.0, "命中后减速 40%，1.5 秒")]), 0.15), &""))
+	return list
 
 
 func _crit(b: BeastDef, chance: float, mult: float = 2.0) -> BeastDef:
@@ -235,7 +314,7 @@ func _keepers() -> Array[KeeperDef]:
 		_keeper(&"yiyi", 3, "羿裔", "射日之羿的后人。伤害更高，但镇鼎符更少。",
 			[&"bifang", &"mingshe"] as Array[StringName], 4,
 			[_effect(&"passive", &"global_damage_pct", 0.05, 0, 0.0, "全体伤害 +5%")],
-			_skill("射日", "一箭射中场上生命最高的敌人。", &"smite_strongest", 9, 200, 1800.0, 0.0)),
+			_skill("射日", "一箭射中场上生命最高的敌人。", &"smite_strongest", 9, 260, 1200.0, 0.0)),
 	]
 
 
@@ -328,6 +407,8 @@ func _fusions() -> Array[FusionRecipe]:
 		_fusion(&"jin_shui_yinglong", &"mingshe", &"huashe", &"yinglong", "金生水：鸣蛇之旱遇化蛇之水，旱极而为应龙，乃得大雨。"),
 		_fusion(&"tu_jin_bo", &"dangkang", &"mingshe", &"bo", "土生金：当康丰年之土，鸣蛇如磬之金，化为御兵之驳。"),
 		_fusion(&"huo_tu_kui", &"bifang", &"lili", &"kui", "火生土：毕方之火锻狸力之土，化为声如雷的夔。"),
+		_fusion(&"shui_mu_goumang", &"lingling", &"jiegou", &"goumang", "水生木：軨軨引来大水，絜钩登木而栖，春木生发，化为东方之神句芒。"),
+		_fusion(&"jin_shui_tianwu", &"youyou", &"heyu", &"tianwu", "金生水：峳峳四角如金，合窳见则大水，化为八首的水伯天吴。"),
 	]
 
 
@@ -429,6 +510,31 @@ func _battle(id: StringName, name: String, kind: BattleDef.Kind, waves: Array[Wa
 	return b
 
 
+## 青州的海岸路线：从西边上岸，在礁石间折返，最后到东南角的鼎。
+const QINGZHOU_PATH := [
+	Vector2(60, 600), Vector2(380, 560), Vector2(520, 360), Vector2(840, 300), Vector2(1000, 470),
+	Vector2(860, 650), Vector2(560, 700), Vector2(430, 860), Vector2(800, 880), Vector2(1180, 820),
+	Vector2(1300, 600), Vector2(1180, 420), Vector2(1340, 260), Vector2(1640, 300), Vector2(1760, 520),
+	Vector2(1600, 720), Vector2(1760, 860),
+]
+const QINGZHOU_SLOTS := [
+	Vector2(640, 480), Vector2(300, 420), Vector2(1000, 300), Vector2(1080, 640),
+	Vector2(700, 780), Vector2(1440, 440), Vector2(1480, 620), Vector2(1620, 880),
+]
+
+
+func _qz_battle(id: StringName, name: String, kind: BattleDef.Kind, waves: Array[WaveDef]) -> BattleDef:
+	var b := BattleDef.new()
+	b.id = id
+	b.display_name = name
+	b.kind = kind
+	b.region = &"qingzhou"
+	b.path_points = PackedVector2Array(QINGZHOU_PATH)
+	b.slots = PackedVector2Array(QINGZHOU_SLOTS)
+	b.waves = waves
+	return b
+
+
 ## 普通战 5 波、精英 5 波、首领 6 波。第一波前 8 秒准备，之后每波前 15 秒倒计时，可提前召唤换灵气。
 ## 杂兵成群（每波 8–14 只），中间夹 1–2 只可捕获的异兽，波次血量逐步 ×1.0 → ×1.6。
 func _battles() -> Array[BattleDef]:
@@ -461,6 +567,42 @@ func _battles() -> Array[BattleDef]:
 			_wave(150, [_spawn(&"dingsha_shui", 12, 6, 1.7), _spawn(&"huashe", 1, 6)]),
 			_wave(150, [_spawn(&"dingsha_tu", 10, 6, 1.8), _spawn(&"zhuyan", 1, 6)]),
 			_wave(150, [_spawn(&"dingsha_huo", 10, 5, 2.3), _spawn(&"dingsha_shui", 10, 5, 2.3), _spawn(&"mingshe", 2, 20, 1.7)]),
+		]),
+		_qz_battle(&"qingzhou_b01", "青州 · 空桑", K.NORMAL, [
+			_wave(80, [_spawn(&"dingsha_mu", 10, 9)]),
+			_wave(150, [_spawn(&"dingsha_mu", 10, 8), _spawn(&"jiegou", 1, 8)]),
+			_wave(150, [_spawn(&"dingsha_jin", 10, 8, 1.4), _spawn(&"lingling", 1, 8)]),
+			_wave(150, [_spawn(&"dingsha_mu", 12, 6, 1.7), _spawn(&"zhuru", 1, 6)]),
+			_wave(150, [_spawn(&"dingsha_mu", 8, 6, 2.1), _spawn(&"dingsha_jin", 8, 6, 2.1), _spawn(&"heyu", 1, 6, 1.4), _spawn(&"jiegou", 1, 6, 1.4)]),
+		]),
+		_qz_battle(&"qingzhou_b02", "青州 · 姑逢", K.NORMAL, [
+			_wave(80, [_spawn(&"dingsha_jin", 9, 9)]),
+			_wave(150, [_spawn(&"dingsha_jin", 10, 8), _spawn(&"youyou", 1, 8)]),
+			_wave(150, [_spawn(&"dingsha_mu", 10, 8, 1.4), _spawn(&"bibi", 1, 8)]),
+			_wave(150, [_spawn(&"dingsha_jin", 12, 6, 1.7), _spawn(&"lihu", 1, 6)]),
+			_wave(150, [_spawn(&"dingsha_jin", 8, 6, 2.1), _spawn(&"dingsha_mu", 8, 6, 2.1), _spawn(&"bibi", 1, 6, 1.4), _spawn(&"youyou", 1, 6, 1.4)]),
+		]),
+		_qz_battle(&"qingzhou_b03", "青州 · 剡山", K.NORMAL, [
+			_wave(80, [_spawn(&"dingsha_mu", 9, 9)]),
+			_wave(150, [_spawn(&"dingsha_shui", 10, 8), _spawn(&"heyu", 1, 8)]),
+			_wave(150, [_spawn(&"dingsha_mu", 10, 8, 1.4), _spawn(&"lihu", 1, 8)]),
+			_wave(150, [_spawn(&"dingsha_jin", 12, 6, 1.7), _spawn(&"lingling", 1, 6)]),
+			_wave(150, [_spawn(&"dingsha_mu", 8, 6, 2.1), _spawn(&"dingsha_shui", 8, 6, 2.1), _spawn(&"zhuru", 1, 6, 1.4), _spawn(&"heyu", 1, 6, 1.4)]),
+		]),
+		_qz_battle(&"qingzhou_elite01", "青州 · 凫丽", K.ELITE, [
+			_wave(80, [_spawn(&"dingsha_mu", 10, 8)]),
+			_wave(150, [_spawn(&"dingsha_jin", 10, 7, 1.4), _spawn(&"zhuru", 1, 7)]),
+			_wave(150, [_spawn(&"dingsha_mu", 12, 6, 1.7), _spawn(&"bibi", 1, 6)]),
+			_wave(150, [_spawn(&"dingsha_jin", 10, 6, 1.8), _spawn(&"longzhi", 1, 6)]),
+			_wave(150, [_spawn(&"dingsha_mu", 10, 5, 2.3), _spawn(&"dingsha_jin", 10, 5, 2.3), _spawn(&"heyu", 2, 20, 1.7)]),
+		]),
+		_qz_battle(&"qingzhou_boss", "青州 · 蜚", K.BOSS, [
+			_wave(80, [_spawn(&"dingsha_mu", 12, 7)]),
+			_wave(150, [_spawn(&"dingsha_jin", 12, 6, 1.2), _spawn(&"lingling", 1, 6)]),
+			_wave(150, [_spawn(&"dingsha_mu", 12, 6, 1.4), _spawn(&"zhuru", 1, 6)]),
+			_wave(150, [_spawn(&"dingsha_jin", 14, 5, 1.5), _spawn(&"bibi", 1, 5, 1.2)]),
+			_wave(150, [_spawn(&"dingsha_mu", 10, 5, 1.7), _spawn(&"dingsha_jin", 10, 5, 1.7)]),
+			_wave(150, [_spawn(&"fei", 1, 10), _spawn(&"dingsha_mu", 12, 15, 1.9), _spawn(&"dingsha_jin", 10, 15, 1.9)]),
 		]),
 		_battle(&"jizhou_boss", "冀州 · 相柳", K.BOSS, [
 			_wave(80, [_spawn(&"dingsha_shui", 12, 7)]),

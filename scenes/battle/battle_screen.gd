@@ -105,6 +105,8 @@ func _react(events: Array[Dictionary]) -> void:
 			"towers_stunned":
 				Sfx.play("skill")
 				_shake = maxf(_shake, 0.4)
+			"spirit_drained":
+				Sfx.play("skill")
 			"summoned":
 				Sfx.play("leak")
 				_shake = maxf(_shake, 0.7)

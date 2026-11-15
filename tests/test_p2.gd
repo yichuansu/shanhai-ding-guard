@@ -90,8 +90,10 @@ func test_battle_result_shell_bonus_loss_and_boss() -> void:
 	RunRules.apply_battle_result(lost, lib, lost.map.layers[0][0], _summary(false), [] as Array[StringName])
 	check(lost.finished and not lost.won and lost.pending_reward.is_empty(), "失败结束本局，没有奖励")
 	var boss := _run()
+	boss.act = Regions.ORDER.size() - 1
+	boss._build_map()
 	RunRules.apply_battle_result(boss, lib, boss.map.boss_id(), _summary(true), [] as Array[StringName])
-	check(boss.finished and boss.won, "打败首领本局胜利")
+	check(boss.finished and boss.won, "打败最后一州的首领本局胜利")
 
 
 func test_shop_buy_marks_sold_and_charges() -> void:

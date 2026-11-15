@@ -1,0 +1,41 @@
+[gd_resource type="Resource" script_class="BeastDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/effect_def.gd" id="1_idus8"]
+[ext_resource type="Script" path="res://content/defs/beast_def.gd" id="2_ov5lp"]
+
+[sub_resource type="Resource" id="Resource_8ox4s"]
+script = ExtResource("1_idus8")
+op = &"splash"
+amount = 0.7
+radius = 180.0
+description = "水伯：周围敌人受到 70% 伤害"
+
+[sub_resource type="Resource" id="Resource_mte85"]
+script = ExtResource("1_idus8")
+op = &"slow"
+amount = 0.6
+duration_ticks = 15
+description = "命中后减速 40%，1.5 秒"
+
+[resource]
+script = ExtResource("2_ov5lp")
+id = &"tianwu"
+display_name = "天吴"
+name_en = "Tianwu, the Eight-Headed Water Lord"
+element = &"shui"
+role = 1
+rarity = 4
+region = &""
+lore = "朝阳之谷，神曰天吴，是为水伯……其为兽也，八首人面，八足八尾，皆青黄。"
+max_hp = 3000
+spirit_reward = 3
+shell_reward = 3
+capturable = false
+contact_damage = 5.0
+deploy_cost = 11
+damage = 260
+attack_range = 320.0
+attack_interval_ticks = 16
+projectile_speed = 750.0
+crit_chance = 0.15
+traits = Array[ExtResource("1_idus8")]([SubResource("Resource_8ox4s"), SubResource("Resource_mte85")])

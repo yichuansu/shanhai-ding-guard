@@ -8,6 +8,8 @@ enum Kind { NORMAL, ELITE, BOSS }
 @export var id: StringName
 @export var display_name: String = ""
 @export var kind: Kind = Kind.NORMAL
+## 属于哪一州。一局打到哪一州，就从那一州的战场里抽。
+@export var region: StringName = &"jizhou"
 @export var path_points: PackedVector2Array = PackedVector2Array()
 @export var slots: PackedVector2Array = PackedVector2Array()
 ## 两个鼎位中心距离不超过它即视为相邻（相生、光环）。

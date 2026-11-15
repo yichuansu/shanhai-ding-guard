@@ -10,6 +10,7 @@ display_name = "驳"
 name_en = "Bo, the Tiger-Eating Horse"
 element = &"jin"
 rarity = 4
+region = &""
 lore = "有兽焉，其状如马而白身黑尾，一角，虎牙爪，音如鼓音，其名曰驳，是食虎豹，可以御兵。"
 max_hp = 3000
 spirit_reward = 3

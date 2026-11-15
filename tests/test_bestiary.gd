@@ -9,8 +9,13 @@ func test_sections() -> void:
 	check(jizhou.has(&"jingwei") and jizhou.has(&"zhuyan"), "冀州栏含普通和精英")
 	check(not jizhou.has(&"dingsha_tu"), "杂兵不入图鉴")
 	check(not jizhou.has(&"fenghuang") and not jizhou.has(&"xiangliu"), "稀有和首领不在冀州栏")
-	check_eq(Bestiary.section_ids(lib, "rare").size(), 4, "四只稀有异兽")
-	check_eq(Bestiary.section_ids(lib, "boss"), [&"xiangliu"] as Array[StringName])
+	check_eq(Bestiary.section_ids(lib, "rare").size(), lib.fusions.size(), "每个配方一只稀有异兽")
+	var bosses := Bestiary.section_ids(lib, "boss")
+	check(bosses.has(&"xiangliu") and bosses.has(&"fei"), "首领栏有相柳和蜚")
+	var qingzhou := Bestiary.section_ids(lib, "qingzhou")
+	check(qingzhou.has(&"jiegou") and qingzhou.has(&"longzhi"), "青州栏含普通和精英")
+	check(not qingzhou.has(&"jingwei") and not jizhou.has(&"jiegou"), "两州互不混入")
+	check_eq(Bestiary.sections().size(), Regions.ORDER.size() + 2, "每州一栏 + 稀有 + 首领")
 	var first: BeastDef = lib.beasts[jizhou[0]]
 	check_eq(first.element, Elements.MU, "按五行顺序排（木在前）")
 
@@ -41,13 +46,16 @@ func test_progress() -> void:
 	var p := Profile.new()
 	var empty := Bestiary.progress(lib, p)
 	check_eq(empty.x, 0)
-	check_eq(empty.y, Bestiary.section_ids(lib, "jizhou").size() + 4 + 1, "总数 = 三栏之和")
+	var total := 0
+	for s: Dictionary in Bestiary.sections():
+		total += Bestiary.section_ids(lib, s["id"]).size()
+	check_eq(empty.y, total, "总数 = 各栏之和")
 	p.record_capture(&"jingwei")
 	p.record_obtained(&"bo")
 	p.record_defeat(&"xiangliu")
 	p.record_seen(&"mingshe")
 	check_eq(Bestiary.progress(lib, p).x, 3, "遇见不算收录")
-	check_eq(Bestiary.progress(lib, p, "rare"), Vector2i(1, 4))
+	check_eq(Bestiary.progress(lib, p, "rare"), Vector2i(1, lib.fusions.size()))
 
 
 func test_recipe_hint_hides_unknown_ingredients() -> void:

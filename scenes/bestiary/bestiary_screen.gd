@@ -83,13 +83,13 @@ func _refresh() -> void:
 	var total := Bestiary.progress(lib, profile)
 	_title.text = "山海经图鉴　收录 %d / %d" % [total.x, total.y]
 	_clear(_tabs)
-	for s: Dictionary in Bestiary.SECTIONS:
+	for s: Dictionary in Bestiary.sections():
 		var p := Bestiary.progress(lib, profile, s["id"])
 		var tab := Button.new()
 		tab.toggle_mode = true
 		tab.button_pressed = s["id"] == _section
 		tab.text = "%s %d/%d" % [s["title"], p.x, p.y]
-		tab.custom_minimum_size = Vector2(240, 56)
+		tab.custom_minimum_size = Vector2(220, 56)
 		tab.pressed.connect(_on_tab.bind(s["id"]))
 		_tabs.add_child(tab)
 	_clear(_grid)
@@ -157,7 +157,7 @@ func _show_detail(id: StringName) -> void:
 	var state := Bestiary.state_of(lib, Game.profile, id)
 	var known := Bestiary.is_complete(state)
 	var section_hint := ""
-	for s: Dictionary in Bestiary.SECTIONS:
+	for s: Dictionary in Bestiary.sections():
 		if s["id"] == _section:
 			section_hint = s["hint"]
 	if state == Bestiary.State.UNKNOWN:
@@ -185,7 +185,8 @@ func _show_detail(id: StringName) -> void:
 			_detail.add_child(_wrap(22, ACCENT, "· " + t.description))
 	if def.rarity != BeastDef.Rarity.RARE:
 		_detail.add_child(_label(24, INK, "作为敌人"))
-		_detail.add_child(_wrap(22, MUTED, "生命 %d · 速度 %d · 漏到鼎前扣 %d%s" % [def.max_hp, int(def.move_speed), def.leak_damage,
+		var leak := "漏到鼎前直接失败" if def.rarity == BeastDef.Rarity.BOSS else "漏到鼎前扣 %d" % def.leak_damage
+		_detail.add_child(_wrap(22, MUTED, "生命 %d · 速度 %d · %s%s" % [def.max_hp, int(def.move_speed), leak,
 			" · 可捕获" if def.capturable else ""]))
 		for ab in def.abilities:
 			_detail.add_child(_wrap(22, Color("8e24aa"), "· " + ab.description))

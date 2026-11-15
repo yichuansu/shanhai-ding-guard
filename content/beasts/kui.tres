@@ -17,6 +17,7 @@ display_name = "夔"
 name_en = "Kui, the One-Legged Thunder Ox"
 role = 2
 rarity = 4
+region = &""
 lore = "东海中有流波山……其上有兽，状如牛，苍身而无角，一足……其声如雷，其名曰夔。黄帝得之，以其皮为鼓……声闻五百里，以威天下。"
 max_hp = 3000
 spirit_reward = 3

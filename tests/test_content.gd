@@ -65,9 +65,44 @@ func test_p2_content() -> void:
 	var lib := ContentLibrary.load_from()
 	check(lib.relics.size() >= 7, "至少 7 件法宝")
 	check(lib.events.size() >= 7, "至少 7 个奇遇")
-	check_eq(lib.fusions.size(), 4, "四个融合配方")
+	check(lib.fusions.size() >= 4, "至少四个融合配方")
 	for id in lib.event_ids():
 		var ev: EventDef = lib.events[id]
 		check(ev.source_text != "" and ev.options.size() >= 2, "%s 有原文和至少两个选项" % id)
 	var xiangliu: BeastDef = lib.beasts[&"xiangliu"]
 	check(xiangliu.abilities.size() >= 2, "相柳有首领技能")
+
+
+## 内置字体只是子集。内容里出现子集外的字，手机上会显示成方框，这里拦住。
+## 失败时运行 tools/subset_font.py 重新裁剪字体。
+func test_font_covers_all_content_text() -> void:
+	var font: FontFile = load("res://assets/fonts/NotoSansSC-Subset.ttf")
+	var lib := ContentLibrary.load_from()
+	var texts := PackedStringArray()
+	for id: StringName in lib.beasts:
+		var b: BeastDef = lib.beasts[id]
+		texts.append_array([b.display_name, b.lore])
+		for t in b.traits + b.abilities:
+			texts.append(t.description)
+	for id: StringName in lib.relics:
+		var r: RelicDef = lib.relics[id]
+		texts.append_array([r.display_name, r.description])
+	for id: StringName in lib.events:
+		var ev: EventDef = lib.events[id]
+		texts.append_array([ev.title, ev.source_text, ev.situation])
+		for o in ev.options:
+			texts.append_array([o.label, o.hint, o.success_text, o.fail_text])
+	for id: StringName in lib.keepers:
+		var k: KeeperDef = lib.keepers[id]
+		texts.append_array([k.display_name, k.description, k.skill.display_name, k.skill.description])
+	for id: StringName in lib.fusions:
+		texts.append((lib.fusions[id] as FusionRecipe).description)
+	for id: StringName in lib.battles:
+		texts.append((lib.battles[id] as BattleDef).display_name)
+	var missing := {}
+	for text in texts:
+		for i in text.length():
+			var code := text.unicode_at(i)
+			if code >= 0x20 and code != 0x0A and not font.has_char(code):
+				missing[text[i]] = true
+	check(missing.is_empty(), "字体缺字：%s" % "".join(PackedStringArray(missing.keys())))

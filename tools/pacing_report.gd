@@ -45,6 +45,7 @@ func _make(lib: ContentLibrary, battle: BattleDef, keeper: KeeperDef) -> BattleS
 	setup.talismans = 0
 	setup.seed_value = 7
 	setup.hp_scale = BOSS_SCALE if battle.kind == BattleDef.Kind.BOSS else MID_RUN_SCALE
+	setup.boss_hp_scale = 1.0 + RunState.DIFFICULTY_PER_ACT * Regions.ORDER.find(battle.region)
 	return BattleSim.create(battle, lib.beasts, lib.chart, setup)
 
 

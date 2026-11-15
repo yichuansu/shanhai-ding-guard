@@ -25,6 +25,7 @@ name_en = "Yinglong, the Winged Rain Dragon"
 element = &"shui"
 role = 1
 rarity = 4
+region = &""
 lore = "应龙处南极，杀蚩尤与夸父，不得复上，故下数旱，旱而为应龙之状，乃得大雨。"
 max_hp = 3000
 spirit_reward = 3

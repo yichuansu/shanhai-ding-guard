@@ -12,4 +12,6 @@ var seed_value := 0
 var keeper: KeeperDef
 ## 敌人血量总倍率。随路线图深入递增，见 RunState.difficulty_scale()。
 var hp_scale := 1.0
+## 首领的血量倍率。首领血量按绝对值调，只随州数放大，不随路线图层数放大。
+var boss_hp_scale := 1.0
 var formations: Array[FormationDef] = []

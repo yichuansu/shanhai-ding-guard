@@ -6,8 +6,13 @@ const SCHEMA := 1
 const DEFAULT_DING := 10
 const DEFAULT_TALISMANS := 5
 const DEFAULT_ROSTER_CAP := 6
-## 每深入路线图一层，敌人血量 +15%（同类肉鸽的幕内递增）。按整局模拟调到自动玩家通关率约 40%–50%。
-const DIFFICULTY_PER_LAYER := 0.15
+## 每深入路线图一层，敌人血量 +12%（同类肉鸽的幕内递增）。按整局模拟调参：
+## 自动玩家整局通关率约 37%，冀州首领倒下约 18%（守鼎人之间强弱仍不均，待调）。
+const DIFFICULTY_PER_LAYER := 0.12
+## 每进入下一州，敌人血量在第一层的基础上再加这么多（新州的异兽本身也更强）。
+const DIFFICULTY_PER_ACT := 0.2
+## 进入下一州时，回复已损失铜鼎耐久的这一比例。
+const ACT_HEAL_RATIO := 0.5
 
 var seed_value := 0
 var keeper_id: StringName = &""
@@ -55,7 +60,27 @@ func battle_seed(node_id: int) -> int:
 
 
 func difficulty_scale(node_id: int) -> float:
-	return 1.0 + DIFFICULTY_PER_LAYER * map.nodes[node_id].layer
+	return 1.0 + DIFFICULTY_PER_ACT * act + DIFFICULTY_PER_LAYER * map.nodes[node_id].layer
+
+
+func boss_scale() -> float:
+	return 1.0 + DIFFICULTY_PER_ACT * act
+
+
+func region() -> StringName:
+	return Regions.for_act(act)
+
+
+## 进入下一州：重建路线图，从头走，回复一半已损失的铜鼎耐久。返回回复量。
+func advance_act() -> int:
+	act += 1
+	_build_map()
+	current_node = -1
+	visited = PackedInt32Array()
+	node_resolved = false
+	var heal := ceili((ding_max - ding_hp) * ACT_HEAL_RATIO)
+	ding_hp += heal
+	return heal
 
 
 func available_nodes() -> PackedInt32Array:

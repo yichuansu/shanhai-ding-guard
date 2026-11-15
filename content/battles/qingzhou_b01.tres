@@ -1,0 +1,106 @@
+[gd_resource type="Resource" script_class="BattleDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/battle_def.gd" id="1_admby"]
+[ext_resource type="Script" path="res://content/defs/wave_def.gd" id="2_c77vx"]
+[ext_resource type="Script" path="res://content/defs/spawn_entry.gd" id="3_4yolv"]
+
+[sub_resource type="Resource" id="Resource_l7r7n"]
+script = ExtResource("3_4yolv")
+beast_id = &"dingsha_mu"
+count = 10
+interval_ticks = 9
+
+[sub_resource type="Resource" id="Resource_u36ah"]
+script = ExtResource("2_c77vx")
+gap_ticks_before = 80
+spawns = Array[ExtResource("3_4yolv")]([SubResource("Resource_l7r7n")])
+
+[sub_resource type="Resource" id="Resource_3qd1m"]
+script = ExtResource("3_4yolv")
+beast_id = &"dingsha_mu"
+count = 10
+interval_ticks = 8
+
+[sub_resource type="Resource" id="Resource_m4tig"]
+script = ExtResource("3_4yolv")
+beast_id = &"jiegou"
+interval_ticks = 8
+
+[sub_resource type="Resource" id="Resource_ip0ly"]
+script = ExtResource("2_c77vx")
+gap_ticks_before = 150
+spawns = Array[ExtResource("3_4yolv")]([SubResource("Resource_3qd1m"), SubResource("Resource_m4tig")])
+
+[sub_resource type="Resource" id="Resource_gujdv"]
+script = ExtResource("3_4yolv")
+beast_id = &"dingsha_jin"
+count = 10
+interval_ticks = 8
+hp_multiplier = 1.4
+
+[sub_resource type="Resource" id="Resource_cjbag"]
+script = ExtResource("3_4yolv")
+beast_id = &"lingling"
+interval_ticks = 8
+
+[sub_resource type="Resource" id="Resource_hm0sv"]
+script = ExtResource("2_c77vx")
+gap_ticks_before = 150
+spawns = Array[ExtResource("3_4yolv")]([SubResource("Resource_gujdv"), SubResource("Resource_cjbag")])
+
+[sub_resource type="Resource" id="Resource_657rb"]
+script = ExtResource("3_4yolv")
+beast_id = &"dingsha_mu"
+count = 12
+interval_ticks = 6
+hp_multiplier = 1.7
+
+[sub_resource type="Resource" id="Resource_bgq2w"]
+script = ExtResource("3_4yolv")
+beast_id = &"zhuru"
+interval_ticks = 6
+
+[sub_resource type="Resource" id="Resource_hjqxt"]
+script = ExtResource("2_c77vx")
+gap_ticks_before = 150
+spawns = Array[ExtResource("3_4yolv")]([SubResource("Resource_657rb"), SubResource("Resource_bgq2w")])
+
+[sub_resource type="Resource" id="Resource_vh6e4"]
+script = ExtResource("3_4yolv")
+beast_id = &"dingsha_mu"
+count = 8
+interval_ticks = 6
+hp_multiplier = 2.1
+
+[sub_resource type="Resource" id="Resource_d88qm"]
+script = ExtResource("3_4yolv")
+beast_id = &"dingsha_jin"
+count = 8
+interval_ticks = 6
+hp_multiplier = 2.1
+
+[sub_resource type="Resource" id="Resource_8lori"]
+script = ExtResource("3_4yolv")
+beast_id = &"heyu"
+interval_ticks = 6
+hp_multiplier = 1.4
+
+[sub_resource type="Resource" id="Resource_ndek6"]
+script = ExtResource("3_4yolv")
+beast_id = &"jiegou"
+interval_ticks = 6
+hp_multiplier = 1.4
+
+[sub_resource type="Resource" id="Resource_maogy"]
+script = ExtResource("2_c77vx")
+gap_ticks_before = 150
+spawns = Array[ExtResource("3_4yolv")]([SubResource("Resource_vh6e4"), SubResource("Resource_d88qm"), SubResource("Resource_8lori"), SubResource("Resource_ndek6")])
+
+[resource]
+script = ExtResource("1_admby")
+id = &"qingzhou_b01"
+display_name = "青州 · 空桑"
+region = &"qingzhou"
+path_points = PackedVector2Array(60, 600, 380, 560, 520, 360, 840, 300, 1000, 470, 860, 650, 560, 700, 430, 860, 800, 880, 1180, 820, 1300, 600, 1180, 420, 1340, 260, 1640, 300, 1760, 520, 1600, 720, 1760, 860)
+slots = PackedVector2Array(640, 480, 300, 420, 1000, 300, 1080, 640, 700, 780, 1440, 440, 1480, 620, 1620, 880)
+waves = Array[ExtResource("2_c77vx")]([SubResource("Resource_u36ah"), SubResource("Resource_ip0ly"), SubResource("Resource_hm0sv"), SubResource("Resource_hjqxt"), SubResource("Resource_maogy")])

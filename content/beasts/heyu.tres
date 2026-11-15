@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="BeastDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/effect_def.gd" id="1_i5ck8"]
+[ext_resource type="Script" path="res://content/defs/beast_def.gd" id="2_bkci7"]
+
+[sub_resource type="Resource" id="Resource_ojk2f"]
+script = ExtResource("1_i5ck8")
+trigger = &"passive"
+op = &"bonus_vs_element"
+amount = 0.6
+element_scope = &"mu"
+description = "亦食虫蛇：对木属敌人伤害 +60%"
+
+[resource]
+script = ExtResource("2_bkci7")
+id = &"heyu"
+display_name = "合窳"
+name_en = "Heyu, the Man-Faced Boar"
+element = &"shui"
+region = &"qingzhou"
+lore = "剡山……有兽焉，其状如彘而人面，黄身而赤尾，其名曰合窳，其音如婴儿。是兽也，食人，亦食虫蛇，见则天下大水。"
+max_hp = 1500
+move_speed = 95.0
+spirit_reward = 3
+shell_reward = 3
+contact_damage = 5.0
+deploy_cost = 8
+damage = 160
+attack_range = 320.0
+attack_interval_ticks = 12
+projectile_speed = 800.0
+crit_chance = 0.15
+traits = Array[ExtResource("1_i5ck8")]([SubResource("Resource_ojk2f")])

@@ -17,8 +17,8 @@ display_name = "射日"
 description = "一箭射中场上生命最高的敌人。"
 op = &"smite_strongest"
 spirit_cost = 9
-cooldown_ticks = 200
-amount = 1800.0
+cooldown_ticks = 260
+amount = 1200.0
 radius = 0.0
 
 [resource]

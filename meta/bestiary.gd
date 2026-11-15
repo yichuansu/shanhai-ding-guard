@@ -4,11 +4,15 @@ extends RefCounted
 
 enum State { UNKNOWN, SEEN, COLLECTED, DEFEATED }
 
-const SECTIONS := [
-	{"id": "jizhou", "title": "冀州异兽", "hint": "在战斗中把它们打到捕获线以下，用镇鼎符收服"},
-	{"id": "rare", "title": "相生炼成", "hint": "在炼鼎节点按五行相生配方融合得到"},
-	{"id": "boss", "title": "首领", "hint": "击败后记入图鉴"},
-]
+## 栏目：每个州一栏，加上相生炼成和首领。栏目 id 就是州 id。
+static func sections() -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for region in Regions.ORDER:
+		out.append({"id": String(region), "title": "%s异兽" % Regions.display(region),
+			"hint": "在%s的战斗中把它们打到捕获线以下，用镇鼎符收服" % Regions.display(region)})
+	out.append({"id": "rare", "title": "相生炼成", "hint": "在炼鼎节点按五行相生配方融合得到"})
+	out.append({"id": "boss", "title": "首领", "hint": "击败后记入图鉴"})
+	return out
 
 
 ## 某一栏的异兽 id（按五行、再按 id 排序）。鼎煞等杂兵不入图鉴。
@@ -18,12 +22,12 @@ static func section_ids(lib: ContentLibrary, section: String) -> Array[StringNam
 		var b: BeastDef = lib.beasts[id]
 		var match_section := false
 		match section:
-			"jizhou":
-				match_section = b.rarity == BeastDef.Rarity.COMMON or b.rarity == BeastDef.Rarity.ELITE
 			"rare":
 				match_section = b.rarity == BeastDef.Rarity.RARE
 			"boss":
 				match_section = b.rarity == BeastDef.Rarity.BOSS
+			_:
+				match_section = String(b.region) == section and (b.rarity == BeastDef.Rarity.COMMON or b.rarity == BeastDef.Rarity.ELITE)
 		if match_section:
 			out.append(id)
 	out.sort_custom(func(a: StringName, c: StringName) -> bool:
@@ -52,7 +56,7 @@ static func is_complete(state: State) -> bool:
 static func progress(lib: ContentLibrary, profile: Profile, section: String = "") -> Vector2i:
 	var done := 0
 	var total := 0
-	for s: Dictionary in SECTIONS:
+	for s: Dictionary in sections():
 		if section != "" and s["id"] != section:
 			continue
 		for id in section_ids(lib, s["id"]):

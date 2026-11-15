@@ -1,0 +1,39 @@
+[gd_resource type="Resource" script_class="BeastDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/effect_def.gd" id="1_05vi1"]
+[ext_resource type="Script" path="res://content/defs/beast_def.gd" id="2_lai52"]
+
+[sub_resource type="Resource" id="Resource_lgldc"]
+script = ExtResource("1_05vi1")
+op = &"splash"
+amount = 0.6
+radius = 140.0
+description = "大旱：周围敌人受到 60% 伤害"
+
+[sub_resource type="Resource" id="Resource_0p363"]
+script = ExtResource("1_05vi1")
+op = &"dry"
+amount = 0.6
+description = "见则天下大旱：命中减速中的敌人时额外造成 60% 伤害并蒸干水泽"
+
+[resource]
+script = ExtResource("2_lai52")
+id = &"bibi"
+display_name = "獙獙"
+name_en = "Bibi, the Winged Drought Fox"
+element = &"huo"
+role = 1
+region = &"qingzhou"
+lore = "姑逢之山……有兽焉，其状如狐而有翼，其音如鸿雁，其名曰獙獙，见则天下大旱。"
+max_hp = 1300
+move_speed = 110.0
+spirit_reward = 3
+shell_reward = 3
+contact_damage = 5.0
+deploy_cost = 8
+damage = 120
+attack_range = 270.0
+attack_interval_ticks = 14
+projectile_speed = 650.0
+crit_chance = 0.1
+traits = Array[ExtResource("1_05vi1")]([SubResource("Resource_lgldc"), SubResource("Resource_0p363")])

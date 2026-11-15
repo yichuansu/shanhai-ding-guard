@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="FusionRecipe" format=3]
+
+[ext_resource type="Script" path="res://content/defs/fusion_recipe.gd" id="1_nru4f"]
+
+[resource]
+script = ExtResource("1_nru4f")
+id = &"jin_shui_tianwu"
+a = &"youyou"
+b = &"heyu"
+result = &"tianwu"
+description = "金生水：峳峳四角如金，合窳见则大水，化为八首的水伯天吴。"
