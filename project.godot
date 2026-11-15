@@ -1,0 +1,38 @@
+; Engine configuration file.
+; 山海守鼎 Godot 工程。改版方案：捕获异兽当塔的肉鸽塔防。
+
+config_version=5
+
+[application]
+
+config/name="山海守鼎"
+config/description="捕获异兽当塔的肉鸽塔防（灰盒）"
+run/main_scene="res://scenes/boot/boot.tscn"
+config/features=PackedStringArray("4.7", "GL Compatibility")
+config/icon="res://icon.svg"
+
+[autoload]
+
+Content="*res://autoload/content.gd"
+Game="*res://autoload/game.gd"
+Sfx="*res://autoload/sfx.gd"
+
+[debug]
+
+gdscript/warnings/untyped_declaration=1
+
+[display]
+
+window/size/viewport_width=1920
+window/size/viewport_height=1080
+window/size/window_width_override=1280
+window/size/window_height_override=720
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+window/handheld/orientation=4
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+textures/vram_compression/import_etc2_astc=true

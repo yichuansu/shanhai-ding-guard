@@ -2,13 +2,13 @@ name: godot
 
 on:
   push:
-    paths:
-      - "godot/**"
-      - ".github/workflows/godot.yml"
+    paths-ignore:
+      - "**.md"
+      - "LICENSE"
   pull_request:
-    paths:
-      - "godot/**"
-      - ".github/workflows/godot.yml"
+    paths-ignore:
+      - "**.md"
+      - "LICENSE"
 
 jobs:
   test:
@@ -25,12 +25,12 @@ jobs:
           sudo mv "Godot_v${GODOT_VERSION}-stable_linux.x86_64" /usr/local/bin/godot
 
       - name: Import project
-        run: godot --headless --path godot --import
+        run: godot --headless --path . --import
 
       - name: Run tests
         run: |
-          godot --headless --path godot --script res://tests/run_tests.gd 2>&1 | tee test.log
+          godot --headless --path . --script res://tests/run_tests.gd 2>&1 | tee test.log
           if grep -E "SCRIPT ERROR|Parse Error" test.log; then exit 1; fi
 
       - name: Balance report
-        run: godot --headless --path godot --script res://tools/simulate_battles.gd
+        run: godot --headless --path . --script res://tools/simulate_battles.gd
