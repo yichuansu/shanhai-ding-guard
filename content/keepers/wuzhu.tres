@@ -8,8 +8,8 @@
 script = ExtResource("1_ugbrw")
 trigger = &"passive"
 op = &"capture_threshold_bonus"
-amount = 0.1
-description = "捕获血线 +10%"
+amount = 0.15
+description = "捕获血线 +15%"
 
 [sub_resource type="Resource" id="Resource_p6qsq"]
 script = ExtResource("1_ugbrw")
@@ -21,18 +21,19 @@ description = "每场额外 1 张临时镇鼎符"
 [sub_resource type="Resource" id="Resource_aw0r4"]
 script = ExtResource("3_jsdgy")
 display_name = "定身符"
-description = "范围内敌人定身 3 秒。"
+description = "范围内敌人定身 5 秒。"
 op = &"freeze_area"
-cooldown_ticks = 180
-radius = 220.0
-duration_ticks = 30
+spirit_cost = 5
+cooldown_ticks = 160
+radius = 260.0
+duration_ticks = 50
 
 [resource]
 script = ExtResource("2_6c6ou")
 id = &"wuzhu"
 order = 2
 display_name = "巫祝"
-description = "通晓异兽之名的巫。更容易收服异兽。"
+description = "通晓异兽之名的巫。更容易收服异兽，符咒能定住成群的敌人。"
 starting_beasts = Array[StringName]([&"jingwei", &"huashe"])
 starting_talismans = 6
 passives = Array[ExtResource("1_ugbrw")]([SubResource("Resource_dkeex"), SubResource("Resource_p6qsq")])

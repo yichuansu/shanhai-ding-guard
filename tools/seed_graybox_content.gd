@@ -308,21 +308,23 @@ func _unlock(k: KeeperDef, kind: StringName, value: int, param: StringName, hint
 	return k
 
 
+## 守鼎人平衡按 tools/simulate_runs.gd（含 --matrix 交叉对照）调：三人整局通关率尽量接近。
 func _keepers() -> Array[KeeperDef]:
 	return [
 		_keeper(&"zhudingjiang", 1, "铸鼎匠", "禹铸九鼎时的匠人后裔。镇守异兽更结实。",
-			[&"jingwei", &"lili"] as Array[StringName], 5,
-			[_effect(&"passive", &"guard_hp_pct", 0.3, 0, 0.0, "镇守异兽生命 +30%")],
-			_skill("鼎鸣", "敲击铜鼎，震伤范围内所有敌人。", &"damage_area", 8, 150, 450.0, 220.0)),
-		_unlock(_keeper(&"wuzhu", 2, "巫祝", "通晓异兽之名的巫。更容易收服异兽。",
+			[&"bifang", &"lili"] as Array[StringName], 5,
+			[_effect(&"passive", &"guard_hp_pct", 0.3, 0, 0.0, "镇守异兽生命 +30%"),
+			_effect(&"passive", &"global_damage_pct", 0.1, 0, 0.0, "鼎纹加持：所有异兽伤害 +10%")],
+			_skill("鼎鸣", "敲击铜鼎，震伤范围内所有敌人。", &"damage_area", 8, 130, 900.0, 220.0)),
+		_unlock(_keeper(&"wuzhu", 2, "巫祝", "通晓异兽之名的巫。更容易收服异兽，符咒能定住成群的敌人。",
 			[&"jingwei", &"huashe"] as Array[StringName], 6,
-			[_effect(&"passive", &"capture_threshold_bonus", 0.1, 0, 0.0, "捕获血线 +10%"),
+			[_effect(&"passive", &"capture_threshold_bonus", 0.15, 0, 0.0, "捕获血线 +15%"),
 			_effect(&"on_battle_start", &"add_talismans", 1, 0, 0.0, "每场额外 1 张临时镇鼎符")],
-			_skill("定身符", "范围内敌人定身 3 秒。", &"freeze_area", 6, 180, 0.0, 220.0, 30)),
+			_skill("定身符", "范围内敌人定身 5 秒。", &"freeze_area", 5, 160, 0.0, 260.0, 50)),
 			&"bestiary", 8, &"", "巫祝通晓异兽之名：山海经图鉴收录满 8 只后解锁。"),
-		_unlock(_keeper(&"yiyi", 3, "羿裔", "射日之羿的后人。伤害更高，但镇鼎符更少。",
-			[&"bifang", &"mingshe"] as Array[StringName], 4,
-			[_effect(&"passive", &"global_damage_pct", 0.05, 0, 0.0, "全体伤害 +5%")],
+		_unlock(_keeper(&"yiyi", 3, "羿裔", "射日之羿的后人。专射大敌，但镇鼎符更少。",
+			[&"mingshe", &"jingwei"] as Array[StringName], 4,
+			[] as Array[EffectDef],
 			_skill("射日", "一箭射中场上生命最高的敌人。", &"smite_strongest", 9, 260, 1200.0, 0.0)),
 			&"defeat", 0, &"xiangliu", "羿之后人只追随屠过大患的人：击败一次相柳后解锁。"),
 	]

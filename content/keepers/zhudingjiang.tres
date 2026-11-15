@@ -12,11 +12,19 @@ amount = 0.3
 description = "镇守异兽生命 +30%"
 
 [sub_resource type="Resource" id="Resource_ueei8"]
+script = ExtResource("1_q0f7j")
+trigger = &"passive"
+op = &"global_damage_pct"
+amount = 0.1
+description = "鼎纹加持：所有异兽伤害 +10%"
+
+[sub_resource type="Resource" id="Resource_8lhif"]
 script = ExtResource("3_1tktn")
 display_name = "鼎鸣"
 description = "敲击铜鼎，震伤范围内所有敌人。"
 spirit_cost = 8
-amount = 450.0
+cooldown_ticks = 130
+amount = 900.0
 radius = 220.0
 
 [resource]
@@ -25,6 +33,6 @@ id = &"zhudingjiang"
 order = 1
 display_name = "铸鼎匠"
 description = "禹铸九鼎时的匠人后裔。镇守异兽更结实。"
-starting_beasts = Array[StringName]([&"jingwei", &"lili"])
-passives = Array[ExtResource("1_q0f7j")]([SubResource("Resource_8a2vw")])
-skill = SubResource("Resource_ueei8")
+starting_beasts = Array[StringName]([&"bifang", &"lili"])
+passives = Array[ExtResource("1_q0f7j")]([SubResource("Resource_8a2vw"), SubResource("Resource_ueei8")])
+skill = SubResource("Resource_8lhif")
