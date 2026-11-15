@@ -13,9 +13,9 @@ description = "见则其邑大水：命中后减速 40%，1.5 秒"
 [sub_resource type="Resource" id="Resource_bthm1"]
 script = ExtResource("2_lnjyd")
 op = &"splash"
-amount = 0.5
-radius = 120.0
-description = "大水：周围敌人受到一半伤害"
+amount = 0.6
+radius = 140.0
+description = "大水：周围敌人受到 60% 伤害"
 
 [resource]
 script = ExtResource("1_h3uww")
@@ -25,10 +25,13 @@ name_en = "Huashe, the Flood Serpent"
 element = &"shui"
 role = 1
 lore = "其中多化蛇，其状如人面而豺身，鸟翼而蛇行，其音如叱呼，见则其邑大水。"
-max_hp = 120
-spirit_reward = 2
-shell_reward = 2
-deploy_cost = 7
-damage = 7
-attack_interval_ticks = 10
+max_hp = 1450
+spirit_reward = 3
+shell_reward = 3
+contact_damage = 5.0
+deploy_cost = 8
+damage = 110
+attack_range = 270.0
+attack_interval_ticks = 15
+crit_chance = 0.1
 traits = Array[ExtResource("2_lnjyd")]([SubResource("Resource_kognb"), SubResource("Resource_bthm1")])

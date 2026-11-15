@@ -12,7 +12,7 @@ enum Kind { NORMAL, ELITE, BOSS }
 @export var slots: PackedVector2Array = PackedVector2Array()
 ## 两个鼎位中心距离不超过它即视为相邻（相生、光环）。
 @export var adjacency_radius: float = 270.0
-@export var starting_spirit: int = 12
+@export var starting_spirit: int = 15
 ## 每隔多少 tick 自然回 1 点灵气。
 @export var spirit_income_interval_ticks: int = 10
 @export var waves: Array[WaveDef] = []

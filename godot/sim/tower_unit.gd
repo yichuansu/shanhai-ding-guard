@@ -7,6 +7,12 @@ var instance: BeastInstance
 var def: BeastDef
 var position := Vector2.ZERO
 var cooldown := 0
+## 局内等级 1..3，战斗结束即失效（和阵容阶位 ★ 是两回事）。
+var level := 1
+## 本场在这只异兽上花掉的灵气（部署 + 升级），收回时返还一半。
+var invested := 0
+## 开火后的后坐动画用，表现层读。
+var last_fire_tick := -100
 ## 相生与光环带来的伤害加成，鼎位变化时重算。
 var damage_bonus := 0.0
 

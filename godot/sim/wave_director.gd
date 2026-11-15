@@ -11,6 +11,8 @@ var _waves: Array[WaveDef]
 var _entry_index := 0
 var _spawned_in_entry := 0
 var _cooldown := 0
+## 当前冷却是否是"波前倒计时"（可以提前召唤）。
+var _gap_active := false
 
 
 func _init(waves: Array[WaveDef]) -> void:
@@ -25,6 +27,7 @@ func _init(waves: Array[WaveDef]) -> void:
 		finished_spawning = true
 	else:
 		_cooldown = waves[0].gap_ticks_before
+		_gap_active = _cooldown > 0
 		_skip_empty_waves()
 
 
@@ -36,6 +39,7 @@ func step() -> Array[Dictionary]:
 	if _cooldown > 0:
 		_cooldown -= 1
 		return out
+	_gap_active = false
 	var wave := _waves[wave_index]
 	var entry := wave.spawns[_entry_index]
 	out.append({
@@ -59,7 +63,32 @@ func step() -> Array[Dictionary]:
 		finished_spawning = true
 	else:
 		_cooldown = maxi(_waves[wave_index].gap_ticks_before - 1, 0)
+		_gap_active = _cooldown > 0
 		_skip_empty_waves()
+	return out
+
+
+## 波前倒计时剩余拍数；不在倒计时中返回 0。
+func gap_remaining() -> int:
+	return _cooldown if _gap_active and not finished_spawning else 0
+
+
+## 跳过倒计时，下一拍就出下一波。返回跳过的拍数。
+func call_early() -> int:
+	var skipped := gap_remaining()
+	if skipped > 0:
+		_cooldown = 0
+		_gap_active = false
+	return skipped
+
+
+## 即将到来（或正在出）的这一波：beast_id -> 数量。
+func preview(index: int) -> Dictionary:
+	var out := {}
+	if index < 0 or index >= _waves.size():
+		return out
+	for spawn in _waves[index].spawns:
+		out[spawn.beast_id] = int(out.get(spawn.beast_id, 0)) + spawn.count
 	return out
 
 

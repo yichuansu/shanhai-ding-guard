@@ -7,7 +7,7 @@
 [sub_resource type="Resource" id="Resource_7h6na"]
 script = ExtResource("3_3c8d2")
 op = &"burn"
-amount = 1.0
+amount = 10.0
 duration_ticks = 15
 
 [sub_resource type="Resource" id="Resource_pesic"]
@@ -17,7 +17,7 @@ effects = Array[ExtResource("3_3c8d2")]([SubResource("Resource_7h6na")])
 [sub_resource type="Resource" id="Resource_u0s3m"]
 script = ExtResource("3_3c8d2")
 op = &"burn"
-amount = 2.5
+amount = 25.0
 duration_ticks = 20
 
 [sub_resource type="Resource" id="Resource_melwd"]

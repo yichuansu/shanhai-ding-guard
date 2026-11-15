@@ -23,7 +23,6 @@ script = ExtResource("3_jsdgy")
 display_name = "定身符"
 description = "范围内敌人定身 3 秒。"
 op = &"freeze_area"
-spirit_cost = 5
 cooldown_ticks = 180
 radius = 220.0
 duration_ticks = 30

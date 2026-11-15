@@ -6,7 +6,7 @@ extends RefCounted
 ## 表现层只读公开字段，并通过 queue_* 提交意图；意图在下一拍开头生效。
 ##
 ## 每拍顺序：
-##   1. tick+1，清空 events，技能冷却 -1，应用意图（部署 / 收回 / 捕获 / 技能）
+##   1. tick+1，清空 events，技能冷却 -1，应用意图（部署 / 升级 / 收回 / 捕获 / 技能 / 提前召唤）
 ##   2. 自然回灵气（含木阵等 spirit_income）
 ##   3. 出怪
 ##   4. 敌人移动：定身的不动；被镇守挡住的原地攻击镇守；经过镇守拦截点时被挡下；到终点记漏怪
@@ -39,6 +39,14 @@ const TICKS_PER_SECOND := 10.0
 const TIER_DAMAGE_MULT: Array[float] = [1.0, 1.0, 1.6, 2.5]
 const TIER_GUARD_MULT: Array[float] = [1.0, 1.0, 1.5, 2.2]
 const RECALL_REFUND_RATIO := 0.5
+## 局内升级：索引是当前等级，值是升到下一级的费用倍率（相对部署费）。
+const UPGRADE_COST_MULT: Array[float] = [0.0, 2.0, 3.5]
+const MAX_LEVEL := 3
+const LEVEL_DAMAGE_MULT: Array[float] = [1.0, 1.0, 1.6, 2.4]
+const LEVEL_RANGE_MULT: Array[float] = [1.0, 1.0, 1.1, 1.2]
+const LEVEL_GUARD_MULT: Array[float] = [1.0, 1.0, 1.5, 2.2]
+## 提前召唤：倒计时每剩 1 秒奖励的灵气。
+const EARLY_CALL_SPIRIT_PER_SECOND := 0.5
 const CAPTURE_LIMIT_PER_BATTLE := 3
 const PROJECTILE_ORIGIN_OFFSET := Vector2(0, -30)
 
@@ -82,6 +90,7 @@ var _effects: Dictionary = {}
 var _global_damage_bonus := 0.0
 var _capture_bonus := 0.0
 var _started := false
+var _hp_scale := 1.0
 
 
 static func create(def: BattleDef, beasts: Dictionary, chart: ElementChart, setup: BattleSetup) -> BattleSim:
@@ -101,6 +110,7 @@ static func create(def: BattleDef, beasts: Dictionary, chart: ElementChart, setu
 	sim.ding_max = setup.ding_max
 	sim.talismans = setup.talismans
 	sim.spirit = def.starting_spirit
+	sim._hp_scale = maxf(setup.hp_scale, 0.01)
 	sim._rng = RngStream.new(setup.seed_value)
 	sim._waves = WaveDirector.new(def.waves)
 	sim._resolved_per_wave.resize(def.waves.size())
@@ -154,6 +164,14 @@ func queue_capture(enemy_id: int) -> void:
 
 func queue_skill(target: Vector2) -> void:
 	_intents.append({"kind": "skill", "target": target})
+
+
+func queue_upgrade(slot: int) -> void:
+	_intents.append({"kind": "upgrade", "slot": slot})
+
+
+func queue_call_wave() -> void:
+	_intents.append({"kind": "call"})
 
 
 # ---------- 查询 ----------
@@ -211,6 +229,37 @@ func skill_ready() -> bool:
 	return keeper != null and keeper.skill != null and skill_cooldown == 0 and spirit >= keeper.skill.spirit_cost
 
 
+## 升到下一级的费用；已满级或没有异兽返回 -1。
+func upgrade_cost(slot: int) -> int:
+	var t: TowerUnit = towers.get(slot)
+	if t == null or t.level >= MAX_LEVEL:
+		return -1
+	return ceili(t.def.deploy_cost * UPGRADE_COST_MULT[t.level])
+
+
+func recall_refund(slot: int) -> int:
+	var t: TowerUnit = towers.get(slot)
+	return 0 if t == null else floori(t.invested * RECALL_REFUND_RATIO)
+
+
+func tower_range(t: TowerUnit) -> float:
+	return t.def.attack_range * LEVEL_RANGE_MULT[clampi(t.level, 1, MAX_LEVEL)]
+
+
+## 波前倒计时剩余拍数，0 表示不在倒计时中。
+func wave_gap_remaining() -> int:
+	return _waves.gap_remaining()
+
+
+func early_call_bonus() -> int:
+	return ceili(wave_gap_remaining() / TICKS_PER_SECOND * EARLY_CALL_SPIRIT_PER_SECOND)
+
+
+## 即将到来的那一波：beast_id -> 数量。全部出完返回空。
+func next_wave_preview() -> Dictionary:
+	return {} if _waves.finished_spawning else _waves.preview(_waves.wave_index)
+
+
 func wave_count() -> int:
 	return battle.waves.size()
 
@@ -226,7 +275,7 @@ func run_talismans_spent() -> int:
 
 
 func damage_against(t: TowerUnit, e: EnemyUnit) -> float:
-	var base := t.def.damage * TIER_DAMAGE_MULT[clampi(t.instance.tier, 1, BeastInstance.MAX_TIER)]
+	var base := t.def.damage * TIER_DAMAGE_MULT[clampi(t.instance.tier, 1, BeastInstance.MAX_TIER)] * LEVEL_DAMAGE_MULT[clampi(t.level, 1, MAX_LEVEL)]
 	var bonus := t.damage_bonus + _global_damage_bonus
 	for eff in t.def.traits:
 		if eff.trigger == &"passive" and eff.op == &"bonus_vs_element" and eff.element_scope == e.def.element:
@@ -269,6 +318,10 @@ func _apply_intents() -> void:
 				_try_capture(intent["enemy_id"])
 			"skill":
 				_try_skill(intent["target"])
+			"upgrade":
+				_try_upgrade(intent["slot"])
+			"call":
+				_try_call_wave()
 
 
 func _income() -> void:
@@ -295,6 +348,7 @@ func _try_deploy(uid: int, slot: int) -> void:
 	t.instance = inst
 	t.def = def
 	t.position = battle.slots[slot]
+	t.invested = def.deploy_cost
 	if def.guard_hp > 0:
 		t.is_guard = true
 		var c := path.closest(t.position)
@@ -312,10 +366,32 @@ func _try_recall(slot: int) -> void:
 		return
 	var t: TowerUnit = towers[slot]
 	_release_blocked(t)
-	spirit += floori(t.def.deploy_cost * RECALL_REFUND_RATIO)
+	spirit += recall_refund(slot)
 	towers.erase(slot)
 	_rebuild_effects()
 	events.append({"type": "recalled", "slot": slot, "uid": t.instance.uid})
+
+
+func _try_upgrade(slot: int) -> void:
+	var cost := upgrade_cost(slot)
+	if cost < 0 or spirit < cost:
+		return
+	var t: TowerUnit = towers[slot]
+	spirit -= cost
+	t.invested += cost
+	t.level += 1
+	_recompute_bonuses()
+	if t.is_guard and t.guard_down_ticks == 0:
+		t.guard_hp = t.guard_hp_max
+	events.append({"type": "upgraded", "slot": slot, "level": t.level})
+
+
+func _try_call_wave() -> void:
+	var bonus := early_call_bonus()
+	if _waves.call_early() <= 0:
+		return
+	spirit += bonus
+	events.append({"type": "wave_called", "bonus": bonus})
 
 
 func _try_capture(enemy_id: int) -> void:
@@ -365,7 +441,7 @@ func _spawn() -> void:
 		_next_id += 1
 		e.def = def
 		e.wave_index = req["wave_index"]
-		e.max_hp = maxi(1, roundi(def.max_hp * float(req["hp_multiplier"])))
+		e.max_hp = maxi(1, roundi(def.max_hp * float(req["hp_multiplier"]) * _hp_scale))
 		e.hp = e.max_hp
 		enemies.append(e)
 		events.append({"type": "spawned", "enemy_id": e.id})
@@ -408,7 +484,7 @@ func _move_enemies() -> void:
 			e.leaked = true
 			ding_hp -= e.def.leak_damage
 			_resolve(e)
-			events.append({"type": "leaked", "enemy_id": e.id, "damage": e.def.leak_damage})
+			events.append({"type": "leaked", "enemy_id": e.id, "damage": e.def.leak_damage, "position": path.points[path.points.size() - 1]})
 
 
 func _update_guards() -> void:
@@ -481,7 +557,7 @@ func _move_projectiles() -> void:
 
 func _hit(e: EnemyUnit, p: Projectile) -> void:
 	e.hp -= p.damage
-	events.append({"type": "hit", "enemy_id": e.id, "position": p.position, "damage": p.damage})
+	events.append({"type": "hit", "enemy_id": e.id, "position": p.position, "damage": p.damage, "crit": p.crit, "element": p.element})
 	for eff in p.on_hit:
 		match eff.op:
 			&"slow":
@@ -492,6 +568,7 @@ func _hit(e: EnemyUnit, p: Projectile) -> void:
 			&"dry":
 				if e.slow_ticks > 0:
 					e.hp -= p.damage * eff.amount
+					events.append({"type": "hit", "enemy_id": e.id, "position": p.position, "damage": p.damage * eff.amount, "crit": true, "element": p.element})
 					e.slow_ticks = 0
 					e.slow_multiplier = 1.0
 			&"splash":
@@ -522,7 +599,7 @@ func _apply_burn(e: EnemyUnit, per_tick: float, duration: int) -> void:
 ## 技能和溅射用的直接伤害，不触发 on_hit。
 func _damage_enemy(e: EnemyUnit, amount: float) -> void:
 	e.hp -= amount
-	events.append({"type": "hit", "enemy_id": e.id, "position": enemy_position(e), "damage": amount})
+	events.append({"type": "hit", "enemy_id": e.id, "position": enemy_position(e), "damage": amount, "crit": false, "element": &"none"})
 	if e.hp <= 0.0:
 		_kill(e)
 
@@ -535,7 +612,7 @@ func _kill(e: EnemyUnit) -> void:
 	shells_earned += e.def.shell_reward
 	_resolve(e)
 	var pos := enemy_position(e)
-	events.append({"type": "killed", "enemy_id": e.id, "position": pos})
+	events.append({"type": "killed", "enemy_id": e.id, "position": pos, "spirit": e.def.spirit_reward, "element": e.def.element, "rarity": e.def.rarity})
 	for entry: Dictionary in _effects.get(&"on_kill_nearby", []):
 		var eff: EffectDef = entry.effect
 		var t: TowerUnit = entry.tower
@@ -566,11 +643,15 @@ func _towers_fire() -> void:
 		p.aim = enemy_position(target)
 		p.speed = t.def.projectile_speed / TICKS_PER_SECOND
 		p.damage = damage_against(t, target)
+		if t.def.crit_chance > 0.0 and _rng.next_float() < t.def.crit_chance:
+			p.damage *= t.def.crit_multiplier
+			p.crit = true
 		p.element = t.def.element
 		p.on_hit = _on_hit_effects_for(t)
 		target.reserved_damage += p.damage
 		projectiles.append(p)
 		t.cooldown = t.def.attack_interval_ticks
+		t.last_fire_tick = tick
 		events.append({"type": "fired", "slot": s, "projectile_id": p.id})
 
 
@@ -591,7 +672,7 @@ func _pick_target(t: TowerUnit) -> EnemyUnit:
 	for e in enemies:
 		if not e.alive or e.hp - e.reserved_damage <= 0.0:
 			continue
-		if t.position.distance_to(enemy_position(e)) > t.def.attack_range:
+		if t.position.distance_to(enemy_position(e)) > tower_range(t):
 			continue
 		if best == null or e.distance > best.distance:
 			best = e
@@ -720,7 +801,7 @@ func _recompute_bonuses() -> void:
 				guard_pct += eff.amount
 		t.damage_bonus = bonus
 		if t.is_guard:
-			var new_max := t.def.guard_hp * TIER_GUARD_MULT[clampi(t.instance.tier, 1, BeastInstance.MAX_TIER)] * (1.0 + guard_pct)
+			var new_max := t.def.guard_hp * TIER_GUARD_MULT[clampi(t.instance.tier, 1, BeastInstance.MAX_TIER)] * LEVEL_GUARD_MULT[clampi(t.level, 1, MAX_LEVEL)] * (1.0 + guard_pct)
 			if t.guard_hp_max > 0.0 and t.guard_down_ticks == 0:
 				t.guard_hp = t.guard_hp * new_max / t.guard_hp_max
 			t.guard_hp_max = new_max

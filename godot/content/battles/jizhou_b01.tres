@@ -7,45 +7,94 @@
 [sub_resource type="Resource" id="Resource_robf3"]
 script = ExtResource("3_c8v1a")
 beast_id = &"dingsha_tu"
-count = 5
-interval_ticks = 18
+count = 8
+interval_ticks = 10
 
 [sub_resource type="Resource" id="Resource_w2bam"]
 script = ExtResource("2_tk3el")
-gap_ticks_before = 20
+gap_ticks_before = 80
 spawns = Array[ExtResource("3_c8v1a")]([SubResource("Resource_robf3")])
 
 [sub_resource type="Resource" id="Resource_42b5d"]
 script = ExtResource("3_c8v1a")
 beast_id = &"dingsha_tu"
-count = 4
-interval_ticks = 16
+count = 10
+interval_ticks = 8
 
 [sub_resource type="Resource" id="Resource_fvrel"]
 script = ExtResource("3_c8v1a")
 beast_id = &"dangkang"
-interval_ticks = 16
+interval_ticks = 8
 
 [sub_resource type="Resource" id="Resource_2wi7a"]
 script = ExtResource("2_tk3el")
-gap_ticks_before = 50
+gap_ticks_before = 150
 spawns = Array[ExtResource("3_c8v1a")]([SubResource("Resource_42b5d"), SubResource("Resource_fvrel")])
 
 [sub_resource type="Resource" id="Resource_fvivc"]
 script = ExtResource("3_c8v1a")
 beast_id = &"dingsha_shui"
-count = 6
-interval_ticks = 14
+count = 10
+interval_ticks = 8
+hp_multiplier = 1.4
 
 [sub_resource type="Resource" id="Resource_06yky"]
 script = ExtResource("3_c8v1a")
 beast_id = &"huashe"
-interval_ticks = 14
+interval_ticks = 8
 
 [sub_resource type="Resource" id="Resource_eua0k"]
 script = ExtResource("2_tk3el")
-gap_ticks_before = 50
+gap_ticks_before = 150
 spawns = Array[ExtResource("3_c8v1a")]([SubResource("Resource_fvivc"), SubResource("Resource_06yky")])
+
+[sub_resource type="Resource" id="Resource_awiat"]
+script = ExtResource("3_c8v1a")
+beast_id = &"dingsha_tu"
+count = 8
+interval_ticks = 7
+hp_multiplier = 1.7
+
+[sub_resource type="Resource" id="Resource_r2dui"]
+script = ExtResource("3_c8v1a")
+beast_id = &"dingsha_shui"
+count = 8
+interval_ticks = 7
+hp_multiplier = 1.7
+
+[sub_resource type="Resource" id="Resource_whdu4"]
+script = ExtResource("3_c8v1a")
+beast_id = &"lili"
+interval_ticks = 7
+
+[sub_resource type="Resource" id="Resource_8pud1"]
+script = ExtResource("2_tk3el")
+gap_ticks_before = 150
+spawns = Array[ExtResource("3_c8v1a")]([SubResource("Resource_awiat"), SubResource("Resource_r2dui"), SubResource("Resource_whdu4")])
+
+[sub_resource type="Resource" id="Resource_acbef"]
+script = ExtResource("3_c8v1a")
+beast_id = &"dingsha_tu"
+count = 12
+interval_ticks = 6
+hp_multiplier = 2.1
+
+[sub_resource type="Resource" id="Resource_5stfd"]
+script = ExtResource("3_c8v1a")
+beast_id = &"dangkang"
+interval_ticks = 6
+hp_multiplier = 1.4
+
+[sub_resource type="Resource" id="Resource_5wih7"]
+script = ExtResource("3_c8v1a")
+beast_id = &"huashe"
+interval_ticks = 6
+hp_multiplier = 1.4
+
+[sub_resource type="Resource" id="Resource_5bsxh"]
+script = ExtResource("2_tk3el")
+gap_ticks_before = 150
+spawns = Array[ExtResource("3_c8v1a")]([SubResource("Resource_acbef"), SubResource("Resource_5stfd"), SubResource("Resource_5wih7")])
 
 [resource]
 script = ExtResource("1_kjb5p")
@@ -53,4 +102,4 @@ id = &"jizhou_b01"
 display_name = "冀州 · 田野"
 path_points = PackedVector2Array(1588, 140, 1339, 194, 1058, 151, 756, 227, 518, 216, 421, 324, 432, 432, 648, 486, 950, 421, 1253, 464, 1534, 454, 1642, 562, 1469, 670, 1145, 648, 799, 713, 475, 659, 292, 756, 356, 896, 713, 875, 1080, 929, 1404, 864, 1652, 832)
 slots = PackedVector2Array(713, 335, 929, 324, 1188, 324, 670, 594, 1404, 562, 1220, 756, 562, 778)
-waves = Array[ExtResource("2_tk3el")]([SubResource("Resource_w2bam"), SubResource("Resource_2wi7a"), SubResource("Resource_eua0k")])
+waves = Array[ExtResource("2_tk3el")]([SubResource("Resource_w2bam"), SubResource("Resource_2wi7a"), SubResource("Resource_eua0k"), SubResource("Resource_8pud1"), SubResource("Resource_5bsxh")])

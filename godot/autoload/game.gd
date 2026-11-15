@@ -91,6 +91,7 @@ func make_battle_setup(node_id: int) -> BattleSetup:
 	setup.talismans = mini(run.talismans, BattleSim.CAPTURE_LIMIT_PER_BATTLE)
 	setup.seed_value = run.battle_seed(node_id)
 	setup.keeper = Content.lib.keepers.get(run.keeper_id)
+	setup.hp_scale = run.difficulty_scale(node_id)
 	setup.formations = Content.lib.formation_list()
 	return setup
 

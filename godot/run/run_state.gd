@@ -6,6 +6,8 @@ const SCHEMA := 1
 const DEFAULT_DING := 10
 const DEFAULT_TALISMANS := 5
 const DEFAULT_ROSTER_CAP := 6
+## 每深入路线图一层，敌人血量 +8%（同类肉鸽的幕内递增）。
+const DIFFICULTY_PER_LAYER := 0.08
 
 var seed_value := 0
 var keeper_id: StringName = &""
@@ -42,6 +44,10 @@ func map_rng() -> RngStream:
 
 func battle_seed(node_id: int) -> int:
 	return RngStream.derive_seed(seed_value, "battle:%d:%d" % [act, node_id])
+
+
+func difficulty_scale(node_id: int) -> float:
+	return 1.0 + DIFFICULTY_PER_LAYER * map.nodes[node_id].layer
 
 
 func available_nodes() -> PackedInt32Array:

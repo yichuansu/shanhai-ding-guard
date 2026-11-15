@@ -15,7 +15,8 @@ description = "镇守异兽生命 +30%"
 script = ExtResource("3_1tktn")
 display_name = "鼎鸣"
 description = "敲击铜鼎，震伤范围内所有敌人。"
-amount = 45.0
+spirit_cost = 8
+amount = 450.0
 radius = 220.0
 
 [resource]

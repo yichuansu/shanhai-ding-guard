@@ -12,4 +12,5 @@ var speed := 0.0
 var damage := 0.0
 var element: StringName = &"none"
 var on_hit: Array[EffectDef] = []
+var crit := false
 var done := false

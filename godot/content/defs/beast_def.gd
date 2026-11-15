@@ -32,6 +32,8 @@ enum Rarity { MINION, COMMON, ELITE, BOSS }
 @export var attack_range: float = 260.0
 @export var attack_interval_ticks: int = 8
 @export var projectile_speed: float = 600.0
+@export_range(0.0, 1.0) var crit_chance: float = 0.0
+@export var crit_multiplier: float = 2.0
 @export_subgroup("镇守")
 ## 大于 0 即为镇守型：在离鼎位最近的路径点上拦截敌人。
 @export var guard_hp: int = 0
