@@ -1,0 +1,61 @@
+[gd_resource type="Resource" script_class="BattleDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/battle_def.gd" id="1_ys33v"]
+[ext_resource type="Script" path="res://content/defs/wave_def.gd" id="2_7utmy"]
+[ext_resource type="Script" path="res://content/defs/spawn_entry.gd" id="3_mvn5r"]
+
+[sub_resource type="Resource" id="Resource_0lb2t"]
+script = ExtResource("3_mvn5r")
+beast_id = &"dingsha_shui"
+count = 6
+interval_ticks = 16
+
+[sub_resource type="Resource" id="Resource_oic2s"]
+script = ExtResource("2_7utmy")
+gap_ticks_before = 20
+spawns = Array[ExtResource("3_mvn5r")]([SubResource("Resource_0lb2t")])
+
+[sub_resource type="Resource" id="Resource_oijo3"]
+script = ExtResource("3_mvn5r")
+beast_id = &"dingsha_shui"
+count = 4
+interval_ticks = 14
+
+[sub_resource type="Resource" id="Resource_ihr6l"]
+script = ExtResource("3_mvn5r")
+beast_id = &"wenyao"
+interval_ticks = 14
+
+[sub_resource type="Resource" id="Resource_2hinb"]
+script = ExtResource("2_7utmy")
+gap_ticks_before = 50
+spawns = Array[ExtResource("3_mvn5r")]([SubResource("Resource_oijo3"), SubResource("Resource_ihr6l")])
+
+[sub_resource type="Resource" id="Resource_1pn5h"]
+script = ExtResource("3_mvn5r")
+beast_id = &"dingsha_tu"
+count = 5
+interval_ticks = 14
+
+[sub_resource type="Resource" id="Resource_rgxda"]
+script = ExtResource("3_mvn5r")
+beast_id = &"lili"
+interval_ticks = 14
+
+[sub_resource type="Resource" id="Resource_082du"]
+script = ExtResource("3_mvn5r")
+beast_id = &"mingshe"
+interval_ticks = 14
+
+[sub_resource type="Resource" id="Resource_jov1n"]
+script = ExtResource("2_7utmy")
+gap_ticks_before = 50
+spawns = Array[ExtResource("3_mvn5r")]([SubResource("Resource_1pn5h"), SubResource("Resource_rgxda"), SubResource("Resource_082du")])
+
+[resource]
+script = ExtResource("1_ys33v")
+id = &"jizhou_b02"
+display_name = "冀州 · 河滩"
+path_points = PackedVector2Array(1588, 140, 1339, 194, 1058, 151, 756, 227, 518, 216, 421, 324, 432, 432, 648, 486, 950, 421, 1253, 464, 1534, 454, 1642, 562, 1469, 670, 1145, 648, 799, 713, 475, 659, 292, 756, 356, 896, 713, 875, 1080, 929, 1404, 864, 1652, 832)
+slots = PackedVector2Array(713, 335, 929, 324, 1188, 324, 670, 594, 1404, 562, 1220, 756, 562, 778)
+waves = Array[ExtResource("2_7utmy")]([SubResource("Resource_oic2s"), SubResource("Resource_2hinb"), SubResource("Resource_jov1n")])

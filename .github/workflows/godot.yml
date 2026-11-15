@@ -1,0 +1,36 @@
+name: godot
+
+on:
+  push:
+    paths:
+      - "godot/**"
+      - ".github/workflows/godot.yml"
+  pull_request:
+    paths:
+      - "godot/**"
+      - ".github/workflows/godot.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GODOT_VERSION: "4.7.2"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Godot
+        run: |
+          curl -sSL -o godot.zip "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q godot.zip
+          sudo mv "Godot_v${GODOT_VERSION}-stable_linux.x86_64" /usr/local/bin/godot
+
+      - name: Import project
+        run: godot --headless --path godot --import
+
+      - name: Run tests
+        run: |
+          godot --headless --path godot --script res://tests/run_tests.gd 2>&1 | tee test.log
+          if grep -E "SCRIPT ERROR|Parse Error" test.log; then exit 1; fi
+
+      - name: Balance report
+        run: godot --headless --path godot --script res://tools/simulate_battles.gd

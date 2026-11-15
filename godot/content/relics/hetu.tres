@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="RelicDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/effect_def.gd" id="1_xcyc6"]
+[ext_resource type="Script" path="res://content/defs/relic_def.gd" id="2_vqrdr"]
+
+[sub_resource type="Resource" id="Resource_sitj3"]
+script = ExtResource("1_xcyc6")
+trigger = &"on_battle_start"
+op = &"add_talismans"
+amount = 1.0
+
+[resource]
+script = ExtResource("2_vqrdr")
+id = &"hetu"
+display_name = "河图"
+description = "每场战斗额外获得 1 张临时镇鼎符。"
+effects = Array[ExtResource("1_xcyc6")]([SubResource("Resource_sitj3")])

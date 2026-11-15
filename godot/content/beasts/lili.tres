@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="BeastDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/beast_def.gd" id="1_wbeiy"]
+[ext_resource type="Script" path="res://content/defs/effect_def.gd" id="2_1fodj"]
+
+[resource]
+script = ExtResource("1_wbeiy")
+id = &"lili"
+display_name = "狸力"
+name_en = "Lili, the Spurred Digger"
+role = 2
+lore = "有兽焉，其状如豚，有距，其音如狗吠，其名曰狸力，见则其县多土功。"
+max_hp = 170
+move_speed = 75.0
+spirit_reward = 2
+shell_reward = 2
+damage = 15
+attack_range = 170.0
+attack_interval_ticks = 9
+projectile_speed = 700.0

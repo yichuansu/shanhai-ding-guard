@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="BeastDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/beast_def.gd" id="1_aymmw"]
+[ext_resource type="Script" path="res://content/defs/effect_def.gd" id="2_w0t6j"]
+
+[resource]
+script = ExtResource("1_aymmw")
+id = &"dingsha_huo"
+display_name = "鼎煞（火）"
+name_en = "Cauldron Wraith (Fire)"
+element = &"huo"
+rarity = 0
+lore = "九鼎崩裂时溢出的浊气。"
+max_hp = 50
+move_speed = 115.0
+shell_reward = 0
+capturable = false
+deploy_cost = 0
+damage = 0
+attack_range = 0.0
+attack_interval_ticks = 10

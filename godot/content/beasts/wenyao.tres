@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="BeastDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/beast_def.gd" id="1_xnn4e"]
+[ext_resource type="Script" path="res://content/defs/effect_def.gd" id="2_udvkk"]
+
+[sub_resource type="Resource" id="Resource_rgskn"]
+script = ExtResource("2_udvkk")
+trigger = &"on_wave_end"
+op = &"heal_ding"
+amount = 1.0
+description = "见则天下大穰：每清一波回复 1 点鼎耐久"
+
+[resource]
+script = ExtResource("1_xnn4e")
+id = &"wenyao"
+display_name = "文鳐鱼"
+name_en = "Wenyao, the Winged Carp"
+element = &"shui"
+role = 3
+lore = "是多文鳐鱼，状如鲤鱼，鱼身而鸟翼，苍文而白首赤喙，见则天下大穰。"
+max_hp = 80
+move_speed = 130.0
+spirit_reward = 2
+shell_reward = 2
+deploy_cost = 5
+damage = 6
+attack_interval_ticks = 9
+projectile_speed = 650.0
+traits = Array[ExtResource("2_udvkk")]([SubResource("Resource_rgskn")])

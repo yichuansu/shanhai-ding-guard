@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="BeastDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/beast_def.gd" id="1_md2yf"]
+[ext_resource type="Script" path="res://content/defs/effect_def.gd" id="2_bu1ws"]
+
+[resource]
+script = ExtResource("1_md2yf")
+id = &"mingshe"
+display_name = "鸣蛇"
+name_en = "Mingshe, the Four-Winged Drought Snake"
+element = &"jin"
+lore = "其中多鸣蛇，其状如蛇而四翼，其音如磬，见则其邑大旱。"
+max_hp = 115
+move_speed = 105.0
+spirit_reward = 2
+shell_reward = 2
+deploy_cost = 7
+damage = 12
+attack_range = 280.0
+attack_interval_ticks = 9
+projectile_speed = 650.0

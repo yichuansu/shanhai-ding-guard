@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="BeastDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/beast_def.gd" id="1_3dm0r"]
+[ext_resource type="Script" path="res://content/defs/effect_def.gd" id="2_x1kpi"]
+
+[resource]
+script = ExtResource("1_3dm0r")
+id = &"jingwei"
+display_name = "精卫"
+name_en = "Jingwei, the Sea-Filling Bird"
+element = &"mu"
+lore = "有鸟焉，其状如乌，文首，白喙，赤足，名曰精卫……常衔西山之木石，以堙于东海。"
+max_hp = 80
+move_speed = 125.0
+spirit_reward = 2
+shell_reward = 2
+deploy_cost = 5
+attack_range = 320.0
+projectile_speed = 700.0

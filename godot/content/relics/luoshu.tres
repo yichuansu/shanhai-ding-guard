@@ -1,0 +1,17 @@
+[gd_resource type="Resource" script_class="RelicDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/effect_def.gd" id="1_ntltf"]
+[ext_resource type="Script" path="res://content/defs/relic_def.gd" id="2_6ne5t"]
+
+[sub_resource type="Resource" id="Resource_fo51j"]
+script = ExtResource("1_ntltf")
+trigger = &"passive"
+op = &"global_damage_pct"
+amount = 0.1
+
+[resource]
+script = ExtResource("2_6ne5t")
+id = &"luoshu"
+display_name = "洛书"
+description = "所有异兽伤害 +10%。"
+effects = Array[ExtResource("1_ntltf")]([SubResource("Resource_fo51j")])

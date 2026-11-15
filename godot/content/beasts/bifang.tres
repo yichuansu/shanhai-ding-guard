@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="BeastDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/beast_def.gd" id="1_qcdoy"]
+[ext_resource type="Script" path="res://content/defs/effect_def.gd" id="2_txjkg"]
+
+[sub_resource type="Resource" id="Resource_kov35"]
+script = ExtResource("2_txjkg")
+op = &"burn"
+amount = 1.5
+duration_ticks = 20
+description = "见则其邑有讹火：命中后灼烧 2 秒"
+
+[resource]
+script = ExtResource("1_qcdoy")
+id = &"bifang"
+display_name = "毕方"
+name_en = "Bifang, the One-Legged Fire Crane"
+element = &"huo"
+lore = "有鸟焉，其状如鹤，一足，赤文青质而白喙，名曰毕方，见则其邑有讹火。"
+max_hp = 90
+move_speed = 120.0
+spirit_reward = 2
+shell_reward = 2
+damage = 9
+attack_range = 300.0
+projectile_speed = 650.0
+traits = Array[ExtResource("2_txjkg")]([SubResource("Resource_kov35")])

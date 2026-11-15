@@ -1,0 +1,27 @@
+[gd_resource type="Resource" script_class="BeastDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/beast_def.gd" id="1_h3uww"]
+[ext_resource type="Script" path="res://content/defs/effect_def.gd" id="2_lnjyd"]
+
+[sub_resource type="Resource" id="Resource_kognb"]
+script = ExtResource("2_lnjyd")
+op = &"slow"
+amount = 0.6
+duration_ticks = 15
+description = "见则其邑大水：命中后减速 40%，1.5 秒"
+
+[resource]
+script = ExtResource("1_h3uww")
+id = &"huashe"
+display_name = "化蛇"
+name_en = "Huashe, the Flood Serpent"
+element = &"shui"
+role = 1
+lore = "其中多化蛇，其状如人面而豺身，鸟翼而蛇行，其音如叱呼，见则其邑大水。"
+max_hp = 120
+spirit_reward = 2
+shell_reward = 2
+deploy_cost = 7
+damage = 7
+attack_interval_ticks = 10
+traits = Array[ExtResource("2_lnjyd")]([SubResource("Resource_kognb")])

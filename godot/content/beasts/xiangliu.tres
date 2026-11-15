@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="BeastDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/beast_def.gd" id="1_t6b0s"]
+[ext_resource type="Script" path="res://content/defs/effect_def.gd" id="2_ux52y"]
+
+[resource]
+script = ExtResource("1_t6b0s")
+id = &"xiangliu"
+display_name = "相柳"
+name_en = "Xiangliu, the Nine-Headed Serpent"
+element = &"shui"
+role = 1
+rarity = 3
+lore = "共工之臣曰相柳氏，九首，以食于九山……禹杀相柳，其血腥，不可以树五谷种。"
+max_hp = 1600
+move_speed = 42.0
+leak_damage = 5
+spirit_reward = 10
+shell_reward = 15
+capturable = false
+deploy_cost = 0
+damage = 0
+attack_range = 0.0
+attack_interval_ticks = 10
