@@ -10,6 +10,13 @@ amount = 0.6
 duration_ticks = 15
 description = "见则其邑大水：命中后减速 40%，1.5 秒"
 
+[sub_resource type="Resource" id="Resource_bthm1"]
+script = ExtResource("2_lnjyd")
+op = &"splash"
+amount = 0.5
+radius = 120.0
+description = "大水：周围敌人受到一半伤害"
+
 [resource]
 script = ExtResource("1_h3uww")
 id = &"huashe"
@@ -24,4 +31,4 @@ shell_reward = 2
 deploy_cost = 7
 damage = 7
 attack_interval_ticks = 10
-traits = Array[ExtResource("2_lnjyd")]([SubResource("Resource_kognb")])
+traits = Array[ExtResource("2_lnjyd")]([SubResource("Resource_kognb"), SubResource("Resource_bthm1")])

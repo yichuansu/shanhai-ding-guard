@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="KeeperDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/effect_def.gd" id="1_jkin8"]
+[ext_resource type="Script" path="res://content/defs/keeper_def.gd" id="2_x7k2n"]
+[ext_resource type="Script" path="res://content/defs/skill_def.gd" id="3_ke08y"]
+
+[sub_resource type="Resource" id="Resource_x8d6e"]
+script = ExtResource("1_jkin8")
+trigger = &"passive"
+op = &"global_damage_pct"
+amount = 0.05
+description = "全体伤害 +5%"
+
+[sub_resource type="Resource" id="Resource_nyx8a"]
+script = ExtResource("3_ke08y")
+display_name = "射日"
+description = "一箭射中场上生命最高的敌人。"
+op = &"smite_strongest"
+spirit_cost = 7
+cooldown_ticks = 200
+amount = 160.0
+radius = 0.0
+
+[resource]
+script = ExtResource("2_x7k2n")
+id = &"yiyi"
+order = 3
+display_name = "羿裔"
+description = "射日之羿的后人。伤害更高，但镇鼎符更少。"
+starting_beasts = Array[StringName]([&"bifang", &"mingshe"])
+starting_talismans = 4
+passives = Array[ExtResource("1_jkin8")]([SubResource("Resource_x8d6e")])
+skill = SubResource("Resource_nyx8a")

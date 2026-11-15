@@ -1,0 +1,29 @@
+[gd_resource type="Resource" script_class="KeeperDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/effect_def.gd" id="1_q0f7j"]
+[ext_resource type="Script" path="res://content/defs/keeper_def.gd" id="2_a1hxv"]
+[ext_resource type="Script" path="res://content/defs/skill_def.gd" id="3_1tktn"]
+
+[sub_resource type="Resource" id="Resource_8a2vw"]
+script = ExtResource("1_q0f7j")
+trigger = &"passive"
+op = &"guard_hp_pct"
+amount = 0.3
+description = "镇守异兽生命 +30%"
+
+[sub_resource type="Resource" id="Resource_ueei8"]
+script = ExtResource("3_1tktn")
+display_name = "鼎鸣"
+description = "敲击铜鼎，震伤范围内所有敌人。"
+amount = 45.0
+radius = 220.0
+
+[resource]
+script = ExtResource("2_a1hxv")
+id = &"zhudingjiang"
+order = 1
+display_name = "铸鼎匠"
+description = "禹铸九鼎时的匠人后裔。镇守异兽更结实。"
+starting_beasts = Array[StringName]([&"jingwei", &"lili"])
+passives = Array[ExtResource("1_q0f7j")]([SubResource("Resource_8a2vw")])
+skill = SubResource("Resource_ueei8")

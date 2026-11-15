@@ -23,6 +23,8 @@ enum Rarity { MINION, COMMON, ELITE, BOSS }
 @export var shell_reward: int = 1
 @export var capturable: bool = true
 @export_range(0.0, 1.0) var capture_threshold: float = 0.25
+## 被镇守异兽挡住时，每拍对它造成的伤害。
+@export var contact_damage: float = 0.5
 
 @export_group("作为塔")
 @export var deploy_cost: int = 6
@@ -30,5 +32,14 @@ enum Rarity { MINION, COMMON, ELITE, BOSS }
 @export var attack_range: float = 260.0
 @export var attack_interval_ticks: int = 8
 @export var projectile_speed: float = 600.0
+@export_subgroup("镇守")
+## 大于 0 即为镇守型：在离鼎位最近的路径点上拦截敌人。
+@export var guard_hp: int = 0
+@export var block_count: int = 1
+## 鼎位到路径的最远距离，超出则无法拦截（仍会攻击）。
+@export var guard_reach: float = 220.0
+## 被打垮后多少拍恢复。
+@export var guard_recover_ticks: int = 50
+@export_subgroup("")
 ## "见则"特性。
 @export var traits: Array[EffectDef] = []

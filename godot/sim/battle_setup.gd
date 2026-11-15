@@ -9,3 +9,5 @@ var ding_max := 10
 ## 本场可用的镇鼎符（已按每场上限截断）。
 var talismans := 3
 var seed_value := 0
+var keeper: KeeperDef
+var formations: Array[FormationDef] = []

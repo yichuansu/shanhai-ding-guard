@@ -1,0 +1,40 @@
+[gd_resource type="Resource" script_class="KeeperDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/effect_def.gd" id="1_ugbrw"]
+[ext_resource type="Script" path="res://content/defs/keeper_def.gd" id="2_6c6ou"]
+[ext_resource type="Script" path="res://content/defs/skill_def.gd" id="3_jsdgy"]
+
+[sub_resource type="Resource" id="Resource_dkeex"]
+script = ExtResource("1_ugbrw")
+trigger = &"passive"
+op = &"capture_threshold_bonus"
+amount = 0.1
+description = "捕获血线 +10%"
+
+[sub_resource type="Resource" id="Resource_p6qsq"]
+script = ExtResource("1_ugbrw")
+trigger = &"on_battle_start"
+op = &"add_talismans"
+amount = 1.0
+description = "每场额外 1 张临时镇鼎符"
+
+[sub_resource type="Resource" id="Resource_aw0r4"]
+script = ExtResource("3_jsdgy")
+display_name = "定身符"
+description = "范围内敌人定身 3 秒。"
+op = &"freeze_area"
+spirit_cost = 5
+cooldown_ticks = 180
+radius = 220.0
+duration_ticks = 30
+
+[resource]
+script = ExtResource("2_6c6ou")
+id = &"wuzhu"
+order = 2
+display_name = "巫祝"
+description = "通晓异兽之名的巫。更容易收服异兽。"
+starting_beasts = Array[StringName]([&"jingwei", &"huashe"])
+starting_talismans = 6
+passives = Array[ExtResource("1_ugbrw")]([SubResource("Resource_dkeex"), SubResource("Resource_p6qsq")])
+skill = SubResource("Resource_aw0r4")

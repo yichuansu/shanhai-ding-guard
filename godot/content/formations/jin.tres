@@ -1,0 +1,33 @@
+[gd_resource type="Resource" script_class="FormationDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/formation_def.gd" id="1_xp71d"]
+[ext_resource type="Script" path="res://content/defs/formation_tier.gd" id="2_lsy8y"]
+[ext_resource type="Script" path="res://content/defs/effect_def.gd" id="3_8tlxh"]
+
+[sub_resource type="Resource" id="Resource_qv513"]
+script = ExtResource("3_8tlxh")
+trigger = &"passive"
+op = &"element_damage_pct"
+amount = 0.15
+
+[sub_resource type="Resource" id="Resource_x6pu8"]
+script = ExtResource("2_lsy8y")
+effects = Array[ExtResource("3_8tlxh")]([SubResource("Resource_qv513")])
+
+[sub_resource type="Resource" id="Resource_ke6di"]
+script = ExtResource("3_8tlxh")
+trigger = &"passive"
+op = &"element_damage_pct"
+amount = 0.4
+
+[sub_resource type="Resource" id="Resource_wspg6"]
+script = ExtResource("2_lsy8y")
+count = 4
+effects = Array[ExtResource("3_8tlxh")]([SubResource("Resource_ke6di")])
+
+[resource]
+script = ExtResource("1_xp71d")
+element = &"jin"
+display_name = "从革"
+description = "金属异兽伤害提升。"
+tiers = Array[ExtResource("2_lsy8y")]([SubResource("Resource_x6pu8"), SubResource("Resource_wspg6")])

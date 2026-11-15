@@ -29,11 +29,20 @@ func _ready() -> void:
 	_report = _label(22)
 	_report.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	root.add_child(_report)
-	var new_run := Button.new()
-	new_run.text = "放弃并开新局"
-	new_run.custom_minimum_size = Vector2(260, 64)
-	new_run.pressed.connect(_on_new_run)
-	root.add_child(new_run)
+	var keepers := HBoxContainer.new()
+	keepers.add_theme_constant_override("separation", 16)
+	root.add_child(keepers)
+	var hint := _label(22)
+	hint.text = "开新局，选择守鼎人："
+	keepers.add_child(hint)
+	for id in Content.lib.keeper_ids():
+		var k: KeeperDef = Content.lib.keepers[id]
+		var b := Button.new()
+		b.text = "%s · %s" % [k.display_name, k.skill.display_name if k.skill else ""]
+		b.tooltip_text = "%s\n技能：%s" % [k.description, k.skill.description if k.skill else ""]
+		b.custom_minimum_size = Vector2(220, 64)
+		b.pressed.connect(_on_new_run.bind(id))
+		keepers.add_child(b)
 	_refresh()
 
 
@@ -44,7 +53,8 @@ func _refresh() -> void:
 		var def: BeastDef = Content.lib.beasts.get(b.beast_id)
 		var label := def.display_name if def else String(b.beast_id)
 		names.append("%s%s" % [label, "" if b.tier == 1 else "★%d" % b.tier])
-	_header.text = "冀州 · 鼎 %d/%d · 贝币 %d · 镇鼎符 %d · 法宝 %d · 阵容（%d/%d）：%s" % [
+	var keeper: KeeperDef = Content.lib.keepers.get(run.keeper_id)
+	_header.text = ("%s · " % keeper.display_name if keeper else "") + "冀州 · 鼎 %d/%d · 贝币 %d · 镇鼎符 %d · 法宝 %d · 阵容（%d/%d）：%s" % [
 		run.ding_hp, run.ding_max, run.shells, run.talismans, run.relic_ids.size(),
 		run.roster.size(), run.roster_cap, "、".join(names)]
 	var status := ""
@@ -78,8 +88,8 @@ func _on_node(id: int) -> void:
 		_refresh()
 
 
-func _on_new_run() -> void:
-	Game.start_new_run()
+func _on_new_run(keeper_id: StringName) -> void:
+	Game.start_new_run(-1, keeper_id)
 	_refresh()
 
 

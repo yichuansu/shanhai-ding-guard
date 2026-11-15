@@ -2,6 +2,7 @@ extends SceneTree
 ## 无头平衡工具：每张战场 × 每种双异兽阵容，用 AutoPlayer 打一遍，输出胜率和平均剩余鼎耐久。
 ##   godot --headless --path godot --script res://tools/simulate_battles.gd
 ## 用来发现"某张图谁都过不了"或"某只异兽一只就够了"这类问题。
+## 不带守鼎人、不捕获，只看异兽本身和五行阵。
 
 const DING := 10
 
@@ -34,9 +35,11 @@ func _initialize() -> void:
 				setup.ding_hp = DING
 				setup.ding_max = DING
 				setup.talismans = 0
+				setup.formations = lib.formation_list()
 				var sim := BattleSim.create(battle, lib.beasts, lib.chart, setup)
 				var ap := AutoPlayer.new()
 				ap.capture_enabled = false
+				ap.skill_enabled = false
 				ap.play(sim)
 				runs += 1
 				ticks += sim.tick

@@ -3,6 +3,12 @@
 [ext_resource type="Script" path="res://content/defs/beast_def.gd" id="1_md2yf"]
 [ext_resource type="Script" path="res://content/defs/effect_def.gd" id="2_bu1ws"]
 
+[sub_resource type="Resource" id="Resource_o2ig6"]
+script = ExtResource("2_bu1ws")
+op = &"dry"
+amount = 0.8
+description = "见则其邑大旱：命中减速中的敌人时额外造成 80% 伤害并蒸干水泽"
+
 [resource]
 script = ExtResource("1_md2yf")
 id = &"mingshe"
@@ -19,3 +25,4 @@ damage = 12
 attack_range = 280.0
 attack_interval_ticks = 9
 projectile_speed = 650.0
+traits = Array[ExtResource("2_bu1ws")]([SubResource("Resource_o2ig6")])

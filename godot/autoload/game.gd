@@ -30,12 +30,19 @@ func has_active_run() -> bool:
 	return run != null and not run.finished
 
 
-func start_new_run(seed_value: int = -1) -> void:
+func start_new_run(seed_value: int = -1, keeper_id: StringName = &"") -> void:
 	if seed_value < 0:
 		seed_value = int(Time.get_unix_time_from_system()) ^ (Time.get_ticks_usec() & 0xffff)
-	run = RunState.new_run(seed_value, STARTING_BEASTS)
+	if keeper_id == &"" or not Content.lib.keepers.has(keeper_id):
+		var ids := Content.lib.keeper_ids()
+		keeper_id = ids[0] if not ids.is_empty() else &""
+	var keeper: KeeperDef = Content.lib.keepers.get(keeper_id)
+	if keeper != null:
+		run = RunState.new_run(seed_value, keeper.starting_beasts, keeper_id, keeper.starting_talismans)
+	else:
+		run = RunState.new_run(seed_value, STARTING_BEASTS)
 	profile.runs_started += 1
-	last_report = "新的一局开始。种子 %d" % seed_value
+	last_report = "新的一局开始：%s。种子 %d" % [keeper.display_name if keeper else "无守鼎人", seed_value]
 	save()
 
 
@@ -83,6 +90,8 @@ func make_battle_setup(node_id: int) -> BattleSetup:
 	setup.ding_max = run.ding_max
 	setup.talismans = mini(run.talismans, BattleSim.CAPTURE_LIMIT_PER_BATTLE)
 	setup.seed_value = run.battle_seed(node_id)
+	setup.keeper = Content.lib.keepers.get(run.keeper_id)
+	setup.formations = Content.lib.formation_list()
 	return setup
 
 

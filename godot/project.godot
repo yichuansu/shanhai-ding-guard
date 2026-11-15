@@ -30,6 +30,11 @@ window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
 window/handheld/orientation=4
 
+[gui]
+
+theme/custom="res://assets/ui_theme.tres"
+theme/custom_font="res://assets/fonts/NotoSansSC-Subset.ttf"
+
 [rendering]
 
 renderer/rendering_method="gl_compatibility"

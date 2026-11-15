@@ -4,14 +4,21 @@ extends RefCounted
 
 var capture_enabled := true
 var deploy_enabled := true
+var skill_enabled := true
 
 
 func act(sim: BattleSim) -> void:
 	if capture_enabled and sim.talismans > 0:
 		for e in sim.enemies:
-			if e.is_capturable():
+			if sim.can_capture(e):
 				sim.queue_capture(e.id)
 				break
+	if skill_enabled and sim.skill_ready() and not sim.enemies.is_empty():
+		var lead := sim.enemies[0]
+		for e in sim.enemies:
+			if e.distance > lead.distance:
+				lead = e
+		sim.queue_skill(sim.enemy_position(lead))
 	if not deploy_enabled:
 		return
 	for inst in sim.roster:

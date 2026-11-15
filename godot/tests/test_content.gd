@@ -35,3 +35,27 @@ func test_balance_smoke_first_battle() -> void:
 	AutoPlayer.new().play(sim)
 	check_eq(sim.outcome, BattleSim.Outcome.WON, "起始阵容能守住第一场")
 	check(sim.tick < 1500, "第一场不超过约 2.5 分钟（%d 拍）" % sim.tick)
+
+
+func test_keepers_and_formations() -> void:
+	var lib := ContentLibrary.load_from()
+	check_eq(lib.keeper_ids().size(), 3, "三位守鼎人")
+	check_eq(lib.keeper_ids()[0], &"zhudingjiang", "按 order 排序")
+	for id in lib.keeper_ids():
+		var k: KeeperDef = lib.keepers[id]
+		check(k.skill != null and k.skill.cooldown_ticks > 0, "%s 有技能" % id)
+		check(k.starting_beasts.size() >= 2, "%s 开局至少两只异兽" % id)
+	check_eq(lib.formation_list().size(), 5, "五行各一阵")
+
+
+func test_every_keeper_can_win_first_battle() -> void:
+	var lib := ContentLibrary.load_from()
+	var battle: BattleDef = lib.battles[&"jizhou_b01"]
+	for id in lib.keeper_ids():
+		var k: KeeperDef = lib.keepers[id]
+		var setup := Fixtures.setup(k.starting_beasts)
+		setup.keeper = k
+		setup.formations = lib.formation_list()
+		var sim := BattleSim.create(battle, lib.beasts, lib.chart, setup)
+		AutoPlayer.new().play(sim)
+		check_eq(sim.outcome, BattleSim.Outcome.WON, "%s 的开局阵容能守住第一场" % k.display_name)

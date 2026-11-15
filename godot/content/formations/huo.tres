@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="FormationDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/formation_def.gd" id="1_kaijk"]
+[ext_resource type="Script" path="res://content/defs/formation_tier.gd" id="2_p7bfb"]
+[ext_resource type="Script" path="res://content/defs/effect_def.gd" id="3_3c8d2"]
+
+[sub_resource type="Resource" id="Resource_7h6na"]
+script = ExtResource("3_3c8d2")
+op = &"burn"
+amount = 1.0
+duration_ticks = 15
+
+[sub_resource type="Resource" id="Resource_pesic"]
+script = ExtResource("2_p7bfb")
+effects = Array[ExtResource("3_3c8d2")]([SubResource("Resource_7h6na")])
+
+[sub_resource type="Resource" id="Resource_u0s3m"]
+script = ExtResource("3_3c8d2")
+op = &"burn"
+amount = 2.5
+duration_ticks = 20
+
+[sub_resource type="Resource" id="Resource_melwd"]
+script = ExtResource("2_p7bfb")
+count = 4
+effects = Array[ExtResource("3_3c8d2")]([SubResource("Resource_u0s3m")])
+
+[resource]
+script = ExtResource("1_kaijk")
+display_name = "炎上"
+description = "火属异兽的攻击附带灼烧。"
+tiers = Array[ExtResource("2_p7bfb")]([SubResource("Resource_pesic"), SubResource("Resource_melwd")])

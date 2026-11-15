@@ -3,6 +3,14 @@
 [ext_resource type="Script" path="res://content/defs/beast_def.gd" id="1_3dm0r"]
 [ext_resource type="Script" path="res://content/defs/effect_def.gd" id="2_x1kpi"]
 
+[sub_resource type="Resource" id="Resource_cavwd"]
+script = ExtResource("2_x1kpi")
+trigger = &"passive"
+op = &"bonus_vs_element"
+amount = 0.5
+element_scope = &"shui"
+description = "衔木石以堙东海：对水属敌人伤害 +50%"
+
 [resource]
 script = ExtResource("1_3dm0r")
 id = &"jingwei"
@@ -17,3 +25,4 @@ shell_reward = 2
 deploy_cost = 5
 attack_range = 320.0
 projectile_speed = 700.0
+traits = Array[ExtResource("2_x1kpi")]([SubResource("Resource_cavwd")])

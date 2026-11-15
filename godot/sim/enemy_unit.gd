@@ -15,10 +15,13 @@ var slow_multiplier := 1.0
 var slow_ticks := 0
 var burn_per_tick := 0.0
 var burn_ticks := 0
+var frozen_ticks := 0
+## 被哪个鼎位的镇守异兽挡住，-1 表示没有。
+var blocked_by := -1
 var alive := true
 var leaked := false
 var captured := false
 
 
-func is_capturable() -> bool:
-	return alive and def.capturable and hp <= max_hp * def.capture_threshold
+func is_capturable(threshold_bonus: float = 0.0) -> bool:
+	return alive and def.capturable and hp <= max_hp * (def.capture_threshold + threshold_bonus)

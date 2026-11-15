@@ -1,0 +1,39 @@
+[gd_resource type="Resource" script_class="FormationDef" format=3]
+
+[ext_resource type="Script" path="res://content/defs/formation_def.gd" id="1_x7t6k"]
+[ext_resource type="Script" path="res://content/defs/formation_tier.gd" id="2_ke4hf"]
+[ext_resource type="Script" path="res://content/defs/effect_def.gd" id="3_mepek"]
+
+[sub_resource type="Resource" id="Resource_aoji8"]
+script = ExtResource("3_mepek")
+trigger = &"on_wave_end"
+op = &"heal_ding"
+amount = 1.0
+
+[sub_resource type="Resource" id="Resource_7row3"]
+script = ExtResource("2_ke4hf")
+effects = Array[ExtResource("3_mepek")]([SubResource("Resource_aoji8")])
+
+[sub_resource type="Resource" id="Resource_0yp3q"]
+script = ExtResource("3_mepek")
+trigger = &"on_wave_end"
+op = &"heal_ding"
+amount = 1.0
+
+[sub_resource type="Resource" id="Resource_s7lo1"]
+script = ExtResource("3_mepek")
+trigger = &"passive"
+op = &"guard_hp_pct"
+amount = 0.5
+
+[sub_resource type="Resource" id="Resource_ofu3t"]
+script = ExtResource("2_ke4hf")
+count = 4
+effects = Array[ExtResource("3_mepek")]([SubResource("Resource_0yp3q"), SubResource("Resource_s7lo1")])
+
+[resource]
+script = ExtResource("1_x7t6k")
+element = &"tu"
+display_name = "稼穑"
+description = "清波时修复铜鼎；四只时镇守更结实。"
+tiers = Array[ExtResource("2_ke4hf")]([SubResource("Resource_7row3"), SubResource("Resource_ofu3t")])

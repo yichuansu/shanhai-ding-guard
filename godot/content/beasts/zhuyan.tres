@@ -24,6 +24,7 @@ move_speed = 85.0
 leak_damage = 2
 spirit_reward = 4
 shell_reward = 5
+contact_damage = 1.5
 deploy_cost = 7
 damage = 8
 attack_range = 240.0

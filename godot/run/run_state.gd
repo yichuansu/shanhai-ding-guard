@@ -8,6 +8,7 @@ const DEFAULT_TALISMANS := 5
 const DEFAULT_ROSTER_CAP := 6
 
 var seed_value := 0
+var keeper_id: StringName = &""
 var act := 0
 var map: RunMap
 var current_node := -1
@@ -24,9 +25,11 @@ var won := false
 var _next_uid := 1
 
 
-static func new_run(seed_in: int, starting_beasts: Array[StringName]) -> RunState:
+static func new_run(seed_in: int, starting_beasts: Array[StringName], keeper: StringName = &"", starting_talismans: int = DEFAULT_TALISMANS) -> RunState:
 	var r := RunState.new()
 	r.seed_value = seed_in
+	r.keeper_id = keeper
+	r.talismans = starting_talismans
 	r._build_map()
 	for id in starting_beasts:
 		r.add_beast(id)
@@ -88,6 +91,7 @@ func to_dict() -> Dictionary:
 	return {
 		"schema": SCHEMA,
 		"seed": seed_value,
+		"keeper": String(keeper_id),
 		"act": act,
 		"current_node": current_node,
 		"visited": Array(visited),
@@ -110,6 +114,7 @@ static func from_dict(d: Dictionary) -> RunState:
 		return null
 	var r := RunState.new()
 	r.seed_value = int(d.get("seed", 0))
+	r.keeper_id = StringName(str(d.get("keeper", "")))
 	r.act = int(d.get("act", 0))
 	r._build_map()
 	r.current_node = int(d.get("current_node", -1))

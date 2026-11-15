@@ -6,28 +6,38 @@ extends RefCounted
 ## 表现层只读公开字段，并通过 queue_* 提交意图；意图在下一拍开头生效。
 ##
 ## 每拍顺序：
-##   1. tick+1，清空 events，应用意图（部署 / 收回 / 捕获）
-##   2. 自然回灵气
+##   1. tick+1，清空 events，技能冷却 -1，应用意图（部署 / 收回 / 捕获 / 技能）
+##   2. 自然回灵气（含木阵等 spirit_income）
 ##   3. 出怪
-##   4. 敌人沿路径移动；到终点记漏怪，扣鼎耐久
-##   5. 持续伤害（灼烧）
-##   6. 飞弹移动；命中拍结算伤害与 on_hit 特效
-##   7. 塔冷却与开火（跳过已被在途伤害预定致死的敌人）
-##   8. 清理死亡单位，结算清波（on_wave_end），判定胜负
+##   4. 敌人移动：定身的不动；被镇守挡住的原地攻击镇守；经过镇守拦截点时被挡下；到终点记漏怪
+##   5. 镇守被打垮 / 恢复
+##   6. 持续伤害（灼烧）
+##   7. 飞弹移动；命中拍结算伤害与 on_hit 特效
+##   8. 塔冷却与开火（跳过已被在途伤害预定致死的敌人）
+##   9. 清理死亡单位，结算清波（on_wave_end），判定胜负
 ##
-## 支持的效果（EffectDef.trigger / op）：
-##   passive         / adjacent_damage_pct  相邻异兽伤害 +amount
-##   passive         / global_damage_pct    全体伤害 +amount（法宝）
-##   on_battle_start / add_talismans        本场额外 amount 张镇鼎符，不消耗局内库存
-##   on_hit          / slow                 移速 ×amount，持续 duration_ticks
-##   on_hit          / burn                 每拍 amount 点伤害，持续 duration_ticks
-##   on_kill_nearby  / bonus_shells         radius 内有敌人被击杀时额外 amount 贝币
-##   on_wave_end     / heal_ding            每清一波回复 amount 鼎耐久
+## 效果来源：异兽特性、法宝、守鼎人被动、五行阵（作用域为该五行）。支持的 trigger / op：
+##   passive         / adjacent_damage_pct      相邻异兽伤害 +amount
+##   passive         / global_damage_pct        全体伤害 +amount
+##   passive         / element_damage_pct       作用域内异兽伤害 +amount
+##   passive         / bonus_vs_element         对 element_scope 五行的敌人伤害 +amount（只读异兽自身特性）
+##   passive         / spirit_income            每 duration_ticks 拍额外 +amount 灵气
+##   passive         / guard_hp_pct             作用域内（空 = 全部）镇守生命 +amount
+##   passive         / capture_threshold_bonus  捕获血线 +amount
+##   on_battle_start / add_talismans            本场额外 amount 张临时镇鼎符
+##   on_hit          / slow                     移速 ×amount，持续 duration_ticks
+##   on_hit          / burn                     每拍 amount 点伤害，持续 duration_ticks
+##   on_hit          / splash                   radius 内其他敌人受到本次伤害 ×amount
+##   on_hit          / ignite_nearby            radius 内最近的另一个敌人灼烧 amount，持续 duration_ticks
+##   on_hit          / dry                      目标若被减速：额外造成本次伤害 ×amount，并解除减速
+##   on_kill_nearby  / bonus_shells             radius 内有敌人被击杀时额外 amount 贝币
+##   on_wave_end     / heal_ding                每清一波回复 amount 鼎耐久
 
 enum Outcome { RUNNING, WON, LOST }
 
 const TICKS_PER_SECOND := 10.0
 const TIER_DAMAGE_MULT: Array[float] = [1.0, 1.0, 1.6, 2.5]
+const TIER_GUARD_MULT: Array[float] = [1.0, 1.0, 1.5, 2.2]
 const RECALL_REFUND_RATIO := 0.5
 const CAPTURE_LIMIT_PER_BATTLE := 3
 const PROJECTILE_ORIGIN_OFFSET := Vector2(0, -30)
@@ -35,6 +45,7 @@ const PROJECTILE_ORIGIN_OFFSET := Vector2(0, -30)
 var error := ""
 var battle: BattleDef
 var path: PathCurve
+var keeper: KeeperDef
 var tick := 0
 var outcome: Outcome = Outcome.RUNNING
 var spirit := 0
@@ -44,27 +55,32 @@ var talismans := 0
 var talismans_used := 0
 var bonus_talismans := 0
 var shells_earned := 0
+var skill_cooldown := 0
 var roster: Array[BeastInstance] = []
 var enemies: Array[EnemyUnit] = []
 ## slot(int) -> TowerUnit
 var towers: Dictionary = {}
 var projectiles: Array[Projectile] = []
 var captured_beasts: Array[StringName] = []
+## element(StringName) -> 已生效的档位 count（HUD 显示用）
+var active_formations: Dictionary = {}
 ## 本拍发生的事，给表现层播特效和音效。每拍开头清空。
 var events: Array[Dictionary] = []
 
 var _beasts: Dictionary = {}
 var _chart: ElementChart
 var _relics: Array[RelicDef] = []
+var _formations: Array[FormationDef] = []
 var _rng: RngStream
 var _waves: WaveDirector
 var _intents: Array[Dictionary] = []
 var _next_id := 1
 var _resolved_per_wave := PackedInt32Array()
 var _wave_cleared: Array[bool] = []
-## trigger(StringName) -> Array[{tower: TowerUnit|null, effect: EffectDef}]
+## trigger(StringName) -> Array[{tower: TowerUnit|null, effect: EffectDef, scope: StringName}]
 var _effects: Dictionary = {}
 var _global_damage_bonus := 0.0
+var _capture_bonus := 0.0
 var _started := false
 
 
@@ -75,10 +91,12 @@ static func create(def: BattleDef, beasts: Dictionary, chart: ElementChart, setu
 		return sim
 	sim.battle = def
 	sim.path = PathCurve.new(def.path_points)
+	sim.keeper = setup.keeper
 	sim._beasts = beasts
 	sim._chart = chart
 	sim.roster = setup.roster.duplicate()
 	sim._relics = setup.relics.duplicate()
+	sim._formations = setup.formations.duplicate()
 	sim.ding_hp = setup.ding_hp
 	sim.ding_max = setup.ding_max
 	sim.talismans = setup.talismans
@@ -134,6 +152,10 @@ func queue_capture(enemy_id: int) -> void:
 	_intents.append({"kind": "capture", "enemy_id": enemy_id})
 
 
+func queue_skill(target: Vector2) -> void:
+	_intents.append({"kind": "skill", "target": target})
+
+
 # ---------- 查询 ----------
 
 func is_running() -> bool:
@@ -181,6 +203,14 @@ func enemy_position(e: EnemyUnit) -> Vector2:
 	return path.position_at(e.distance)
 
 
+func can_capture(e: EnemyUnit) -> bool:
+	return e.is_capturable(_capture_bonus)
+
+
+func skill_ready() -> bool:
+	return keeper != null and keeper.skill != null and skill_cooldown == 0 and spirit >= keeper.skill.spirit_cost
+
+
 func wave_count() -> int:
 	return battle.waves.size()
 
@@ -190,14 +220,18 @@ func current_wave_number() -> int:
 	return mini(_waves.wave_index + 1, wave_count())
 
 
-## 一局库存实际消耗的镇鼎符（法宝给的临时符不算）。
+## 一局库存实际消耗的镇鼎符（法宝和守鼎人给的临时符不算）。
 func run_talismans_spent() -> int:
 	return maxi(talismans_used - bonus_talismans, 0)
 
 
 func damage_against(t: TowerUnit, e: EnemyUnit) -> float:
 	var base := t.def.damage * TIER_DAMAGE_MULT[clampi(t.instance.tier, 1, BeastInstance.MAX_TIER)]
-	return base * _chart.multiplier(t.def.element, e.def.element) * (1.0 + t.damage_bonus + _global_damage_bonus)
+	var bonus := t.damage_bonus + _global_damage_bonus
+	for eff in t.def.traits:
+		if eff.trigger == &"passive" and eff.op == &"bonus_vs_element" and eff.element_scope == e.def.element:
+			bonus += eff.amount
+	return base * _chart.multiplier(t.def.element, e.def.element) * (1.0 + bonus)
 
 
 # ---------- 推进 ----------
@@ -207,11 +241,13 @@ func step() -> void:
 		return
 	tick += 1
 	events.clear()
+	if skill_cooldown > 0:
+		skill_cooldown -= 1
 	_apply_intents()
-	if battle.spirit_income_interval_ticks > 0 and tick % battle.spirit_income_interval_ticks == 0:
-		spirit += 1
+	_income()
 	_spawn()
 	_move_enemies()
+	_update_guards()
 	_tick_statuses()
 	_move_projectiles()
 	_towers_fire()
@@ -231,6 +267,17 @@ func _apply_intents() -> void:
 				_try_recall(intent["slot"])
 			"capture":
 				_try_capture(intent["enemy_id"])
+			"skill":
+				_try_skill(intent["target"])
+
+
+func _income() -> void:
+	if battle.spirit_income_interval_ticks > 0 and tick % battle.spirit_income_interval_ticks == 0:
+		spirit += 1
+	for entry: Dictionary in _effects.get(&"passive", []):
+		var eff: EffectDef = entry.effect
+		if eff.op == &"spirit_income" and eff.duration_ticks > 0 and tick % eff.duration_ticks == 0:
+			spirit += int(eff.amount)
 
 
 func _try_deploy(uid: int, slot: int) -> void:
@@ -248,8 +295,15 @@ func _try_deploy(uid: int, slot: int) -> void:
 	t.instance = inst
 	t.def = def
 	t.position = battle.slots[slot]
+	if def.guard_hp > 0:
+		t.is_guard = true
+		var c := path.closest(t.position)
+		t.guard_active = c.y <= def.guard_reach
+		t.block_distance = c.x
 	towers[slot] = t
 	_rebuild_effects()
+	if t.is_guard:
+		t.guard_hp = t.guard_hp_max
 	events.append({"type": "deployed", "slot": slot, "uid": uid})
 
 
@@ -257,6 +311,7 @@ func _try_recall(slot: int) -> void:
 	if not towers.has(slot):
 		return
 	var t: TowerUnit = towers[slot]
+	_release_blocked(t)
 	spirit += floori(t.def.deploy_cost * RECALL_REFUND_RATIO)
 	towers.erase(slot)
 	_rebuild_effects()
@@ -265,7 +320,7 @@ func _try_recall(slot: int) -> void:
 
 func _try_capture(enemy_id: int) -> void:
 	var e := enemy_by_id(enemy_id)
-	if e == null or not e.is_capturable() or talismans <= 0:
+	if e == null or not can_capture(e) or talismans <= 0:
 		return
 	talismans -= 1
 	talismans_used += 1
@@ -274,6 +329,32 @@ func _try_capture(enemy_id: int) -> void:
 	captured_beasts.append(e.def.id)
 	_resolve(e)
 	events.append({"type": "captured", "enemy_id": e.id, "beast_id": e.def.id, "position": enemy_position(e)})
+
+
+func _try_skill(target: Vector2) -> void:
+	if not skill_ready():
+		return
+	var skill := keeper.skill
+	spirit -= skill.spirit_cost
+	skill_cooldown = skill.cooldown_ticks
+	match skill.op:
+		&"damage_area":
+			for e in enemies:
+				if e.alive and enemy_position(e).distance_to(target) <= skill.radius:
+					_damage_enemy(e, skill.amount)
+		&"freeze_area":
+			for e in enemies:
+				if e.alive and enemy_position(e).distance_to(target) <= skill.radius:
+					e.frozen_ticks = maxi(e.frozen_ticks, skill.duration_ticks)
+		&"smite_strongest":
+			var strongest: EnemyUnit = null
+			for e in enemies:
+				if e.alive and (strongest == null or e.hp > strongest.hp):
+					strongest = e
+			if strongest != null:
+				target = enemy_position(strongest)
+				_damage_enemy(strongest, skill.amount)
+	events.append({"type": "skill", "op": skill.op, "position": target, "radius": skill.radius})
 
 
 func _spawn() -> void:
@@ -291,15 +372,36 @@ func _spawn() -> void:
 
 
 func _move_enemies() -> void:
+	var guards := _guards_by_distance()
 	for e in enemies:
 		if not e.alive:
 			continue
 		e.prev_distance = e.distance
+		if e.frozen_ticks > 0:
+			e.frozen_ticks -= 1
+			continue
+		if e.blocked_by >= 0:
+			var holder: TowerUnit = towers.get(e.blocked_by)
+			if holder != null and holder.guard_ready():
+				holder.guard_hp -= e.def.contact_damage
+				continue
+			e.blocked_by = -1
 		var speed := e.def.move_speed / TICKS_PER_SECOND
 		if e.slow_ticks > 0:
 			speed *= e.slow_multiplier
 			e.slow_ticks -= 1
-		e.distance += speed
+		var next_distance := e.distance + speed
+		if e.def.rarity != BeastDef.Rarity.BOSS:
+			for g in guards:
+				if not g.guard_ready() or g.blocked.size() >= g.def.block_count:
+					continue
+				if e.distance <= g.block_distance and next_distance >= g.block_distance:
+					next_distance = g.block_distance
+					e.blocked_by = g.slot
+					g.blocked.append(e.id)
+					events.append({"type": "blocked", "enemy_id": e.id, "slot": g.slot})
+					break
+		e.distance = next_distance
 		if e.distance >= path.length:
 			e.distance = path.length
 			e.alive = false
@@ -307,6 +409,40 @@ func _move_enemies() -> void:
 			ding_hp -= e.def.leak_damage
 			_resolve(e)
 			events.append({"type": "leaked", "enemy_id": e.id, "damage": e.def.leak_damage})
+
+
+func _update_guards() -> void:
+	for t: TowerUnit in towers.values():
+		if not t.is_guard:
+			continue
+		if t.guard_down_ticks > 0:
+			t.guard_down_ticks -= 1
+			if t.guard_down_ticks == 0:
+				t.guard_hp = t.guard_hp_max
+				events.append({"type": "guard_recovered", "slot": t.slot})
+		elif t.guard_active and t.guard_hp <= 0.0:
+			t.guard_hp = 0.0
+			t.guard_down_ticks = maxi(t.def.guard_recover_ticks, 1)
+			_release_blocked(t)
+			events.append({"type": "guard_broken", "slot": t.slot})
+
+
+func _release_blocked(t: TowerUnit) -> void:
+	for id in t.blocked:
+		var e := enemy_by_id(id)
+		if e != null and e.blocked_by == t.slot:
+			e.blocked_by = -1
+	t.blocked.clear()
+
+
+func _guards_by_distance() -> Array[TowerUnit]:
+	var out: Array[TowerUnit] = []
+	for t: TowerUnit in towers.values():
+		if t.is_guard and t.guard_active:
+			out.append(t)
+	out.sort_custom(func(a: TowerUnit, b: TowerUnit) -> bool:
+		return a.block_distance < b.block_distance or (a.block_distance == b.block_distance and a.slot < b.slot))
+	return out
 
 
 func _tick_statuses() -> void:
@@ -352,8 +488,41 @@ func _hit(e: EnemyUnit, p: Projectile) -> void:
 				e.slow_multiplier = eff.amount if e.slow_ticks <= 0 else minf(e.slow_multiplier, eff.amount)
 				e.slow_ticks = maxi(e.slow_ticks, eff.duration_ticks)
 			&"burn":
-				e.burn_per_tick = eff.amount if e.burn_ticks <= 0 else maxf(e.burn_per_tick, eff.amount)
-				e.burn_ticks = maxi(e.burn_ticks, eff.duration_ticks)
+				_apply_burn(e, eff.amount, eff.duration_ticks)
+			&"dry":
+				if e.slow_ticks > 0:
+					e.hp -= p.damage * eff.amount
+					e.slow_ticks = 0
+					e.slow_multiplier = 1.0
+			&"splash":
+				for other in enemies:
+					if other != e and other.alive and enemy_position(other).distance_to(p.position) <= eff.radius:
+						_damage_enemy(other, p.damage * eff.amount)
+			&"ignite_nearby":
+				var nearest: EnemyUnit = null
+				var best := eff.radius
+				for other in enemies:
+					if other == e or not other.alive:
+						continue
+					var d := enemy_position(other).distance_to(p.position)
+					if d <= best:
+						best = d
+						nearest = other
+				if nearest != null:
+					_apply_burn(nearest, eff.amount, eff.duration_ticks)
+	if e.hp <= 0.0:
+		_kill(e)
+
+
+func _apply_burn(e: EnemyUnit, per_tick: float, duration: int) -> void:
+	e.burn_per_tick = per_tick if e.burn_ticks <= 0 else maxf(e.burn_per_tick, per_tick)
+	e.burn_ticks = maxi(e.burn_ticks, duration)
+
+
+## 技能和溅射用的直接伤害，不触发 on_hit。
+func _damage_enemy(e: EnemyUnit, amount: float) -> void:
+	e.hp -= amount
+	events.append({"type": "hit", "enemy_id": e.id, "position": enemy_position(e), "damage": amount})
 	if e.hp <= 0.0:
 		_kill(e)
 
@@ -398,13 +567,22 @@ func _towers_fire() -> void:
 		p.speed = t.def.projectile_speed / TICKS_PER_SECOND
 		p.damage = damage_against(t, target)
 		p.element = t.def.element
-		for eff in t.def.traits:
-			if eff.trigger == &"on_hit":
-				p.on_hit.append(eff)
+		p.on_hit = _on_hit_effects_for(t)
 		target.reserved_damage += p.damage
 		projectiles.append(p)
 		t.cooldown = t.def.attack_interval_ticks
 		events.append({"type": "fired", "slot": s, "projectile_id": p.id})
+
+
+## 本塔自己的 on_hit 特性 + 作用域匹配本塔五行（或不限五行）的阵法、法宝、守鼎人 on_hit 效果。
+func _on_hit_effects_for(t: TowerUnit) -> Array[EffectDef]:
+	var out: Array[EffectDef] = []
+	for entry: Dictionary in _effects.get(&"on_hit", []):
+		var source: TowerUnit = entry.tower
+		var scope: StringName = entry.scope
+		if source == t or (source == null and (scope == &"" or scope == t.def.element)):
+			out.append(entry.effect)
+	return out
 
 
 ## 射程内、没被预定致死、沿路径走得最远的敌人。
@@ -431,6 +609,15 @@ func _cleanup() -> void:
 		if not p.done:
 			flying.append(p)
 	projectiles = flying
+	for t: TowerUnit in towers.values():
+		if t.blocked.is_empty():
+			continue
+		var still: Array[int] = []
+		for id in t.blocked:
+			var e := enemy_by_id(id)
+			if e != null and e.blocked_by == t.slot:
+				still.append(id)
+		t.blocked = still
 
 
 func _resolve(e: EnemyUnit) -> void:
@@ -467,31 +654,53 @@ func _check_outcome() -> void:
 func _rebuild_effects() -> void:
 	_effects.clear()
 	_global_damage_bonus = 0.0
+	_capture_bonus = 0.0
+	if keeper != null:
+		for eff in keeper.passives:
+			_register(null, eff, eff.element_scope)
 	for relic in _relics:
 		for eff in relic.effects:
-			_register(null, eff)
+			_register(null, eff, eff.element_scope)
 	var slots := towers.keys()
 	slots.sort()
+	var counts := {}
 	for s: int in slots:
 		var t: TowerUnit = towers[s]
+		counts[t.def.element] = int(counts.get(t.def.element, 0)) + 1
 		for eff in t.def.traits:
-			_register(t, eff)
+			_register(t, eff, eff.element_scope)
+	active_formations.clear()
+	for f in _formations:
+		var reached: FormationTier = null
+		for tier in f.tiers:
+			if int(counts.get(f.element, 0)) >= tier.count:
+				reached = tier
+		if reached == null:
+			continue
+		active_formations[f.element] = reached.count
+		for eff in reached.effects:
+			_register(null, eff, f.element)
 	for entry: Dictionary in _effects.get(&"passive", []):
 		var eff: EffectDef = entry.effect
-		if eff.op == &"global_damage_pct":
-			_global_damage_bonus += eff.amount
+		match eff.op:
+			&"global_damage_pct":
+				_global_damage_bonus += eff.amount
+			&"capture_threshold_bonus":
+				_capture_bonus += eff.amount
 	_recompute_bonuses()
 
 
-func _register(t: TowerUnit, eff: EffectDef) -> void:
+func _register(t: TowerUnit, eff: EffectDef, scope: StringName) -> void:
 	if not _effects.has(eff.trigger):
 		_effects[eff.trigger] = []
-	_effects[eff.trigger].append({"tower": t, "effect": eff})
+	_effects[eff.trigger].append({"tower": t, "effect": eff, "scope": scope})
 
 
 func _recompute_bonuses() -> void:
+	var passives: Array = _effects.get(&"passive", [])
 	for t: TowerUnit in towers.values():
 		var bonus := 0.0
+		var guard_pct := 0.0
 		for o: TowerUnit in towers.values():
 			if o == t or o.position.distance_to(t.position) > battle.adjacency_radius:
 				continue
@@ -500,4 +709,18 @@ func _recompute_bonuses() -> void:
 			for eff in o.def.traits:
 				if eff.trigger == &"passive" and eff.op == &"adjacent_damage_pct":
 					bonus += eff.amount
+		for entry: Dictionary in passives:
+			var eff: EffectDef = entry.effect
+			var scope: StringName = entry.scope
+			if entry.tower != null:
+				continue
+			if eff.op == &"element_damage_pct" and scope == t.def.element:
+				bonus += eff.amount
+			elif eff.op == &"guard_hp_pct" and (scope == &"" or scope == t.def.element):
+				guard_pct += eff.amount
 		t.damage_bonus = bonus
+		if t.is_guard:
+			var new_max := t.def.guard_hp * TIER_GUARD_MULT[clampi(t.instance.tier, 1, BeastInstance.MAX_TIER)] * (1.0 + guard_pct)
+			if t.guard_hp_max > 0.0 and t.guard_down_ticks == 0:
+				t.guard_hp = t.guard_hp * new_max / t.guard_hp_max
+			t.guard_hp_max = new_max
